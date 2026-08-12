@@ -1,0 +1,1 @@
+Migrations are append-only, UTC-named (`YYYYMMDDHHMMSS_description.sql`), and on demo posture (no Branching) applied manually via Supabase SQL Editor after PR merge. See the root `CLAUDE.md` Migrations rule.

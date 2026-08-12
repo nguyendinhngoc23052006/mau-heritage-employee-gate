@@ -1,0 +1,20 @@
+node_modules
+dist
+coverage
+.env
+.env.local
+.env.*.local
+
+# Vite / IDE
+.DS_Store
+.vscode/*
+!.vscode/settings.json
+.idea
+
+# Playwright (installed later)
+playwright-report
+test-results
+
+# Supabase CLI local state
+supabase/.temp
+supabase/.branches
