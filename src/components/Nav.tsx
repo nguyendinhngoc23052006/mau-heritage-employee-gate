@@ -1,0 +1,57 @@
+import { NavLink, useParams } from "react-router-dom";
+import { useMemberships, isManagerRole } from "../hooks/useMemberships";
+import { useT } from "../lib/i18n";
+
+interface Item {
+  to: string;
+  labelKey: string;
+  managerOnly?: boolean;
+  ownerOnly?: boolean;
+}
+
+const ITEMS: Item[] = [
+  { to: "", labelKey: "nav.dashboard" },
+  { to: "schedule", labelKey: "nav.schedule" },
+  { to: "clock", labelKey: "nav.clock" },
+  { to: "sales", labelKey: "nav.sales" },
+  { to: "announcements", labelKey: "nav.announcements" },
+  { to: "me", labelKey: "nav.me" },
+  { to: "people", labelKey: "nav.people", managerOnly: true },
+  { to: "rules", labelKey: "nav.rules", managerOnly: true },
+  { to: "payroll", labelKey: "nav.payroll", managerOnly: true },
+  { to: "audit", labelKey: "nav.audit", managerOnly: true },
+  { to: "settings", labelKey: "nav.settings", ownerOnly: true },
+];
+
+export function Nav() {
+  const { storeId } = useParams();
+  const { data } = useMemberships();
+  const t = useT();
+  const role = data?.find((m) => m.store_id === storeId)?.role;
+  if (!storeId || !role) return null;
+
+  const visible = ITEMS.filter((i) => {
+    if (i.ownerOnly) return role === "owner";
+    if (i.managerOnly) return isManagerRole(role);
+    return true;
+  });
+
+  return (
+    <nav className="flex flex-wrap gap-1 border-b border-slate-200 bg-white px-4 py-2">
+      {visible.map((i) => (
+        <NavLink
+          key={i.to}
+          to={i.to === "" ? "." : i.to}
+          end={i.to === ""}
+          className={({ isActive }) =>
+            `rounded-md px-3 py-1.5 text-sm font-medium transition ${
+              isActive ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100"
+            }`
+          }
+        >
+          {t(i.labelKey)}
+        </NavLink>
+      ))}
+    </nav>
+  );
+}
