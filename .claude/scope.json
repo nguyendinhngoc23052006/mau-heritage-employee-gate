@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "part_0_complete": true,
+  "framework": "vite",
+  "repo_owner": "nguyendinhngoc23052006",
+  "repo_name": "mau-heritage-employee-gate",
+  "session_id": "part2-drive-2026-08-12",
+  "locked_at": "2026-08-12T00:00:00Z",
+  "team_size": "solo",
+  "environments": "main-only",
+  "repo_state": "empty",
+  "postgres_version": "17",
+  "constraints": [
+    "demo lifespan (a few months) — prefer simplicity over defense-in-depth",
+    "solo developer for the entire demo phase",
+    "multi-tenant per store (design consideration)",
+    "supabase magic-link auth",
+    "supabase free tier (no Branching, no PITR add-on)",
+    "cloudflare pages git integration (no wrangler, no per-PR preview DBs)"
+  ],
+  "answers": {
+    "q1_what_building": "internal tool: employee gate for Mau Heritage stores (demo)",
+    "q2_who_for": "internal team; near-term: solo builder; product target: 1 boss + 3-5 managers + 30-50 employees per store",
+    "q3_team_size": "solo",
+    "q4_environments": "one (main only)",
+    "q5_repo_state": "empty (README + LICENSE only)",
+    "q6_constraints": "demo for several months until real budget; multi-tenant per store; magic-link auth; Cloudflare Pages; Supabase Free"
+  },
+  "deviations": [
+    {
+      "question": "q3",
+      "value": "solo",
+      "callout_ref": "docs/00-scope.md (Solo developer — drop staging branch; main-only)"
+    },
+    {
+      "question": "q4",
+      "value": "main-only",
+      "callout_ref": "docs/00-scope.md (One environment — Cloudflare Pages Git integration over wrangler + secrets)"
+    },
+    {
+      "question": "q6",
+      "value": "cloudflare-pages",
+      "callout_ref": "docs/00-scope.md#deviations (matches Q4=one-env deviation)"
+    },
+    {
+      "question": "q6",
+      "value": "supabase-free-no-branching",
+      "callout_ref": "docs/vite/02-set-it-up.md#3-create-the-supabase-project (Pro skipped for demo; no per-PR preview DBs)"
+    },
+    {
+      "question": "q6",
+      "value": "demo-lifespan",
+      "callout_ref": "docs/00-scope.md (demo class — favor Pages + Free tier; skip PITR/backup-check/blue-green/perf-budget gates)"
+    }
+  ],
+  "completed_at": "2026-08-12T00:00:00Z",
+  "changed_at": "2026-08-12T00:00:00Z",
+  "imported_from": null,
+  "mode": "normal"
+}
