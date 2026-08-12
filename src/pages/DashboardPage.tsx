@@ -1,0 +1,133 @@
+import { useQuery } from "@tanstack/react-query";
+import { useParams } from "react-router-dom";
+import { Card, CardTitle } from "../components/ui/Card";
+import { ErrorState, LoadingState, EmptyState } from "../components/ui/EmptyState";
+import { useT } from "../lib/i18n";
+import { useSession } from "../hooks/useSession";
+import { getSupabase } from "../lib/supabaseClient";
+import { listAnnouncements } from "../services/announcements";
+import { listMyNotifications } from "../services/notifications";
+import type { Announcement, PointBalance, Shift } from "../types/database";
+
+export function DashboardPage() {
+  const t = useT();
+  const { storeId } = useParams<{ storeId: string }>();
+  const { user } = useSession();
+
+  if (!storeId || !user) {
+    return <ErrorState message="Store or user not found" />;
+  }
+
+  // Announcements
+  const { data: announcements, isLoading: announcementsLoading } = useQuery({
+    queryKey: ["announcements", storeId, "latest"],
+    queryFn: () => listAnnouncements(storeId, { activeOnly: true }).then((items) => items.slice(0, 3)),
+  });
+
+  // Notifications
+  const { data: notifications, isLoading: notificationsLoading } = useQuery({
+    queryKey: ["notifications", "inbox"],
+    queryFn: () => listMyNotifications({ unreadOnly: true }),
+  });
+
+  // Points balance
+  const { data: pointBalance, isLoading: pointsLoading } = useQuery({
+    queryKey: ["point-balance", storeId, user.id],
+    queryFn: async () => {
+      const supabase = getSupabase();
+      const { data, error } = await supabase
+        .from("point_balances")
+        .select("*")
+        .eq("store_id", storeId)
+        .eq("user_id", user.id)
+        .single();
+      if (error && error.code !== "PGRST116") throw error;
+      return (data as PointBalance | null) ?? { balance: 0 };
+    },
+  });
+
+  // Upcoming shifts (next 7 days)
+  const { data: upcomingShiftsCount, isLoading: shiftsLoading } = useQuery({
+    queryKey: ["shifts", storeId, "upcoming-count"],
+    queryFn: async () => {
+      const supabase = getSupabase();
+      const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { data, error } = await supabase
+        .from("shifts")
+        .select("id", { count: "exact" })
+        .eq("store_id", storeId)
+        .eq("status", "open")
+        .gt("starts_at", new Date().toISOString())
+        .lt("starts_at", sevenDaysFromNow);
+      if (error) throw error;
+      return data?.length ?? 0;
+    },
+  });
+
+  const isLoading = announcementsLoading || notificationsLoading || pointsLoading || shiftsLoading;
+
+  if (isLoading) {
+    return <LoadingState>{t("common.loading")}</LoadingState>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-semibold text-slate-900">{t("nav.dashboard")}</h1>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        {/* Points Balance */}
+        <Card className="text-center">
+          <div className="text-sm text-slate-600">Points Balance</div>
+          <div className="mt-2 text-3xl font-semibold text-slate-900">
+            {pointBalance?.balance ?? 0}
+          </div>
+        </Card>
+
+        {/* Unread Notifications */}
+        <Card className="text-center">
+          <div className="text-sm text-slate-600">{t("notifications.title")}</div>
+          <div className="mt-2 text-3xl font-semibold text-slate-900">
+            {notifications?.filter((n) => !n.read_at).length ?? 0}
+          </div>
+        </Card>
+
+        {/* Upcoming Shifts */}
+        <Card className="text-center">
+          <div className="text-sm text-slate-600">Upcoming Shifts</div>
+          <div className="mt-2 text-3xl font-semibold text-slate-900">
+            {upcomingShiftsCount ?? 0}
+          </div>
+        </Card>
+
+        {/* Total Announcements */}
+        <Card className="text-center">
+          <div className="text-sm text-slate-600">{t("announcements.title")}</div>
+          <div className="mt-2 text-3xl font-semibold text-slate-900">
+            {announcements?.length ?? 0}
+          </div>
+        </Card>
+      </div>
+
+      {/* Latest Announcements */}
+      <Card>
+        <CardTitle>{t("announcements.title")}</CardTitle>
+        {announcements && announcements.length === 0 ? (
+          <EmptyState>{t("common.empty")}</EmptyState>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {announcements?.map((announcement: Announcement) => (
+              <div key={announcement.id} className="border-b border-slate-100 pb-3 last:border-0">
+                <h3 className="font-semibold text-slate-900">{announcement.title}</h3>
+                <p className="mt-1 line-clamp-2 text-sm text-slate-600">{announcement.body}</p>
+                <p className="mt-2 text-xs text-slate-400">
+                  {new Date(announcement.created_at).toLocaleString()}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}

@@ -1,6 +1,8 @@
 import type { RouteObject } from "react-router-dom";
+import { AnnouncementsPage } from "../pages/AnnouncementsPage";
+import { NotificationsInbox } from "../pages/NotificationsInbox";
 
-// Stub. Haiku 4 replaces with AnnouncementsPage.
 export const announcementsRoutes: RouteObject[] = [
-  { path: "announcements", element: <div className="p-6">Announcements (placeholder)</div> },
+  { path: "announcements", element: <AnnouncementsPage /> },
+  { path: "notifications", element: <NotificationsInbox /> },
 ];

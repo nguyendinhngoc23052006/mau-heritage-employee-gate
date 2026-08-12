@@ -1,6 +1,6 @@
 import type { RouteObject } from "react-router-dom";
+import { DashboardPage } from "../pages/DashboardPage";
 
-// Stub. Haiku 4 replaces with DashboardPage.
 export const dashboardRoutes: RouteObject[] = [
-  { index: true, element: <div className="p-6">Dashboard (placeholder)</div> },
+  { index: true, element: <DashboardPage /> },
 ];

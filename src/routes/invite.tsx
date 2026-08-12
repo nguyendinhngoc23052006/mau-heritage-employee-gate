@@ -1,6 +1,6 @@
 import type { RouteObject } from "react-router-dom";
+import { InviteAcceptPage } from "../pages/InviteAcceptPage";
 
-// Stub. Haiku 1 replaces with InviteAcceptPage.
 export const inviteRoutes: RouteObject[] = [
-  { path: "/invite/:token", element: <div className="p-6">Invite acceptance (placeholder)</div> },
+  { path: "/invite/:token", element: <InviteAcceptPage /> },
 ];

@@ -1,6 +1,14 @@
 import type { RouteObject } from "react-router-dom";
+import { AuthGate } from "../components/AuthGate";
+import { OnboardingPage } from "../pages/OnboardingPage";
 
-// Stub. Haiku 1 replaces with OnboardingPage.
 export const onboardingRoutes: RouteObject[] = [
-  { path: "/onboarding", element: <div className="p-6">Onboarding (placeholder)</div> },
+  {
+    path: "/onboarding",
+    element: (
+      <AuthGate>
+        <OnboardingPage />
+      </AuthGate>
+    ),
+  },
 ];
