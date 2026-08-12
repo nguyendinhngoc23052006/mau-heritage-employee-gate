@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "part_0_complete": true,
+  "framework": "vite",
+  "repo_owner": "nguyendinhngoc23052006",
+  "repo_name": "Mau-Heritage-Employee-Gate",
+  "session_id": "part2-drive-2026-08-12",
+  "locked_at": "2026-08-12T00:00:00Z",
+  "team_size": "solo",
+  "environments": "staging+main",
+  "repo_state": "empty",
+  "postgres_version": "17",
+  "constraints": [
+    "multi-tenant per store",
+    "supabase magic-link auth",
+    "supabase free tier initially (upgrading to pro before step 6)",
+    "solo now, scaling to 1 boss + 3-5 managers + 30-50 employees per store"
+  ],
+  "answers": {
+    "q1_what_building": "internal tool: employee gate for Mau Heritage stores",
+    "q2_who_for": "internal team: 1 boss + 3-5 managers + 30-50 employees per store",
+    "q3_team_size": "solo (near-term: small team)",
+    "q4_environments": "staging + main (chose Workers path over Pages)",
+    "q5_repo_state": "empty (README + LICENSE only)",
+    "q6_constraints": "multi-tenant per store; magic-link auth; supabase free now upgrading pro; cloudflare pages was requested but Workers recommended and adopted"
+  },
+  "deviations": [
+    {
+      "question": "q3",
+      "value": "solo",
+      "callout_ref": "docs/vite/02-set-it-up.md (No-staging variant callout missing; keeping staging+main because near-term team growth + real production system)"
+    },
+    {
+      "question": "q6",
+      "value": "cloudflare-pages",
+      "callout_ref": "docs/vite/02-set-it-up.md#7-connect-cloudflare (guide baseline is Workers; adopted Workers per Cloudflare's own current best-practice guidance)"
+    },
+    {
+      "question": "q6",
+      "value": "supabase-free-initially",
+      "callout_ref": "docs/vite/02-set-it-up.md#3-create-the-supabase-project (Pro required before Step 6 for Branching; scheduled Pro upgrade in Step 3 per guide default)"
+    }
+  ],
+  "completed_at": "2026-08-12T00:00:00Z",
+  "changed_at": "2026-08-12T00:00:00Z",
+  "imported_from": null,
+  "mode": "normal"
+}
