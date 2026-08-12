@@ -1,7 +1,11 @@
 import { getSupabase } from "../lib/supabaseClient";
 import type { Store } from "../types/database";
 
-export async function createStore(params: { name: string; timezone?: string; currency?: string }): Promise<Store> {
+export async function createStore(params: {
+  name: string;
+  timezone?: string;
+  currency?: string;
+}): Promise<Store> {
   const supabase = getSupabase();
   const {
     data: { user },
@@ -35,14 +39,26 @@ export async function createStore(params: { name: string; timezone?: string; cur
 
 export async function getStore(id: string): Promise<Store> {
   const supabase = getSupabase();
-  const { data, error } = await supabase.from("stores").select("*").eq("id", id).single();
+  const { data, error } = await supabase
+    .from("stores")
+    .select("*")
+    .eq("id", id)
+    .single();
   if (error) throw error;
   return data;
 }
 
-export async function updateStore(id: string, updates: { name?: string; timezone?: string; currency?: string }) {
+export async function updateStore(
+  id: string,
+  updates: { name?: string; timezone?: string; currency?: string },
+) {
   const supabase = getSupabase();
-  const { data, error } = await supabase.from("stores").update(updates).eq("id", id).select().single();
+  const { data, error } = await supabase
+    .from("stores")
+    .update(updates)
+    .eq("id", id)
+    .select()
+    .single();
   if (error) throw error;
   return data;
 }

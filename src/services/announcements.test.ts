@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createAnnouncement } from "./announcements";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getSupabase } from "../lib/supabaseClient";
+import { createAnnouncement } from "./announcements";
 
 vi.mock("../lib/supabaseClient");
 
@@ -12,20 +12,18 @@ describe("announcements service", () => {
   it("createAnnouncement inserts with correct shape", async () => {
     const mockInsert = vi.fn().mockReturnValue({
       select: vi.fn().mockReturnValue({
-        single: vi
-          .fn()
-          .mockResolvedValue({
-            data: {
-              id: "test-id",
-              store_id: "store-123",
-              title: "Test",
-              body: "Body",
-              active: true,
-              created_by: "user-123",
-              created_at: "2026-08-12T00:00:00Z",
-            },
-            error: null,
-          }),
+        single: vi.fn().mockResolvedValue({
+          data: {
+            id: "test-id",
+            store_id: "store-123",
+            title: "Test",
+            body: "Body",
+            active: true,
+            created_by: "user-123",
+            created_at: "2026-08-12T00:00:00Z",
+          },
+          error: null,
+        }),
       }),
     });
 

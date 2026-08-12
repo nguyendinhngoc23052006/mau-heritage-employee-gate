@@ -1,13 +1,16 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "../components/ui/Button";
-import { Input, Label } from "../components/ui/Input";
 import { Card, CardTitle } from "../components/ui/Card";
-import { EmptyState, LoadingState, ErrorState } from "../components/ui/EmptyState";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "../components/ui/EmptyState";
+import { Input, Label } from "../components/ui/Input";
 import { useT } from "../lib/i18n";
-import { listRules, applyManualRule } from "../services/rules";
 import { listMembers } from "../services/members";
-import type { Rule } from "../types/database";
+import { applyManualRule, listRules } from "../services/rules";
 
 interface ApplyRulePageProps {
   storeId: string;
@@ -21,7 +24,11 @@ export function ApplyRulePage({ storeId }: ApplyRulePageProps) {
   const [reason, setReason] = useState("");
   const [successMessage, setSuccessMessage] = useState<string>("");
 
-  const { data: rules, isLoading: rulesLoading, error: rulesError } = useQuery({
+  const {
+    data: rules,
+    isLoading: rulesLoading,
+    error: rulesError,
+  } = useQuery({
     queryKey: ["rules", storeId, "active"],
     queryFn: async () => {
       const allRules = await listRules(storeId);
@@ -29,7 +36,11 @@ export function ApplyRulePage({ storeId }: ApplyRulePageProps) {
     },
   });
 
-  const { data: members, isLoading: membersLoading, error: membersError } = useQuery({
+  const {
+    data: members,
+    isLoading: membersLoading,
+    error: membersError,
+  } = useQuery({
     queryKey: ["members", storeId],
     queryFn: () => listMembers(storeId),
   });
@@ -70,7 +81,11 @@ export function ApplyRulePage({ storeId }: ApplyRulePageProps) {
   }
 
   if (error) {
-    return <ErrorState message={error instanceof Error ? error.message : "Error loading data"} />;
+    return (
+      <ErrorState
+        message={error instanceof Error ? error.message : "Error loading data"}
+      />
+    );
   }
 
   if (!rules || rules.length === 0) {
@@ -89,7 +104,9 @@ export function ApplyRulePage({ storeId }: ApplyRulePageProps) {
       </div>
 
       {successMessage && (
-        <div className="p-4 bg-green-100 text-green-800 rounded-md">{successMessage}</div>
+        <div className="p-4 bg-green-100 text-green-800 rounded-md">
+          {successMessage}
+        </div>
       )}
 
       <Card>
@@ -159,7 +176,9 @@ export function ApplyRulePage({ storeId }: ApplyRulePageProps) {
 
           <Button
             type="submit"
-            disabled={!selectedRuleId || !selectedUserId || applyMutation.isPending}
+            disabled={
+              !selectedRuleId || !selectedUserId || applyMutation.isPending
+            }
             className="w-full"
           >
             {applyMutation.isPending ? t("common.loading") : "Apply rule"}

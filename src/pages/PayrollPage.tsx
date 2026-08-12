@@ -1,15 +1,17 @@
-import { useState, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { startOfMonth, endOfMonth, format } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
+import { endOfMonth, format, startOfMonth } from "date-fns";
+import { useMemo, useState } from "react";
 import { Button } from "../components/ui/Button";
-import { Label } from "../components/ui/Input";
 import { Card, CardTitle } from "../components/ui/Card";
-import { EmptyState, LoadingState, ErrorState } from "../components/ui/EmptyState";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "../components/ui/EmptyState";
+import { downloadCsv, toCsv } from "../lib/csv";
 import { useT } from "../lib/i18n";
 import { formatVnd } from "../lib/money";
-import { computePayroll, markPrizeFinePaid } from "../services/payroll";
-import { toCsv, downloadCsv } from "../lib/csv";
-import type { PayrollRow } from "../services/payroll";
+import { computePayroll } from "../services/payroll";
 
 interface PayrollPageProps {
   storeId: string;
@@ -17,7 +19,6 @@ interface PayrollPageProps {
 
 export function PayrollPage({ storeId }: PayrollPageProps) {
   const t = useT();
-  const queryClient = useQueryClient();
   const [date, setDate] = useState(() => new Date());
 
   const startDate = startOfMonth(date);
@@ -25,16 +26,13 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
   const fromIso = startDate.toISOString();
   const toIso = endDate.toISOString();
 
-  const { data: payroll, isLoading, error } = useQuery({
+  const {
+    data: payroll,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["payroll", storeId, fromIso, toIso],
     queryFn: () => computePayroll(storeId, fromIso, toIso),
-  });
-
-  const markPaidMutation = useMutation({
-    mutationFn: (prizeFineFineId: string) => markPrizeFinePaid(prizeFineFineId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["payroll", storeId, fromIso, toIso] });
-    },
   });
 
   const handleDownloadCsv = () => {
@@ -43,14 +41,24 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
     const rows = payroll.map((row) => ({
       Name: row.display_name || row.user_id,
       Hours: (row.minutes_worked / 60).toFixed(2),
-      "Hourly rate (VND)": row.hourly_rate_cents ? row.hourly_rate_cents.toString() : "0",
+      "Hourly rate (VND)": row.hourly_rate_cents
+        ? row.hourly_rate_cents.toString()
+        : "0",
       "Wages (VND)": row.wages_cents.toString(),
       "Prizes (VND)": row.prizes_cents.toString(),
       "Fines (VND)": row.fines_cents.toString(),
       "Total (VND)": row.total_cents.toString(),
     }));
 
-    const headers = ["Name", "Hours", "Hourly rate (VND)", "Wages (VND)", "Prizes (VND)", "Fines (VND)", "Total (VND)"];
+    const headers = [
+      "Name",
+      "Hours",
+      "Hourly rate (VND)",
+      "Wages (VND)",
+      "Prizes (VND)",
+      "Fines (VND)",
+      "Total (VND)",
+    ];
     const csv = toCsv(rows, headers);
     const filename = `payroll-${format(startDate, "yyyy-MM-dd")}-${format(endDate, "yyyy-MM-dd")}.csv`;
     downloadCsv(filename, csv);
@@ -66,17 +74,35 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
     setDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
   };
 
-  const totalWages = useMemo(() => payroll?.reduce((sum, row) => sum + row.wages_cents, 0) ?? 0, [payroll]);
-  const totalPrizes = useMemo(() => payroll?.reduce((sum, row) => sum + row.prizes_cents, 0) ?? 0, [payroll]);
-  const totalFines = useMemo(() => payroll?.reduce((sum, row) => sum + row.fines_cents, 0) ?? 0, [payroll]);
-  const grandTotal = useMemo(() => payroll?.reduce((sum, row) => sum + row.total_cents, 0) ?? 0, [payroll]);
+  const totalWages = useMemo(
+    () => payroll?.reduce((sum, row) => sum + row.wages_cents, 0) ?? 0,
+    [payroll],
+  );
+  const totalPrizes = useMemo(
+    () => payroll?.reduce((sum, row) => sum + row.prizes_cents, 0) ?? 0,
+    [payroll],
+  );
+  const totalFines = useMemo(
+    () => payroll?.reduce((sum, row) => sum + row.fines_cents, 0) ?? 0,
+    [payroll],
+  );
+  const grandTotal = useMemo(
+    () => payroll?.reduce((sum, row) => sum + row.total_cents, 0) ?? 0,
+    [payroll],
+  );
 
   if (isLoading) {
     return <LoadingState>{t("common.loading")}</LoadingState>;
   }
 
   if (error) {
-    return <ErrorState message={error instanceof Error ? error.message : "Error loading payroll"} />;
+    return (
+      <ErrorState
+        message={
+          error instanceof Error ? error.message : "Error loading payroll"
+        }
+      />
+    );
   }
 
   return (
@@ -92,14 +118,19 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
             <Button onClick={handlePrevMonth} variant="secondary">
               ← Previous
             </Button>
-            <div className="text-lg font-semibold text-center flex-1">{monthYear}</div>
+            <div className="text-lg font-semibold text-center flex-1">
+              {monthYear}
+            </div>
             <Button onClick={handleNextMonth} variant="secondary">
               Next →
             </Button>
           </div>
 
           <div className="flex gap-2">
-            <Button onClick={handleDownloadCsv} disabled={!payroll || payroll.length === 0}>
+            <Button
+              onClick={handleDownloadCsv}
+              disabled={!payroll || payroll.length === 0}
+            >
               {t("payroll.download_csv")}
             </Button>
           </div>
@@ -118,7 +149,9 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
                   <th className="text-right px-4 py-2">{t("payroll.hours")}</th>
                   <th className="text-right px-4 py-2">Rate (VND/hr)</th>
                   <th className="text-right px-4 py-2">{t("payroll.wages")}</th>
-                  <th className="text-right px-4 py-2">{t("payroll.prizes")}</th>
+                  <th className="text-right px-4 py-2">
+                    {t("payroll.prizes")}
+                  </th>
                   <th className="text-right px-4 py-2">{t("payroll.fines")}</th>
                   <th className="text-right px-4 py-2">{t("payroll.total")}</th>
                 </tr>
@@ -126,15 +159,29 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
               <tbody>
                 {payroll.map((row) => (
                   <tr key={row.user_id} className="border-b hover:bg-slate-50">
-                    <td className="px-4 py-2">{row.display_name || row.user_id}</td>
-                    <td className="text-right px-4 py-2">{(row.minutes_worked / 60).toFixed(1)}</td>
-                    <td className="text-right px-4 py-2">
-                      {row.hourly_rate_cents ? formatVnd(row.hourly_rate_cents) : "—"}
+                    <td className="px-4 py-2">
+                      {row.display_name || row.user_id}
                     </td>
-                    <td className="text-right px-4 py-2">{formatVnd(row.wages_cents)}</td>
-                    <td className="text-right px-4 py-2 text-green-600">{formatVnd(row.prizes_cents)}</td>
-                    <td className="text-right px-4 py-2 text-red-600">{formatVnd(row.fines_cents)}</td>
-                    <td className="text-right px-4 py-2 font-semibold">{formatVnd(row.total_cents)}</td>
+                    <td className="text-right px-4 py-2">
+                      {(row.minutes_worked / 60).toFixed(1)}
+                    </td>
+                    <td className="text-right px-4 py-2">
+                      {row.hourly_rate_cents
+                        ? formatVnd(row.hourly_rate_cents)
+                        : "—"}
+                    </td>
+                    <td className="text-right px-4 py-2">
+                      {formatVnd(row.wages_cents)}
+                    </td>
+                    <td className="text-right px-4 py-2 text-green-600">
+                      {formatVnd(row.prizes_cents)}
+                    </td>
+                    <td className="text-right px-4 py-2 text-red-600">
+                      {formatVnd(row.fines_cents)}
+                    </td>
+                    <td className="text-right px-4 py-2 font-semibold">
+                      {formatVnd(row.total_cents)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -143,11 +190,19 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
                   <td colSpan={2} className="px-4 py-2">
                     Total
                   </td>
-                  <td className="px-4 py-2"></td>
-                  <td className="text-right px-4 py-2">{formatVnd(totalWages)}</td>
-                  <td className="text-right px-4 py-2 text-green-600">{formatVnd(totalPrizes)}</td>
-                  <td className="text-right px-4 py-2 text-red-600">{formatVnd(totalFines)}</td>
-                  <td className="text-right px-4 py-2">{formatVnd(grandTotal)}</td>
+                  <td className="px-4 py-2" />
+                  <td className="text-right px-4 py-2">
+                    {formatVnd(totalWages)}
+                  </td>
+                  <td className="text-right px-4 py-2 text-green-600">
+                    {formatVnd(totalPrizes)}
+                  </td>
+                  <td className="text-right px-4 py-2 text-red-600">
+                    {formatVnd(totalFines)}
+                  </td>
+                  <td className="text-right px-4 py-2">
+                    {formatVnd(grandTotal)}
+                  </td>
                 </tr>
               </tfoot>
             </table>

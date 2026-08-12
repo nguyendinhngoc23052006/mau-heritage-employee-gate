@@ -1,5 +1,10 @@
 import { getSupabase } from "../lib/supabaseClient";
-import type { Invite, EmploymentType, Role, Membership } from "../types/database";
+import type {
+  EmploymentType,
+  Invite,
+  Membership,
+  Role,
+} from "../types/database";
 
 export async function listInvitesFor(storeId: string): Promise<Invite[]> {
   const supabase = getSupabase();
@@ -52,7 +57,9 @@ export async function revokeInvite(id: string): Promise<Invite> {
 
 export async function acceptInvite(token: string): Promise<Membership> {
   const supabase = getSupabase();
-  const { data, error } = await supabase.rpc("accept_invite", { p_token: token });
+  const { data, error } = await supabase.rpc("accept_invite", {
+    p_token: token,
+  });
   if (error) throw error;
   return data;
 }

@@ -1,13 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { Card, CardTitle } from "../components/ui/Card";
-import { ErrorState, LoadingState, EmptyState } from "../components/ui/EmptyState";
-import { useT } from "../lib/i18n";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "../components/ui/EmptyState";
 import { useSession } from "../hooks/useSession";
+import { useT } from "../lib/i18n";
 import { getSupabase } from "../lib/supabaseClient";
 import { listAnnouncements } from "../services/announcements";
 import { listMyNotifications } from "../services/notifications";
-import type { Announcement, PointBalance, Shift } from "../types/database";
+import type { Announcement, PointBalance } from "../types/database";
 
 export function DashboardPage() {
   const t = useT();
@@ -21,7 +25,10 @@ export function DashboardPage() {
   // Announcements
   const { data: announcements, isLoading: announcementsLoading } = useQuery({
     queryKey: ["announcements", storeId, "latest"],
-    queryFn: () => listAnnouncements(storeId, { activeOnly: true }).then((items) => items.slice(0, 3)),
+    queryFn: () =>
+      listAnnouncements(storeId, { activeOnly: true }).then((items) =>
+        items.slice(0, 3),
+      ),
   });
 
   // Notifications
@@ -51,7 +58,9 @@ export function DashboardPage() {
     queryKey: ["shifts", storeId, "upcoming-count"],
     queryFn: async () => {
       const supabase = getSupabase();
-      const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      const sevenDaysFromNow = new Date(
+        Date.now() + 7 * 24 * 60 * 60 * 1000,
+      ).toISOString();
       const { data, error } = await supabase
         .from("shifts")
         .select("id", { count: "exact" })
@@ -64,7 +73,11 @@ export function DashboardPage() {
     },
   });
 
-  const isLoading = announcementsLoading || notificationsLoading || pointsLoading || shiftsLoading;
+  const isLoading =
+    announcementsLoading ||
+    notificationsLoading ||
+    pointsLoading ||
+    shiftsLoading;
 
   if (isLoading) {
     return <LoadingState>{t("common.loading")}</LoadingState>;
@@ -72,7 +85,9 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-slate-900">{t("nav.dashboard")}</h1>
+      <h1 className="text-2xl font-semibold text-slate-900">
+        {t("nav.dashboard")}
+      </h1>
 
       {/* Stats */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
@@ -86,7 +101,9 @@ export function DashboardPage() {
 
         {/* Unread Notifications */}
         <Card className="text-center">
-          <div className="text-sm text-slate-600">{t("notifications.title")}</div>
+          <div className="text-sm text-slate-600">
+            {t("notifications.title")}
+          </div>
           <div className="mt-2 text-3xl font-semibold text-slate-900">
             {notifications?.filter((n) => !n.read_at).length ?? 0}
           </div>
@@ -102,7 +119,9 @@ export function DashboardPage() {
 
         {/* Total Announcements */}
         <Card className="text-center">
-          <div className="text-sm text-slate-600">{t("announcements.title")}</div>
+          <div className="text-sm text-slate-600">
+            {t("announcements.title")}
+          </div>
           <div className="mt-2 text-3xl font-semibold text-slate-900">
             {announcements?.length ?? 0}
           </div>
@@ -117,9 +136,16 @@ export function DashboardPage() {
         ) : (
           <div className="mt-4 space-y-3">
             {announcements?.map((announcement: Announcement) => (
-              <div key={announcement.id} className="border-b border-slate-100 pb-3 last:border-0">
-                <h3 className="font-semibold text-slate-900">{announcement.title}</h3>
-                <p className="mt-1 line-clamp-2 text-sm text-slate-600">{announcement.body}</p>
+              <div
+                key={announcement.id}
+                className="border-b border-slate-100 pb-3 last:border-0"
+              >
+                <h3 className="font-semibold text-slate-900">
+                  {announcement.title}
+                </h3>
+                <p className="mt-1 line-clamp-2 text-sm text-slate-600">
+                  {announcement.body}
+                </p>
                 <p className="mt-2 text-xs text-slate-400">
                   {new Date(announcement.created_at).toLocaleString()}
                 </p>

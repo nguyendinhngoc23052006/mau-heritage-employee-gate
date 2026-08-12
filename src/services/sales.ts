@@ -31,7 +31,10 @@ export async function submitSales(input: {
   return data as SalesReport;
 }
 
-export async function listMySales(userId: string, storeId: string): Promise<SalesReport[]> {
+export async function listMySales(
+  userId: string,
+  storeId: string,
+): Promise<SalesReport[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from("sales_reports")
@@ -43,7 +46,9 @@ export async function listMySales(userId: string, storeId: string): Promise<Sale
   return (data ?? []) as SalesReport[];
 }
 
-export async function listPendingSales(storeId: string): Promise<SalesReport[]> {
+export async function listPendingSales(
+  storeId: string,
+): Promise<SalesReport[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from("sales_reports")
@@ -70,7 +75,10 @@ export async function approveSales(id: string): Promise<SalesReport> {
   return data as SalesReport;
 }
 
-export async function disputeSales(id: string, disputeReason: string): Promise<SalesReport> {
+export async function disputeSales(
+  id: string,
+  disputeReason: string,
+): Promise<SalesReport> {
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from("sales_reports")

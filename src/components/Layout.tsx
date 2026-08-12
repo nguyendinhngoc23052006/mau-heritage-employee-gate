@@ -1,9 +1,9 @@
 import { Outlet, useNavigate } from "react-router-dom";
-import { StoreSwitcher } from "./StoreSwitcher";
-import { Nav } from "./Nav";
-import { Button } from "./ui/Button";
-import { getSupabase } from "../lib/supabaseClient";
 import { useI18n, useT } from "../lib/i18n";
+import { getSupabase } from "../lib/supabaseClient";
+import { Nav } from "./Nav";
+import { StoreSwitcher } from "./StoreSwitcher";
+import { Button } from "./ui/Button";
 
 export function Layout() {
   const t = useT();

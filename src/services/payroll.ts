@@ -1,6 +1,6 @@
-import { getSupabase } from "../lib/supabaseClient";
 import { minutesBetween, wagesCents } from "../lib/money";
-import type { ClockEvent, MembershipPublic, PrizeFineEvent } from "../types/database";
+import { getSupabase } from "../lib/supabaseClient";
+import type { PrizeFineEvent } from "../types/database";
 
 export interface PayrollRow {
   user_id: string;
@@ -61,25 +61,46 @@ export async function computePayroll(
 
   if (profilesError) throw profilesError;
 
-  const profileMap = new Map((profiles ?? []).map((p) => [p.id, p.display_name]));
-  const memberMap = new Map(members?.map((m) => [m.user_id, m]) ?? []);
+  const profileMap = new Map(
+    (profiles ?? []).map((p) => [p.id, p.display_name]),
+  );
 
   // Group clock events by user
-  const clockByUser = new Map<string, ClockEvent[]>();
+  const clockByUser = new Map<
+    string,
+    Array<{ user_id: string; kind: string; at: string }>
+  >();
   (clockEvents ?? []).forEach((event) => {
     if (!clockByUser.has(event.user_id)) {
       clockByUser.set(event.user_id, []);
     }
-    clockByUser.get(event.user_id)!.push(event);
+    clockByUser
+      .get(event.user_id)
+      ?.push(event as { user_id: string; kind: string; at: string });
   });
 
   // Group prize/fine events by user
-  const pfByUser = new Map<string, PrizeFineEvent[]>();
+  const pfByUser = new Map<
+    string,
+    Array<{
+      user_id: string;
+      kind: "prize" | "fine";
+      amount_cents: number;
+      status: string;
+    }>
+  >();
   (prizeFineEvents ?? []).forEach((event) => {
     if (!pfByUser.has(event.user_id)) {
       pfByUser.set(event.user_id, []);
     }
-    pfByUser.get(event.user_id)!.push(event);
+    pfByUser.get(event.user_id)?.push(
+      event as {
+        user_id: string;
+        kind: "prize" | "fine";
+        amount_cents: number;
+        status: string;
+      },
+    );
   });
 
   const rows: PayrollRow[] = [];
@@ -118,7 +139,9 @@ export async function computePayroll(
   return rows;
 }
 
-function pairClockEvents(events: ClockEvent[]): number {
+function pairClockEvents(
+  events: Array<{ user_id: string; kind: string; at: string }>,
+): number {
   let totalMinutes = 0;
   let inTime: string | null = null;
 

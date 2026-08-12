@@ -1,13 +1,13 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "../components/ui/Button";
-import { Input, Label } from "../components/ui/Input";
 import { Card, CardTitle } from "../components/ui/Card";
 import { ErrorState, LoadingState } from "../components/ui/EmptyState";
+import { Input, Label } from "../components/ui/Input";
+import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
 import { useT } from "../lib/i18n";
-import { useRoleOn, isManagerRole } from "../hooks/useMemberships";
 import { getStore, updateStore } from "../services/stores";
-import { useState } from "react";
 
 export function SettingsPage() {
   const t = useT();
@@ -21,7 +21,11 @@ export function SettingsPage() {
   const [currency, setCurrency] = useState("");
   const [saved, setSaved] = useState(false);
 
-  const { data: store, isLoading, error } = useQuery({
+  const {
+    data: store,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["store", storeId],
     queryFn: () => (storeId ? getStore(storeId) : Promise.resolve(null)),
     enabled: !!storeId,
@@ -42,7 +46,11 @@ export function SettingsPage() {
   }
 
   if (error) {
-    return <ErrorState message={error instanceof Error ? error.message : "Error loading store"} />;
+    return (
+      <ErrorState
+        message={error instanceof Error ? error.message : "Error loading store"}
+      />
+    );
   }
 
   if (store && name === "") {
@@ -95,14 +103,22 @@ export function SettingsPage() {
           {updateMutation.error && (
             <ErrorState
               message={
-                updateMutation.error instanceof Error ? updateMutation.error.message : "Failed to save settings"
+                updateMutation.error instanceof Error
+                  ? updateMutation.error.message
+                  : "Failed to save settings"
               }
             />
           )}
 
-          {saved && <div className="text-sm text-green-600">{t("profile.saved")}</div>}
+          {saved && (
+            <div className="text-sm text-green-600">{t("profile.saved")}</div>
+          )}
 
-          <Button onClick={handleSave} disabled={!canEdit || updateMutation.isPending} className="w-full">
+          <Button
+            onClick={handleSave}
+            disabled={!canEdit || updateMutation.isPending}
+            className="w-full"
+          >
             {updateMutation.isPending ? t("common.loading") : t("common.save")}
           </Button>
         </div>

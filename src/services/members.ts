@@ -1,11 +1,13 @@
 import { getSupabase } from "../lib/supabaseClient";
-import type { MembershipPublic, Role, Profile } from "../types/database";
+import type { MembershipPublic, Profile, Role } from "../types/database";
 
 export interface MemberWithProfile extends MembershipPublic {
   profile: Profile;
 }
 
-export async function listMembers(storeId: string): Promise<MemberWithProfile[]> {
+export async function listMembers(
+  storeId: string,
+): Promise<MemberWithProfile[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from("memberships_public")
@@ -17,7 +19,11 @@ export async function listMembers(storeId: string): Promise<MemberWithProfile[]>
   return (data ?? []) as MemberWithProfile[];
 }
 
-export async function updateMemberRole(userId: string, storeId: string, role: Role) {
+export async function updateMemberRole(
+  userId: string,
+  storeId: string,
+  role: Role,
+) {
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from("memberships")

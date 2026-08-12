@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { wagesCents, minutesBetween } from "../lib/money";
+import { describe, expect, it } from "vitest";
+import { minutesBetween, wagesCents } from "../lib/money";
 
 describe("payroll helper functions", () => {
   it("wagesCents calculates correctly with integer math", () => {

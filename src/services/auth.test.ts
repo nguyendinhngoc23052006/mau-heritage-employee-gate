@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { sendMagicLink } from "./auth";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getSupabase } from "../lib/supabaseClient";
+import { sendMagicLink } from "./auth";
 
 vi.mock("../lib/supabaseClient");
 
@@ -10,7 +10,9 @@ describe("auth service", () => {
   });
 
   it("sendMagicLink calls signInWithOtp with correct args", async () => {
-    const mockSignInWithOtp = vi.fn().mockResolvedValue({ data: {}, error: null });
+    const mockSignInWithOtp = vi
+      .fn()
+      .mockResolvedValue({ data: {}, error: null });
     vi.mocked(getSupabase).mockReturnValue({
       auth: {
         signInWithOtp: mockSignInWithOtp,

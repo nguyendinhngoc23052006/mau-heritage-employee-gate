@@ -9,7 +9,7 @@ export interface AttendanceHeatmapData {
 
 export async function computeAttendanceHeatmap(
   storeId: string,
-  { from, to }: { from: string; to: string }
+  { from, to }: { from: string; to: string },
 ): Promise<AttendanceHeatmapData> {
   const supabase = getSupabase();
 

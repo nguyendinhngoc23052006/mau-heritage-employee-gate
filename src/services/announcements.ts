@@ -3,10 +3,13 @@ import type { Announcement } from "../types/database";
 
 export async function listAnnouncements(
   storeId: string,
-  { activeOnly = false }: { activeOnly?: boolean } = {}
+  { activeOnly = false }: { activeOnly?: boolean } = {},
 ): Promise<Announcement[]> {
   const supabase = getSupabase();
-  let query = supabase.from("announcements").select("*").eq("store_id", storeId);
+  let query = supabase
+    .from("announcements")
+    .select("*")
+    .eq("store_id", storeId);
 
   if (activeOnly) {
     query = query.eq("active", true);
@@ -43,7 +46,9 @@ export async function createAnnouncement(input: {
   return data;
 }
 
-export async function deactivateAnnouncement(id: string): Promise<Announcement> {
+export async function deactivateAnnouncement(
+  id: string,
+): Promise<Announcement> {
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from("announcements")

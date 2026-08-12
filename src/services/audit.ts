@@ -13,7 +13,7 @@ export async function listAuditLog(
     entity_type?: string;
     limit?: number;
     before_at?: string;
-  } = {}
+  } = {},
 ): Promise<AuditLog[]> {
   const supabase = getSupabase();
   let query = supabase.from("audit_log").select("*").eq("store_id", storeId);

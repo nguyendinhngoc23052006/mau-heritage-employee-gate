@@ -1,14 +1,18 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useT } from "../lib/i18n";
-import { useRoleOn, isManagerRole } from "../hooks/useMemberships";
-import { getSupabase } from "../lib/supabaseClient";
-import { listShifts, createShift, claimShift } from "../services/shifts";
-import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
-import { Input, Textarea, Label } from "../components/ui/Input";
-import { LoadingState, ErrorState, EmptyState } from "../components/ui/EmptyState";
+import { Card } from "../components/ui/Card";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "../components/ui/EmptyState";
+import { Input, Label, Textarea } from "../components/ui/Input";
+import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
+import { useT } from "../lib/i18n";
+import { getSupabase } from "../lib/supabaseClient";
+import { claimShift, createShift, listShifts } from "../services/shifts";
 import type { Shift } from "../types/database";
 
 function formatDate(iso: string): string {
@@ -28,11 +32,22 @@ export function SchedulePage() {
   const queryClient = useQueryClient();
 
   const [showNewForm, setShowNewForm] = useState(false);
-  const [formData, setFormData] = useState({ starts_at: "", ends_at: "", notes: "" });
+  const [formData, setFormData] = useState({
+    starts_at: "",
+    ends_at: "",
+    notes: "",
+  });
 
-  if (!storeId) return <ErrorState message={t("common.error", { message: "Store not found" })} />;
+  if (!storeId)
+    return (
+      <ErrorState message={t("common.error", { message: "Store not found" })} />
+    );
 
-  const { data: shifts, isLoading, error } = useQuery({
+  const {
+    data: shifts,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["shifts", storeId],
     queryFn: () => {
       const from = new Date();
@@ -73,7 +88,10 @@ export function SchedulePage() {
   // Realtime subscription
   useRealtime(storeId, queryClient);
 
-  if (error) return <ErrorState message={t("common.error", { message: String(error) })} />;
+  if (error)
+    return (
+      <ErrorState message={t("common.error", { message: String(error) })} />
+    );
   if (isLoading) return <LoadingState>{t("common.loading")}</LoadingState>;
   if (!shifts || shifts.length === 0)
     return (
@@ -81,7 +99,10 @@ export function SchedulePage() {
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold">{t("schedule.title")}</h1>
           {isManagerRole(role) && (
-            <Button onClick={() => setShowNewForm(!showNewForm)} variant="primary">
+            <Button
+              onClick={() => setShowNewForm(!showNewForm)}
+              variant="primary"
+            >
               {t("schedule.new_shift")}
             </Button>
           )}
@@ -104,7 +125,10 @@ export function SchedulePage() {
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold">{t("schedule.title")}</h1>
         {isManagerRole(role) && (
-          <Button onClick={() => setShowNewForm(!showNewForm)} variant="primary">
+          <Button
+            onClick={() => setShowNewForm(!showNewForm)}
+            variant="primary"
+          >
             {t("schedule.new_shift")}
           </Button>
         )}
@@ -122,7 +146,11 @@ export function SchedulePage() {
 
       <div className="space-y-2">
         {shifts.map((shift) => (
-          <ShiftRow key={shift.id} shift={shift} onClaim={() => claimMutation.mutate(shift.id)} />
+          <ShiftRow
+            key={shift.id}
+            shift={shift}
+            onClaim={() => claimMutation.mutate(shift.id)}
+          />
         ))}
       </div>
     </div>
@@ -144,7 +172,9 @@ function ShiftRow({
         <div className="text-sm font-semibold">
           {formatDate(shift.starts_at)} – {formatDate(shift.ends_at)}
         </div>
-        {shift.notes && <div className="text-xs text-slate-500">{shift.notes}</div>}
+        {shift.notes && (
+          <div className="text-xs text-slate-500">{shift.notes}</div>
+        )}
         <div className="mt-1 text-xs text-slate-600">
           {shift.status === "open"
             ? t("schedule.open")
@@ -186,7 +216,9 @@ function NewShiftForm({
             id="starts_at"
             type="datetime-local"
             value={formData.starts_at}
-            onChange={(e) => setFormData({ ...formData, starts_at: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, starts_at: e.target.value })
+            }
           />
         </div>
         <div>
@@ -195,7 +227,9 @@ function NewShiftForm({
             id="ends_at"
             type="datetime-local"
             value={formData.ends_at}
-            onChange={(e) => setFormData({ ...formData, ends_at: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, ends_at: e.target.value })
+            }
           />
         </div>
         <div>
@@ -203,7 +237,9 @@ function NewShiftForm({
           <Textarea
             id="notes"
             value={formData.notes}
-            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, notes: e.target.value })
+            }
             rows={2}
           />
         </div>

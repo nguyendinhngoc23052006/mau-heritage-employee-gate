@@ -1,7 +1,7 @@
 import type { RouteObject } from "react-router-dom";
 import { useParams } from "react-router-dom";
-import { RulesPage } from "../pages/RulesPage";
 import { ApplyRulePage } from "../pages/ApplyRulePage";
+import { RulesPage } from "../pages/RulesPage";
 
 function RulesWrapper() {
   const { storeId } = useParams<{ storeId: string }>();

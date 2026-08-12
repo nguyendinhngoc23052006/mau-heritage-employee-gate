@@ -1,7 +1,10 @@
 import { getSupabase } from "./supabaseClient";
 
 // Best-effort: log unhandled errors to client_errors. Never throws.
-export async function logClientError(err: unknown, url?: string): Promise<void> {
+export async function logClientError(
+  err: unknown,
+  url?: string,
+): Promise<void> {
   try {
     const supabase = getSupabase();
     const { data } = await supabase.auth.getUser();

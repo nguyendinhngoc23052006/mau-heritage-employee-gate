@@ -1,22 +1,26 @@
-import { createBrowserRouter, Navigate, type RouteObject } from "react-router-dom";
-import { Layout } from "../components/Layout";
+import {
+  Navigate,
+  type RouteObject,
+  createBrowserRouter,
+} from "react-router-dom";
 import { AuthGate } from "../components/AuthGate";
+import { Layout } from "../components/Layout";
 
-// Slice route files. Each slice exports RouteObject[] (children of /store/:storeId).
-import { authRoutes } from "../routes/auth";
-import { onboardingRoutes } from "../routes/onboarding";
-import { inviteRoutes } from "../routes/invite";
-import { dashboardRoutes } from "../routes/dashboard";
-import { scheduleRoutes } from "../routes/schedule";
-import { clockRoutes } from "../routes/clock";
-import { salesRoutes } from "../routes/sales";
-import { peopleRoutes } from "../routes/people";
-import { rulesRoutes } from "../routes/rules";
-import { payrollRoutes } from "../routes/payroll";
 import { announcementsRoutes } from "../routes/announcements";
 import { auditRoutes } from "../routes/audit";
-import { settingsRoutes } from "../routes/settings";
+// Slice route files. Each slice exports RouteObject[] (children of /store/:storeId).
+import { authRoutes } from "../routes/auth";
+import { clockRoutes } from "../routes/clock";
+import { dashboardRoutes } from "../routes/dashboard";
+import { inviteRoutes } from "../routes/invite";
 import { meRoutes } from "../routes/me";
+import { onboardingRoutes } from "../routes/onboarding";
+import { payrollRoutes } from "../routes/payroll";
+import { peopleRoutes } from "../routes/people";
+import { rulesRoutes } from "../routes/rules";
+import { salesRoutes } from "../routes/sales";
+import { scheduleRoutes } from "../routes/schedule";
+import { settingsRoutes } from "../routes/settings";
 
 const storeChildren: RouteObject[] = [
   ...dashboardRoutes,

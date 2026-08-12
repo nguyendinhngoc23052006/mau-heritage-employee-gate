@@ -1,11 +1,16 @@
-import { useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useT } from "../lib/i18n";
-import { useSession } from "../hooks/useSession";
-import { getCurrentClockState, clockIn, clockOut, listMyClockEvents } from "../services/clock";
-import { Card, CardTitle } from "../components/ui/Card";
+import { useParams } from "react-router-dom";
 import { Button } from "../components/ui/Button";
-import { LoadingState, ErrorState } from "../components/ui/EmptyState";
+import { Card, CardTitle } from "../components/ui/Card";
+import { ErrorState, LoadingState } from "../components/ui/EmptyState";
+import { useSession } from "../hooks/useSession";
+import { useT } from "../lib/i18n";
+import {
+  clockIn,
+  clockOut,
+  getCurrentClockState,
+  listMyClockEvents,
+} from "../services/clock";
 
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString("vi-VN", {
@@ -21,7 +26,11 @@ export function ClockPage() {
   const queryClient = useQueryClient();
 
   if (!storeId || !user)
-    return <ErrorState message={t("common.error", { message: "Not authenticated" })} />;
+    return (
+      <ErrorState
+        message={t("common.error", { message: "Not authenticated" })}
+      />
+    );
 
   const { data: clockState, isLoading: stateLoading } = useQuery({
     queryKey: ["clock", "state", user.id, storeId],
@@ -41,20 +50,29 @@ export function ClockPage() {
   const clockInMutation = useMutation({
     mutationFn: () => clockIn(storeId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["clock", "state", user.id, storeId] });
-      queryClient.invalidateQueries({ queryKey: ["clock", "events", user.id, storeId] });
+      queryClient.invalidateQueries({
+        queryKey: ["clock", "state", user.id, storeId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["clock", "events", user.id, storeId],
+      });
     },
   });
 
   const clockOutMutation = useMutation({
     mutationFn: () => clockOut(storeId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["clock", "state", user.id, storeId] });
-      queryClient.invalidateQueries({ queryKey: ["clock", "events", user.id, storeId] });
+      queryClient.invalidateQueries({
+        queryKey: ["clock", "state", user.id, storeId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["clock", "events", user.id, storeId],
+      });
     },
   });
 
-  if (stateLoading || eventsLoading) return <LoadingState>{t("common.loading")}</LoadingState>;
+  if (stateLoading || eventsLoading)
+    return <LoadingState>{t("common.loading")}</LoadingState>;
 
   const isClockedIn = clockState === "in";
   const lastInEvent = events?.find((e) => e.kind === "in");
@@ -80,7 +98,9 @@ export function ClockPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="text-sm text-slate-600">{t("clock.status_out")}</div>
+            <div className="text-sm text-slate-600">
+              {t("clock.status_out")}
+            </div>
             <Button
               onClick={() => clockInMutation.mutate()}
               disabled={clockInMutation.isPending}

@@ -1,9 +1,9 @@
-import { RouterProvider } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { router } from "./lib/router";
-import { queryClient } from "./lib/query";
-import { I18nProvider } from "./lib/i18n";
+import { RouterProvider } from "react-router-dom";
 import { installGlobalErrorLogging } from "./lib/errorLog";
+import { I18nProvider } from "./lib/i18n";
+import { queryClient } from "./lib/query";
+import { router } from "./lib/router";
 
 installGlobalErrorLogging();
 

@@ -1,5 +1,5 @@
 import { NavLink, useParams } from "react-router-dom";
-import { useMemberships, isManagerRole } from "../hooks/useMemberships";
+import { isManagerRole, useMemberships } from "../hooks/useMemberships";
 import { useT } from "../lib/i18n";
 
 interface Item {
@@ -45,7 +45,9 @@ export function Nav() {
           end={i.to === ""}
           className={({ isActive }) =>
             `rounded-md px-3 py-1.5 text-sm font-medium transition ${
-              isActive ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100"
+              isActive
+                ? "bg-slate-900 text-white"
+                : "text-slate-700 hover:bg-slate-100"
             }`
           }
         >

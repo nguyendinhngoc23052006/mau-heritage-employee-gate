@@ -1,15 +1,24 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useT } from "../lib/i18n";
-import { useSession } from "../hooks/useSession";
-import { useRoleOn, isManagerRole } from "../hooks/useMemberships";
-import { formatVnd, parseVndToCents } from "../lib/money";
-import { submitSales, listPendingSales, approveSales, disputeSales } from "../services/sales";
-import { Card, CardTitle } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
-import { Input, Textarea, Label } from "../components/ui/Input";
-import { LoadingState, ErrorState, EmptyState } from "../components/ui/EmptyState";
+import { Card, CardTitle } from "../components/ui/Card";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "../components/ui/EmptyState";
+import { Input, Label, Textarea } from "../components/ui/Input";
+import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
+import { useSession } from "../hooks/useSession";
+import { useT } from "../lib/i18n";
+import { formatVnd, parseVndToCents } from "../lib/money";
+import {
+  approveSales,
+  disputeSales,
+  listPendingSales,
+  submitSales,
+} from "../services/sales";
 import type { SalesReport } from "../types/database";
 
 export function SalesPage() {
@@ -20,7 +29,11 @@ export function SalesPage() {
   const isManager = isManagerRole(role);
 
   if (!storeId || !user)
-    return <ErrorState message={t("common.error", { message: "Not authenticated" })} />;
+    return (
+      <ErrorState
+        message={t("common.error", { message: "Not authenticated" })}
+      />
+    );
 
   return (
     <div className="p-6">
@@ -37,7 +50,10 @@ export function SalesPage() {
   );
 }
 
-function SubmitSalesForm({ userId, storeId }: { userId: string; storeId: string }) {
+function SubmitSalesForm({
+  userId,
+  storeId,
+}: { userId: string; storeId: string }) {
   const t = useT();
   const queryClient = useQueryClient();
 
@@ -64,7 +80,9 @@ function SubmitSalesForm({ userId, storeId }: { userId: string; storeId: string 
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["sales", "mine", userId, storeId] });
+      queryClient.invalidateQueries({
+        queryKey: ["sales", "mine", userId, storeId],
+      });
       setCash("");
       setCard("");
       setQr("");
@@ -156,7 +174,11 @@ function PendingReviews({ storeId }: { storeId: string }) {
   const t = useT();
   const queryClient = useQueryClient();
 
-  const { data: pending, isLoading, error } = useQuery({
+  const {
+    data: pending,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["sales", "pending", storeId],
     queryFn: () => listPendingSales(storeId),
   });
@@ -167,20 +189,28 @@ function PendingReviews({ storeId }: { storeId: string }) {
   const approveMutation = useMutation({
     mutationFn: (id: string) => approveSales(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["sales", "pending", storeId] });
+      queryClient.invalidateQueries({
+        queryKey: ["sales", "pending", storeId],
+      });
     },
   });
 
   const disputeMutation = useMutation({
-    mutationFn: () => (disputeId ? disputeSales(disputeId, disputeReason) : Promise.reject()),
+    mutationFn: () =>
+      disputeId ? disputeSales(disputeId, disputeReason) : Promise.reject(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["sales", "pending", storeId] });
+      queryClient.invalidateQueries({
+        queryKey: ["sales", "pending", storeId],
+      });
       setDisputeId(null);
       setDisputeReason("");
     },
   });
 
-  if (error) return <ErrorState message={t("common.error", { message: String(error) })} />;
+  if (error)
+    return (
+      <ErrorState message={t("common.error", { message: String(error) })} />
+    );
   if (isLoading) return <LoadingState>{t("common.loading")}</LoadingState>;
   if (!pending || pending.length === 0)
     return (
@@ -195,7 +225,10 @@ function PendingReviews({ storeId }: { storeId: string }) {
       <CardTitle>{t("sales.pending_queue")}</CardTitle>
       <div className="space-y-3">
         {pending.map((report) => (
-          <div key={report.id} className="border-t border-slate-200 pt-3 first:border-0 first:pt-0">
+          <div
+            key={report.id}
+            className="border-t border-slate-200 pt-3 first:border-0 first:pt-0"
+          >
             <PendingSalesRow
               report={report}
               onApprove={() => approveMutation.mutate(report.id)}
@@ -242,14 +275,17 @@ function PendingSalesRow({
       </div>
       <div className="text-xs text-slate-600">
         {t("sales.cash")}: {formatVnd(report.cash_cents)} | {t("sales.card")}:{" "}
-        {formatVnd(report.card_cents)} | {t("sales.qr")}: {formatVnd(report.qr_cents)}
+        {formatVnd(report.card_cents)} | {t("sales.qr")}:{" "}
+        {formatVnd(report.qr_cents)}
       </div>
       {report.variance_cents !== 0 && (
         <div className="text-xs font-semibold text-yellow-700">
           {t("sales.variance", { amount: formatVnd(report.variance_cents) })}
         </div>
       )}
-      {report.note && <div className="text-xs text-slate-600">Note: {report.note}</div>}
+      {report.note && (
+        <div className="text-xs text-slate-600">Note: {report.note}</div>
+      )}
       <div className="flex gap-2">
         <Button
           onClick={onApprove}
@@ -259,7 +295,11 @@ function PendingSalesRow({
         >
           {t("sales.approve")}
         </Button>
-        <Button onClick={onDispute} variant="secondary" className="flex-1 text-xs">
+        <Button
+          onClick={onDispute}
+          variant="secondary"
+          className="flex-1 text-xs"
+        >
           {t("sales.dispute")}
         </Button>
       </div>
@@ -299,7 +339,11 @@ function DisputeForm({
         >
           {t("common.confirm")}
         </Button>
-        <Button onClick={onCancel} variant="secondary" className="flex-1 text-xs">
+        <Button
+          onClick={onCancel}
+          variant="secondary"
+          className="flex-1 text-xs"
+        >
           {t("common.cancel")}
         </Button>
       </div>

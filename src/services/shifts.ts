@@ -40,7 +40,10 @@ export async function createShift(input: {
   return data as Shift;
 }
 
-export async function updateShift(id: string, patch: Partial<Shift>): Promise<Shift> {
+export async function updateShift(
+  id: string,
+  patch: Partial<Shift>,
+): Promise<Shift> {
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from("shifts")
@@ -60,7 +63,9 @@ export async function deleteShift(id: string): Promise<void> {
 
 export async function claimShift(shiftId: string): Promise<Shift | null> {
   const supabase = getSupabase();
-  const { data, error } = await supabase.rpc("claim_shift", { p_shift_id: shiftId });
+  const { data, error } = await supabase.rpc("claim_shift", {
+    p_shift_id: shiftId,
+  });
   if (error) throw error;
   return (data ?? null) as Shift | null;
 }

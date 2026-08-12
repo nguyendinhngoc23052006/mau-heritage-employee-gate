@@ -3,8 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
 import { ErrorState, LoadingState } from "../components/ui/EmptyState";
-import { useT } from "../lib/i18n";
 import { useSession } from "../hooks/useSession";
+import { useT } from "../lib/i18n";
 import { acceptInvite } from "../services/invites";
 
 export function InviteAcceptPage() {

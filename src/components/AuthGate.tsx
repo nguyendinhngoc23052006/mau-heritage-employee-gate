@@ -8,7 +8,11 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const t = useT();
   const location = useLocation();
 
-  if (loading) return <div className="p-6 text-sm text-slate-500">{t("common.loading")}</div>;
-  if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  if (loading)
+    return (
+      <div className="p-6 text-sm text-slate-500">{t("common.loading")}</div>
+    );
+  if (!user)
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   return <>{children}</>;
 }

@@ -1,9 +1,9 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "../components/ui/Button";
-import { Input, Label } from "../components/ui/Input";
 import { Card, CardTitle } from "../components/ui/Card";
 import { ErrorState, LoadingState } from "../components/ui/EmptyState";
+import { Input, Label } from "../components/ui/Input";
 import { useT } from "../lib/i18n";
 import { getMyProfile, updateMyProfile } from "../services/profiles";
 
@@ -15,13 +15,18 @@ export function ProfilePage() {
   const [locale, setLocale] = useState("vi");
   const [saved, setSaved] = useState(false);
 
-  const { data: profile, isLoading, error } = useQuery({
+  const {
+    data: profile,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["profile", "me"],
     queryFn: getMyProfile,
   });
 
   const updateMutation = useMutation({
-    mutationFn: (updates: Parameters<typeof updateMyProfile>[0]) => updateMyProfile(updates),
+    mutationFn: (updates: Parameters<typeof updateMyProfile>[0]) =>
+      updateMyProfile(updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile", "me"] });
       setSaved(true);
@@ -34,7 +39,13 @@ export function ProfilePage() {
   }
 
   if (error) {
-    return <ErrorState message={error instanceof Error ? error.message : "Error loading profile"} />;
+    return (
+      <ErrorState
+        message={
+          error instanceof Error ? error.message : "Error loading profile"
+        }
+      />
+    );
   }
 
   if (profile && displayName === "") {
@@ -90,14 +101,22 @@ export function ProfilePage() {
           {updateMutation.error && (
             <ErrorState
               message={
-                updateMutation.error instanceof Error ? updateMutation.error.message : "Failed to save profile"
+                updateMutation.error instanceof Error
+                  ? updateMutation.error.message
+                  : "Failed to save profile"
               }
             />
           )}
 
-          {saved && <div className="text-sm text-green-600">{t("profile.saved")}</div>}
+          {saved && (
+            <div className="text-sm text-green-600">{t("profile.saved")}</div>
+          )}
 
-          <Button onClick={handleSave} disabled={updateMutation.isPending} className="w-full">
+          <Button
+            onClick={handleSave}
+            disabled={updateMutation.isPending}
+            className="w-full"
+          >
             {updateMutation.isPending ? t("common.loading") : t("profile.save")}
           </Button>
         </div>

@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/Button";
-import { Input, Label } from "../components/ui/Input";
 import { Card, CardTitle } from "../components/ui/Card";
-import { LoadingState, ErrorState } from "../components/ui/EmptyState";
-import { useT } from "../lib/i18n";
-import { useSession } from "../hooks/useSession";
+import { ErrorState, LoadingState } from "../components/ui/EmptyState";
+import { Input, Label } from "../components/ui/Input";
 import { useMemberships } from "../hooks/useMemberships";
+import { useSession } from "../hooks/useSession";
+import { useT } from "../lib/i18n";
 import { createStore } from "../services/stores";
 
 export function OnboardingPage() {
@@ -29,7 +29,11 @@ export function OnboardingPage() {
   if (error) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
-        <ErrorState message={error instanceof Error ? error.message : "Error loading memberships"} />
+        <ErrorState
+          message={
+            error instanceof Error ? error.message : "Error loading memberships"
+          }
+        />
       </div>
     );
   }
@@ -47,7 +51,9 @@ export function OnboardingPage() {
       const store = await createStore({ name: storeName });
       navigate(`/store/${store.id}`);
     } catch (err) {
-      setCreateError(err instanceof Error ? err.message : "Failed to create store");
+      setCreateError(
+        err instanceof Error ? err.message : "Failed to create store",
+      );
     } finally {
       setCreating(false);
     }
@@ -70,7 +76,11 @@ export function OnboardingPage() {
               />
             </div>
             {createError && <ErrorState message={createError} />}
-            <Button onClick={handleCreateStore} disabled={creating || !storeName.trim()} className="w-full">
+            <Button
+              onClick={handleCreateStore}
+              disabled={creating || !storeName.trim()}
+              className="w-full"
+            >
               {creating ? t("common.loading") : t("onboarding.create_button")}
             </Button>
           </div>
@@ -78,7 +88,9 @@ export function OnboardingPage() {
 
         <Card>
           <CardTitle>{t("onboarding.waiting_invite")}</CardTitle>
-          <p className="text-sm text-slate-600 mt-2">{t("onboarding.waiting_invite", { email: user?.email || "" })}</p>
+          <p className="text-sm text-slate-600 mt-2">
+            {t("onboarding.waiting_invite", { email: user?.email || "" })}
+          </p>
         </Card>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import * as rulesService from "./rules";
 
 vi.mock("../lib/supabaseClient", () => ({
@@ -6,29 +6,27 @@ vi.mock("../lib/supabaseClient", () => ({
     from: vi.fn((table) => {
       if (table === "rules") {
         return {
-          insert: vi.fn(function (data) {
-            return {
-              select: vi.fn(() => ({
-                single: vi.fn(async () => ({
-                  data: {
-                    id: "rule-123",
-                    store_id: data.store_id,
-                    name: data.name,
-                    kind: data.kind,
-                    trigger_type: data.trigger_type,
-                    trigger_params: data.trigger_params,
-                    points_delta: data.points_delta,
-                    amount_cents: data.amount_cents,
-                    active: data.active,
-                    created_by: null,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString(),
-                  },
-                  error: null,
-                })),
+          insert: vi.fn((data) => ({
+            select: vi.fn(() => ({
+              single: vi.fn(async () => ({
+                data: {
+                  id: "rule-123",
+                  store_id: data.store_id,
+                  name: data.name,
+                  kind: data.kind,
+                  trigger_type: data.trigger_type,
+                  trigger_params: data.trigger_params,
+                  points_delta: data.points_delta,
+                  amount_cents: data.amount_cents,
+                  active: data.active,
+                  created_by: null,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                },
+                error: null,
               })),
-            };
-          }),
+            })),
+          })),
         };
       }
       return null;

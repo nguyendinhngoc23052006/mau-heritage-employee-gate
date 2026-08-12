@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { claimShift } from "./shifts";
 
 vi.mock("../lib/supabaseClient", () => ({
@@ -19,6 +19,8 @@ describe("shifts", () => {
     const shiftId = "shift-123";
     await claimShift(shiftId);
 
-    expect(mockRpc).toHaveBeenCalledWith("claim_shift", { p_shift_id: shiftId });
+    expect(mockRpc).toHaveBeenCalledWith("claim_shift", {
+      p_shift_id: shiftId,
+    });
   });
 });

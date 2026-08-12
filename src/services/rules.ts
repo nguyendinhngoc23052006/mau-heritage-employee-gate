@@ -1,5 +1,10 @@
 import { getSupabase } from "../lib/supabaseClient";
-import type { Rule, RuleEvent, PointEvent, PrizeFineEvent } from "../types/database";
+import type {
+  PointEvent,
+  PrizeFineEvent,
+  Rule,
+  RuleEvent,
+} from "../types/database";
 
 export async function listRules(storeId: string): Promise<Rule[]> {
   const supabase = getSupabase();
@@ -16,7 +21,12 @@ export async function createRule(params: {
   store_id: string;
   name: string;
   kind: "auto" | "manual";
-  trigger_type: "missed_shift" | "late_arrival" | "till_variance" | "points_threshold" | "manager_manual";
+  trigger_type:
+    | "missed_shift"
+    | "late_arrival"
+    | "till_variance"
+    | "points_threshold"
+    | "manager_manual";
   trigger_params?: Record<string, unknown>;
   points_delta: number;
   amount_cents: number;
@@ -41,7 +51,10 @@ export async function createRule(params: {
   return data as Rule;
 }
 
-export async function updateRule(id: string, patch: Partial<Rule>): Promise<Rule> {
+export async function updateRule(
+  id: string,
+  patch: Partial<Rule>,
+): Promise<Rule> {
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from("rules")
@@ -57,7 +70,11 @@ export async function applyManualRule(params: {
   rule: Rule;
   target_user_id: string;
   reason?: string;
-}): Promise<{ ruleEvent: RuleEvent; pointEvent?: PointEvent; prizeFineEvent?: PrizeFineEvent }> {
+}): Promise<{
+  ruleEvent: RuleEvent;
+  pointEvent?: PointEvent;
+  prizeFineEvent?: PrizeFineEvent;
+}> {
   const supabase = getSupabase();
   const uid = (await supabase.auth.getUser()).data.user?.id;
 
@@ -104,18 +121,19 @@ export async function applyManualRule(params: {
 
   let prizeFineEvent: PrizeFineEvent | undefined;
   if (params.rule.amount_cents !== 0) {
-    const { data: prizeFineEventResult, error: prizeFineEventError } = await supabase
-      .from("prize_fine_events")
-      .insert({
-        store_id: params.rule.store_id,
-        user_id: params.target_user_id,
-        kind: params.rule.amount_cents >= 0 ? "prize" : "fine",
-        amount_cents: Math.abs(params.rule.amount_cents),
-        reason: params.reason ?? null,
-        rule_event_id: ruleEvent.id,
-      })
-      .select()
-      .single();
+    const { data: prizeFineEventResult, error: prizeFineEventError } =
+      await supabase
+        .from("prize_fine_events")
+        .insert({
+          store_id: params.rule.store_id,
+          user_id: params.target_user_id,
+          kind: params.rule.amount_cents >= 0 ? "prize" : "fine",
+          amount_cents: Math.abs(params.rule.amount_cents),
+          reason: params.reason ?? null,
+          rule_event_id: ruleEvent.id,
+        })
+        .select()
+        .single();
 
     if (prizeFineEventError) throw prizeFineEventError;
     prizeFineEvent = prizeFineEventResult as PrizeFineEvent;

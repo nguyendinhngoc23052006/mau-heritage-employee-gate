@@ -1,14 +1,18 @@
-import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Button } from "../components/ui/Button";
-import { Input } from "../components/ui/Input";
-import { Card, CardTitle } from "../components/ui/Card";
-import { ErrorState, LoadingState, EmptyState } from "../components/ui/EmptyState";
-import { useT } from "../lib/i18n";
-import { useRoleOn, isManagerRole } from "../hooks/useMemberships";
-import { listAuditLog } from "../services/audit";
 import { AttendanceHeatmap } from "../components/AttendanceHeatmap";
+import { Button } from "../components/ui/Button";
+import { Card, CardTitle } from "../components/ui/Card";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "../components/ui/EmptyState";
+import { Input } from "../components/ui/Input";
+import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
+import { useT } from "../lib/i18n";
+import { listAuditLog } from "../services/audit";
 import type { AuditLog } from "../types/database";
 
 export function AuditPage() {
@@ -26,7 +30,7 @@ export function AuditPage() {
     return <ErrorState message="Store not found" />;
   }
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const { isLoading, error, refetch } = useQuery({
     queryKey: ["audit-log", storeId, filterEntityType, before],
     queryFn: async () => {
       const items = await listAuditLog(storeId, {
@@ -71,19 +75,33 @@ export function AuditPage() {
   }
 
   if (error && allItems.length === 0) {
-    return <ErrorState message={error instanceof Error ? error.message : "Error loading audit log"} />;
+    return (
+      <ErrorState
+        message={
+          error instanceof Error ? error.message : "Error loading audit log"
+        }
+      />
+    );
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-slate-900">{t("nav.audit")}</h1>
+      <h1 className="text-2xl font-semibold text-slate-900">
+        {t("nav.audit")}
+      </h1>
 
       {/* Filter */}
       <Card>
         <div className="space-y-3">
-          <label className="block text-sm font-medium text-slate-700">Filter</label>
+          <label
+            htmlFor="entity-filter"
+            className="block text-sm font-medium text-slate-700"
+          >
+            Filter
+          </label>
           <div className="flex gap-2">
             <Input
+              id="entity-filter"
               value={filterEntityType}
               onChange={(e) => handleFilterChange(e.target.value)}
               placeholder="Filter by entity type..."
@@ -96,7 +114,10 @@ export function AuditPage() {
               ))}
             </datalist>
             {filterEntityType && (
-              <Button variant="secondary" onClick={() => handleFilterChange("")}>
+              <Button
+                variant="secondary"
+                onClick={() => handleFilterChange("")}
+              >
                 Clear
               </Button>
             )}
@@ -115,26 +136,41 @@ export function AuditPage() {
                 <thead>
                   <tr className="border-b border-slate-200">
                     <th className="px-4 py-2 text-left text-slate-600">Time</th>
-                    <th className="px-4 py-2 text-left text-slate-600">Actor</th>
-                    <th className="px-4 py-2 text-left text-slate-600">Entity Type</th>
-                    <th className="px-4 py-2 text-left text-slate-600">Entity ID</th>
-                    <th className="px-4 py-2 text-left text-slate-600">Action</th>
+                    <th className="px-4 py-2 text-left text-slate-600">
+                      Actor
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-600">
+                      Entity Type
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-600">
+                      Entity ID
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-600">
+                      Action
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {allItems.map((item: AuditLog) => (
-                    <tr key={`${item.id}-${item.at}`} className="border-b border-slate-100 hover:bg-slate-50">
+                    <tr
+                      key={`${item.id}-${item.at}`}
+                      className="border-b border-slate-100 hover:bg-slate-50"
+                    >
                       <td className="px-4 py-2 text-slate-900">
                         {new Date(item.at).toLocaleString()}
                       </td>
                       <td className="px-4 py-2 text-slate-600">
                         {item.actor_id?.substring(0, 8) || "—"}
                       </td>
-                      <td className="px-4 py-2 text-slate-600">{item.entity_type}</td>
+                      <td className="px-4 py-2 text-slate-600">
+                        {item.entity_type}
+                      </td>
                       <td className="px-4 py-2 text-slate-600">
                         {item.entity_id.substring(0, 12)}
                       </td>
-                      <td className="px-4 py-2 text-slate-600">{item.action}</td>
+                      <td className="px-4 py-2 text-slate-600">
+                        {item.action}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -159,7 +195,9 @@ export function AuditPage() {
           <div className="mt-4">
             <AttendanceHeatmap
               storeId={storeId}
-              from={new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()}
+              from={new Date(
+                Date.now() - 30 * 24 * 60 * 60 * 1000,
+              ).toISOString()}
               to={new Date().toISOString()}
             />
           </div>

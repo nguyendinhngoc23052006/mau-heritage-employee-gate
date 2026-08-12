@@ -1,32 +1,49 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "../components/ui/Button";
-import { Input, Label } from "../components/ui/Input";
 import { Card, CardTitle } from "../components/ui/Card";
-import { EmptyState, LoadingState, ErrorState } from "../components/ui/EmptyState";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "../components/ui/EmptyState";
+import { Input, Label } from "../components/ui/Input";
 import { useT } from "../lib/i18n";
 import { formatVnd } from "../lib/money";
-import { listRules, createRule, updateRule } from "../services/rules";
+import { createRule, listRules, updateRule } from "../services/rules";
 import type { Rule, RuleTrigger } from "../types/database";
 
 interface RulesPageProps {
   storeId: string;
 }
 
+type RuleKind = "auto" | "manual";
+
 export function RulesPage({ storeId }: RulesPageProps) {
   const t = useT();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    kind: RuleKind;
+    trigger_type: RuleTrigger;
+    points_delta: number;
+    amount_cents: number;
+    active: boolean;
+  }>({
     name: "",
-    kind: "manual" as const,
-    trigger_type: "manager_manual" as RuleTrigger,
+    kind: "manual",
+    trigger_type: "manager_manual",
     points_delta: 0,
     amount_cents: 0,
     active: true,
   });
 
-  const { data: rules, isLoading, error } = useQuery({
+  const {
+    data: rules,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["rules", storeId],
     queryFn: () => listRules(storeId),
   });
@@ -74,14 +91,20 @@ export function RulesPage({ storeId }: RulesPageProps) {
   }
 
   if (error) {
-    return <ErrorState message={error instanceof Error ? error.message : "Error loading rules"} />;
+    return (
+      <ErrorState
+        message={error instanceof Error ? error.message : "Error loading rules"}
+      />
+    );
   }
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">{t("rules.title")}</h1>
-        <Button onClick={() => setShowForm(!showForm)}>{t("rules.new_rule")}</Button>
+        <Button onClick={() => setShowForm(!showForm)}>
+          {t("rules.new_rule")}
+        </Button>
       </div>
 
       {showForm && (
@@ -93,7 +116,9 @@ export function RulesPage({ storeId }: RulesPageProps) {
               <Input
                 id="rule-name"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
                 placeholder="e.g., Late arrival fine"
               />
             </div>
@@ -104,7 +129,12 @@ export function RulesPage({ storeId }: RulesPageProps) {
                 <select
                   id="rule-kind"
                   value={formData.kind}
-                  onChange={(e) => setFormData({ ...formData, kind: e.target.value as "auto" | "manual" })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      kind: e.target.value as "auto" | "manual",
+                    })
+                  }
                   className="w-full px-3 py-2 border rounded-md"
                 >
                   <option value="manual">Manual</option>
@@ -117,7 +147,12 @@ export function RulesPage({ storeId }: RulesPageProps) {
                 <select
                   id="rule-trigger"
                   value={formData.trigger_type}
-                  onChange={(e) => setFormData({ ...formData, trigger_type: e.target.value as RuleTrigger })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      trigger_type: e.target.value as RuleTrigger,
+                    })
+                  }
                   className="w-full px-3 py-2 border rounded-md"
                 >
                   <option value="manager_manual">Manager Manual</option>
@@ -136,7 +171,12 @@ export function RulesPage({ storeId }: RulesPageProps) {
                   id="points-delta"
                   type="number"
                   value={formData.points_delta}
-                  onChange={(e) => setFormData({ ...formData, points_delta: Number.parseInt(e.target.value) || 0 })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      points_delta: Number.parseInt(e.target.value) || 0,
+                    })
+                  }
                 />
               </div>
 
@@ -146,7 +186,12 @@ export function RulesPage({ storeId }: RulesPageProps) {
                   id="amount-cents"
                   type="number"
                   value={formData.amount_cents}
-                  onChange={(e) => setFormData({ ...formData, amount_cents: Number.parseInt(e.target.value) || 0 })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      amount_cents: Number.parseInt(e.target.value) || 0,
+                    })
+                  }
                 />
               </div>
             </div>
@@ -156,14 +201,21 @@ export function RulesPage({ storeId }: RulesPageProps) {
                 id="rule-active"
                 type="checkbox"
                 checked={formData.active}
-                onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+                onChange={(e) =>
+                  setFormData({ ...formData, active: e.target.checked })
+                }
               />
               <Label htmlFor="rule-active">{t("rules.active")}</Label>
             </div>
 
             <div className="flex gap-2">
-              <Button type="submit" disabled={createMutation.isPending || !formData.name.trim()}>
-                {createMutation.isPending ? t("common.loading") : t("common.save")}
+              <Button
+                type="submit"
+                disabled={createMutation.isPending || !formData.name.trim()}
+              >
+                {createMutation.isPending
+                  ? t("common.loading")
+                  : t("common.save")}
               </Button>
               <Button
                 type="button"
@@ -202,10 +254,10 @@ export function RulesPage({ storeId }: RulesPageProps) {
                   <td className="px-4 py-2">{rule.active ? "✓" : "✗"}</td>
                   <td className="px-4 py-2">
                     <Button
-                      size="sm"
                       variant="secondary"
                       onClick={() => toggleMutation.mutate(rule)}
                       disabled={toggleMutation.isPending}
+                      className="text-xs px-2 py-1"
                     >
                       {rule.active ? "Disable" : "Enable"}
                     </Button>

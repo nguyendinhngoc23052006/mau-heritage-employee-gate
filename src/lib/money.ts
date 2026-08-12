@@ -2,7 +2,7 @@
 
 export function formatVnd(cents: number): string {
   const n = Math.round(cents);
-  return new Intl.NumberFormat("vi-VN").format(n) + " ₫";
+  return `${new Intl.NumberFormat("vi-VN").format(n)} ₫`;
 }
 
 export function parseVndToCents(input: string): number | null {
@@ -20,6 +20,9 @@ export function minutesBetween(startIso: string, endIso: string): number {
 }
 
 // Wages: integer cents. (minutes * rate_cents) / 60, integer-divided.
-export function wagesCents(minutesWorked: number, hourlyRateCents: number): number {
+export function wagesCents(
+  minutesWorked: number,
+  hourlyRateCents: number,
+): number {
   return Math.floor((minutesWorked * hourlyRateCents) / 60);
 }

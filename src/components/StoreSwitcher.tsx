@@ -8,10 +8,17 @@ export function StoreSwitcher() {
   const navigate = useNavigate();
   const t = useT();
 
-  if (isLoading) return <span className="text-sm text-slate-500">{t("common.loading")}</span>;
+  if (isLoading)
+    return (
+      <span className="text-sm text-slate-500">{t("common.loading")}</span>
+    );
   if (!data || data.length === 0) return null;
   if (data.length === 1) {
-    return <span className="text-sm font-medium text-slate-700">{data[0].store.name}</span>;
+    return (
+      <span className="text-sm font-medium text-slate-700">
+        {data[0].store.name}
+      </span>
+    );
   }
   return (
     <select

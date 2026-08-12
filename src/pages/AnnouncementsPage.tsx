@@ -1,13 +1,20 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { Button } from "../components/ui/Button";
-import { Input, Label, Textarea } from "../components/ui/Input";
 import { Card, CardTitle } from "../components/ui/Card";
-import { ErrorState, LoadingState, EmptyState } from "../components/ui/EmptyState";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "../components/ui/EmptyState";
+import { Input, Label, Textarea } from "../components/ui/Input";
+import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
 import { useT } from "../lib/i18n";
-import { useRoleOn, isManagerRole } from "../hooks/useMemberships";
-import { listAnnouncements, createAnnouncement } from "../services/announcements";
+import {
+  createAnnouncement,
+  listAnnouncements,
+} from "../services/announcements";
 import type { Announcement } from "../types/database";
 
 export function AnnouncementsPage() {
@@ -45,15 +52,26 @@ export function AnnouncementsPage() {
   }
 
   if (error) {
-    return <ErrorState message={error instanceof Error ? error.message : "Error loading announcements"} />;
+    return (
+      <ErrorState
+        message={
+          error instanceof Error ? error.message : "Error loading announcements"
+        }
+      />
+    );
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-slate-900">{t("announcements.title")}</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">
+          {t("announcements.title")}
+        </h1>
         {isManager && (
-          <Button onClick={() => setShowForm(!showForm)} variant={showForm ? "secondary" : "primary"}>
+          <Button
+            onClick={() => setShowForm(!showForm)}
+            variant={showForm ? "secondary" : "primary"}
+          >
             {showForm ? t("common.cancel") : t("announcements.new")}
           </Button>
         )}
@@ -88,12 +106,18 @@ export function AnnouncementsPage() {
           {createMutation.error && (
             <ErrorState
               message={
-                createMutation.error instanceof Error ? createMutation.error.message : "Failed to create announcement"
+                createMutation.error instanceof Error
+                  ? createMutation.error.message
+                  : "Failed to create announcement"
               }
             />
           )}
 
-          <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending} className="w-full">
+          <Button
+            onClick={() => createMutation.mutate()}
+            disabled={createMutation.isPending}
+            className="w-full"
+          >
             {createMutation.isPending ? t("common.loading") : t("common.save")}
           </Button>
         </Card>
@@ -105,7 +129,9 @@ export function AnnouncementsPage() {
         <div className="space-y-3">
           {data?.map((announcement: Announcement) => (
             <Card key={announcement.id}>
-              <h3 className="mb-2 font-semibold text-slate-900">{announcement.title}</h3>
+              <h3 className="mb-2 font-semibold text-slate-900">
+                {announcement.title}
+              </h3>
               <p className="mb-2 text-sm text-slate-600">{announcement.body}</p>
               <p className="text-xs text-slate-400">
                 {new Date(announcement.created_at).toLocaleString()}

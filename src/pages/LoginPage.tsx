@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/Button";
-import { Input, Label } from "../components/ui/Input";
 import { Card, CardTitle } from "../components/ui/Card";
-import { useT } from "../lib/i18n";
+import { Input, Label } from "../components/ui/Input";
 import { useSession } from "../hooks/useSession";
+import { useT } from "../lib/i18n";
 import { sendMagicLink } from "../services/auth";
 
 export function LoginPage() {
@@ -40,7 +40,9 @@ export function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardTitle>{t("auth.title")}</CardTitle>
         {sent ? (
-          <div className="text-sm text-slate-600">{t("auth.link_sent", { email })}</div>
+          <div className="text-sm text-slate-600">
+            {t("auth.link_sent", { email })}
+          </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -55,8 +57,16 @@ export function LoginPage() {
                 disabled={loading}
               />
             </div>
-            {error && <div className="text-sm text-red-600">{t("auth.failed", { message: error })}</div>}
-            <Button type="submit" disabled={loading || !email} className="w-full">
+            {error && (
+              <div className="text-sm text-red-600">
+                {t("auth.failed", { message: error })}
+              </div>
+            )}
+            <Button
+              type="submit"
+              disabled={loading || !email}
+              className="w-full"
+            >
               {loading ? t("auth.checking") : t("auth.send_link")}
             </Button>
           </form>

@@ -1,5 +1,5 @@
 import { getSupabase } from "../lib/supabaseClient";
-import type { PointEvent, PrizeFineEvent, PointBalance } from "../types/database";
+import type { PointEvent, PrizeFineEvent } from "../types/database";
 
 export async function getMyBalance(storeId: string): Promise<number> {
   const supabase = getSupabase();
@@ -18,7 +18,10 @@ export async function getMyBalance(storeId: string): Promise<number> {
   return (data?.balance ?? 0) as number;
 }
 
-export async function listMyPointEvents(storeId: string, limit = 50): Promise<PointEvent[]> {
+export async function listMyPointEvents(
+  storeId: string,
+  limit = 50,
+): Promise<PointEvent[]> {
   const supabase = getSupabase();
   const uid = (await supabase.auth.getUser()).data.user?.id;
 
@@ -36,7 +39,10 @@ export async function listMyPointEvents(storeId: string, limit = 50): Promise<Po
   return (data ?? []) as PointEvent[];
 }
 
-export async function listMyPrizeFine(storeId: string, limit = 50): Promise<PrizeFineEvent[]> {
+export async function listMyPrizeFine(
+  storeId: string,
+  limit = 50,
+): Promise<PrizeFineEvent[]> {
   const supabase = getSupabase();
   const uid = (await supabase.auth.getUser()).data.user?.id;
 
