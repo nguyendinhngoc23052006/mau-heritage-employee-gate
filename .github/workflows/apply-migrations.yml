@@ -1,0 +1,32 @@
+name: apply-migrations
+
+# Auto-applies any new supabase/migrations/*.sql files to the production DB
+# when they land on main. Free-tier substitute for Supabase Branching's
+# built-in migration hook — replaces the "paste into SQL Editor" manual step.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/**.sql"
+      - ".github/workflows/apply-migrations.yml"
+  workflow_dispatch:
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link project + push new migrations
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+        run: |
+          supabase link --project-ref "$SUPABASE_PROJECT_REF"
+          supabase db push --linked
