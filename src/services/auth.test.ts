@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getSupabase } from "../lib/supabaseClient";
-import { sendMagicLink } from "./auth";
+import { signInWithPassword, signUpWithPassword } from "./auth";
 
 vi.mock("../lib/supabaseClient");
 
@@ -9,21 +9,31 @@ describe("auth service", () => {
     vi.clearAllMocks();
   });
 
-  it("sendMagicLink calls signInWithOtp with correct args", async () => {
-    const mockSignInWithOtp = vi
-      .fn()
-      .mockResolvedValue({ data: {}, error: null });
+  it("signInWithPassword forwards email + password to Supabase", async () => {
+    const spy = vi.fn().mockResolvedValue({ data: {}, error: null });
     vi.mocked(getSupabase).mockReturnValue({
-      auth: {
-        signInWithOtp: mockSignInWithOtp,
-      },
+      auth: { signInWithPassword: spy },
     } as any);
 
-    await sendMagicLink("test@example.com");
+    await signInWithPassword("test@example.com", "hunter22");
 
-    expect(mockSignInWithOtp).toHaveBeenCalledWith({
+    expect(spy).toHaveBeenCalledWith({
       email: "test@example.com",
-      options: { emailRedirectTo: expect.stringContaining("/callback") },
+      password: "hunter22",
+    });
+  });
+
+  it("signUpWithPassword forwards email + password to Supabase", async () => {
+    const spy = vi.fn().mockResolvedValue({ data: {}, error: null });
+    vi.mocked(getSupabase).mockReturnValue({
+      auth: { signUp: spy },
+    } as any);
+
+    await signUpWithPassword("new@example.com", "hunter22");
+
+    expect(spy).toHaveBeenCalledWith({
+      email: "new@example.com",
+      password: "hunter22",
     });
   });
 });
