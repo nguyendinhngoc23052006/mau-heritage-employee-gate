@@ -17,16 +17,15 @@ export function DashboardPage() {
   const t = useT();
   const { storeId } = useParams<{ storeId: string }>();
   const { user } = useSession();
-
-  if (!storeId || !user) {
-    return <ErrorState message="Store or user not found" />;
-  }
+  const userId = user?.id;
+  const ready = Boolean(storeId && userId);
 
   // Announcements
   const { data: announcements, isLoading: announcementsLoading } = useQuery({
     queryKey: ["announcements", storeId, "latest"],
+    enabled: ready,
     queryFn: () =>
-      listAnnouncements(storeId, { activeOnly: true }).then((items) =>
+      listAnnouncements(storeId as string, { activeOnly: true }).then((items) =>
         items.slice(0, 3),
       ),
   });
@@ -34,19 +33,21 @@ export function DashboardPage() {
   // Notifications
   const { data: notifications, isLoading: notificationsLoading } = useQuery({
     queryKey: ["notifications", "inbox"],
+    enabled: ready,
     queryFn: () => listMyNotifications({ unreadOnly: true }),
   });
 
   // Points balance
   const { data: pointBalance, isLoading: pointsLoading } = useQuery({
-    queryKey: ["point-balance", storeId, user.id],
+    queryKey: ["point-balance", storeId, userId],
+    enabled: ready,
     queryFn: async () => {
       const supabase = getSupabase();
       const { data, error } = await supabase
         .from("point_balances")
         .select("*")
-        .eq("store_id", storeId)
-        .eq("user_id", user.id)
+        .eq("store_id", storeId as string)
+        .eq("user_id", userId as string)
         .single();
       if (error && error.code !== "PGRST116") throw error;
       return (data as PointBalance | null) ?? { balance: 0 };
@@ -56,6 +57,7 @@ export function DashboardPage() {
   // Upcoming shifts (next 7 days)
   const { data: upcomingShiftsCount, isLoading: shiftsLoading } = useQuery({
     queryKey: ["shifts", storeId, "upcoming-count"],
+    enabled: ready,
     queryFn: async () => {
       const supabase = getSupabase();
       const sevenDaysFromNow = new Date(
@@ -64,7 +66,7 @@ export function DashboardPage() {
       const { data, error } = await supabase
         .from("shifts")
         .select("id", { count: "exact" })
-        .eq("store_id", storeId)
+        .eq("store_id", storeId as string)
         .eq("status", "open")
         .gt("starts_at", new Date().toISOString())
         .lt("starts_at", sevenDaysFromNow);
@@ -72,6 +74,10 @@ export function DashboardPage() {
       return data?.length ?? 0;
     },
   });
+
+  if (!ready) {
+    return <ErrorState message="Store or user not found" />;
+  }
 
   const isLoading =
     announcementsLoading ||
