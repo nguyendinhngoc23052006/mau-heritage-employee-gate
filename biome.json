@@ -11,8 +11,19 @@
     "rules": {
       "recommended": true,
       "suspicious": { "noExplicitAny": "warn" },
+      "complexity": { "noForEach": "off" },
       "style": { "useConst": "error" }
     }
   },
-  "javascript": { "formatter": { "quoteStyle": "double" } }
+  "javascript": { "formatter": { "quoteStyle": "double" } },
+  "overrides": [
+    {
+      "include": ["**/*.test.ts", "**/*.test.tsx"],
+      "linter": {
+        "rules": {
+          "suspicious": { "noExplicitAny": "off" }
+        }
+      }
+    }
+  ]
 }
