@@ -3,6 +3,14 @@
 -- Money: integer cents. Time: timestamptz (UTC).
 -- pgcrypto is already enabled by the init migration.
 
+-- Postgres's default `check_function_bodies = on` validates every plpgsql
+-- function body at CREATE FUNCTION time. This script defines helper functions
+-- (is_member_of, has_role_on) in Section 6 that are referenced by earlier
+-- functions (claim_shift in Section 2, RLS policies in Section 8). Disable the
+-- check for this session so the whole script runs top-to-bottom; every
+-- reference resolves correctly at call time because all objects exist by then.
+set check_function_bodies = off;
+
 -- =====================================================================
 -- 0. profiles (mirrors auth.users so we can join without RLS gymnastics)
 -- =====================================================================
