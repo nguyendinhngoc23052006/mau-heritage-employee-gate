@@ -52,7 +52,12 @@ export function OnboardingPage() {
   }, [applications, queryClient]);
 
   // Redirect if user has memberships
-  if (!sessionLoading && !membershipsLoading && memberships && memberships.length > 0) {
+  if (
+    !sessionLoading &&
+    !membershipsLoading &&
+    memberships &&
+    memberships.length > 0
+  ) {
     navigate(`/store/${memberships[0].store_id}`, { replace: true });
     return null;
   }
@@ -116,26 +121,29 @@ export function OnboardingPage() {
   );
 
   // Manual preview check
-  const performPreview = useCallback(async (code: string) => {
-    try {
-      setPreviewError(null);
-      const preview = await previewStoreByCode(code);
-      if (preview) {
-        setPreviewedStoreName(preview.name);
-        setPreviewedCode(code);
-      } else {
-        setPreviewError(t("onboarding.join_unknown_code"));
+  const performPreview = useCallback(
+    async (code: string) => {
+      try {
+        setPreviewError(null);
+        const preview = await previewStoreByCode(code);
+        if (preview) {
+          setPreviewedStoreName(preview.name);
+          setPreviewedCode(code);
+        } else {
+          setPreviewError(t("onboarding.join_unknown_code"));
+          setPreviewedStoreName(null);
+          setPreviewedCode(null);
+        }
+      } catch (err) {
+        setPreviewError(
+          err instanceof Error ? err.message : "Failed to check code",
+        );
         setPreviewedStoreName(null);
         setPreviewedCode(null);
       }
-    } catch (err) {
-      setPreviewError(
-        err instanceof Error ? err.message : "Failed to check code",
-      );
-      setPreviewedStoreName(null);
-      setPreviewedCode(null);
-    }
-  }, [t]);
+    },
+    [t],
+  );
 
   // Handle manual preview check button
   const handleCheckCode = useCallback(() => {
@@ -242,9 +250,7 @@ export function OnboardingPage() {
                 )}
                 <Button
                   onClick={handleCreateStore}
-                  disabled={
-                    createStoreMutation.isPending || !storeName.trim()
-                  }
+                  disabled={createStoreMutation.isPending || !storeName.trim()}
                   className="w-full"
                 >
                   {createStoreMutation.isPending

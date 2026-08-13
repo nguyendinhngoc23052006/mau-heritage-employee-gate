@@ -11,6 +11,12 @@ import {
 import { Input, Label } from "../components/ui/Input";
 import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
 import { useT } from "../lib/i18n";
+import { parseVndToCents } from "../lib/money";
+import {
+  approveApplication,
+  declineApplication,
+  listPendingApplications,
+} from "../services/applications";
 import {
   buildInviteLink,
   createInvite,
@@ -38,6 +44,19 @@ export function PeoplePage() {
     useState<EmploymentType>("hourly");
   const [inviteHourlyRate, setInviteHourlyRate] = useState(0);
 
+  const [appFormState, setAppFormState] = useState<
+    Record<
+      string,
+      {
+        role: Role;
+        employment_type: EmploymentType;
+        hourly_rate_input: string;
+        declineReasonShown: boolean;
+        declineReason: string;
+      }
+    >
+  >({});
+
   const membersQuery = useQuery({
     queryKey: ["members", storeId],
     queryFn: () => (storeId ? listMembers(storeId) : Promise.resolve([])),
@@ -47,6 +66,13 @@ export function PeoplePage() {
   const invitesQuery = useQuery({
     queryKey: ["invites", storeId],
     queryFn: () => (storeId ? listInvitesFor(storeId) : Promise.resolve([])),
+    enabled: !!storeId && canManage,
+  });
+
+  const applicationsQuery = useQuery({
+    queryKey: ["applications", "pending", storeId],
+    queryFn: () =>
+      storeId ? listPendingApplications(storeId) : Promise.resolve([]),
     enabled: !!storeId && canManage,
   });
 
@@ -95,7 +121,36 @@ export function PeoplePage() {
     },
   });
 
-  if (membersQuery.isLoading || invitesQuery.isLoading) {
+  const approveMutation = useMutation({
+    mutationFn: (data: {
+      id: string;
+      role: Role;
+      employment_type: EmploymentType;
+      hourly_rate_cents: number;
+    }) => approveApplication(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["applications", "pending", storeId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["members", storeId] });
+    },
+  });
+
+  const declineMutation = useMutation({
+    mutationFn: (data: { id: string; reason?: string }) =>
+      declineApplication(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["applications", "pending", storeId],
+      });
+    },
+  });
+
+  if (
+    membersQuery.isLoading ||
+    invitesQuery.isLoading ||
+    applicationsQuery.isLoading
+  ) {
     return <LoadingState>{t("common.loading")}</LoadingState>;
   }
 
@@ -113,6 +168,47 @@ export function PeoplePage() {
 
   const members = membersQuery.data ?? [];
   const invites = invitesQuery.data ?? [];
+  const applications = applicationsQuery.data ?? [];
+
+  function getAppFormState(appId: string) {
+    if (!appFormState[appId]) {
+      setAppFormState((prev) => ({
+        ...prev,
+        [appId]: {
+          role: "employee" as Role,
+          employment_type: "hourly" as EmploymentType,
+          hourly_rate_input: "0",
+          declineReasonShown: false,
+          declineReason: "",
+        },
+      }));
+    }
+    return appFormState[appId];
+  }
+
+  function handleApproveApplication(appId: string) {
+    const state = getAppFormState(appId);
+    const rateCents = parseVndToCents(state.hourly_rate_input);
+    if (rateCents === null) {
+      alert("Please enter a valid hourly rate");
+      return;
+    }
+    approveMutation.mutate({
+      id: appId,
+      role: state.role,
+      employment_type: state.employment_type,
+      hourly_rate_cents: rateCents,
+    });
+  }
+
+  function handleDeclineApplication(appId: string) {
+    const state = getAppFormState(appId);
+    if (!window.confirm("Confirm decline?")) return;
+    declineMutation.mutate({
+      id: appId,
+      reason: state.declineReason || undefined,
+    });
+  }
 
   function handleCreateInvite() {
     createInviteMutation.mutate({
@@ -130,6 +226,214 @@ export function PeoplePage() {
 
   return (
     <div className="space-y-6">
+      {canManage && (
+        <Card>
+          <CardTitle>{t("people.applications.title")}</CardTitle>
+          {applications.length === 0 ? (
+            <EmptyState>{t("people.applications.empty")}</EmptyState>
+          ) : (
+            <div className="space-y-4">
+              {applications.map((app) => {
+                const state = getAppFormState(app.id);
+                return (
+                  <div
+                    key={app.id}
+                    className="border-l-4 border-blue-200 bg-blue-50 p-4 rounded"
+                  >
+                    <div className="space-y-3">
+                      <div>
+                        <div className="text-sm font-medium text-slate-900">
+                          {app.user_id.substring(0, 8)}
+                        </div>
+                        <div className="text-xs text-slate-600">
+                          {t("people.applications.submitted", {
+                            when: new Date(app.submitted_at).toLocaleString(),
+                          })}
+                        </div>
+                        {app.note && (
+                          <div className="text-xs text-slate-600 mt-1">
+                            {t("people.applications.note", {
+                              note: app.note,
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <Label>{t("people.applications.role")}</Label>
+                          <select
+                            value={state.role}
+                            onChange={(e) =>
+                              setAppFormState((prev) => ({
+                                ...prev,
+                                [app.id]: {
+                                  ...prev[app.id],
+                                  role: e.target.value as Role,
+                                },
+                              }))
+                            }
+                            className="block w-full rounded-md border border-slate-300 px-2 py-1 text-xs mt-1"
+                            disabled={approveMutation.isPending}
+                          >
+                            <option value="employee">Employee</option>
+                            <option value="manager">Manager</option>
+                            <option value="owner">Owner</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <Label>
+                            {t("people.applications.employment_type")}
+                          </Label>
+                          <select
+                            value={state.employment_type}
+                            onChange={(e) =>
+                              setAppFormState((prev) => ({
+                                ...prev,
+                                [app.id]: {
+                                  ...prev[app.id],
+                                  employment_type: e.target
+                                    .value as EmploymentType,
+                                },
+                              }))
+                            }
+                            className="block w-full rounded-md border border-slate-300 px-2 py-1 text-xs mt-1"
+                            disabled={approveMutation.isPending}
+                          >
+                            <option value="full_time">Full-time</option>
+                            <option value="part_time">Part-time</option>
+                            <option value="hourly">Hourly</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <Label>{t("people.applications.hourly_rate")}</Label>
+                          <Input
+                            type="text"
+                            value={state.hourly_rate_input}
+                            onChange={(e) =>
+                              setAppFormState((prev) => ({
+                                ...prev,
+                                [app.id]: {
+                                  ...prev[app.id],
+                                  hourly_rate_input: e.target.value,
+                                },
+                              }))
+                            }
+                            disabled={approveMutation.isPending}
+                            placeholder="0"
+                            className="mt-1 text-xs"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => handleApproveApplication(app.id)}
+                          disabled={approveMutation.isPending}
+                          className="text-xs"
+                        >
+                          {approveMutation.isPending
+                            ? t("common.loading")
+                            : t("people.applications.approve")}
+                        </Button>
+
+                        {state.declineReasonShown ? (
+                          <>
+                            <Input
+                              type="text"
+                              value={state.declineReason}
+                              onChange={(e) =>
+                                setAppFormState((prev) => ({
+                                  ...prev,
+                                  [app.id]: {
+                                    ...prev[app.id],
+                                    declineReason: e.target.value,
+                                  },
+                                }))
+                              }
+                              placeholder={t(
+                                "people.applications.decline_reason",
+                              )}
+                              className="text-xs flex-1"
+                              disabled={declineMutation.isPending}
+                            />
+                            <Button
+                              variant="danger"
+                              onClick={() => handleDeclineApplication(app.id)}
+                              disabled={declineMutation.isPending}
+                              className="text-xs"
+                            >
+                              {declineMutation.isPending
+                                ? t("common.loading")
+                                : t("common.delete")}
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              onClick={() =>
+                                setAppFormState((prev) => ({
+                                  ...prev,
+                                  [app.id]: {
+                                    ...prev[app.id],
+                                    declineReasonShown: false,
+                                    declineReason: "",
+                                  },
+                                }))
+                              }
+                              disabled={declineMutation.isPending}
+                              className="text-xs"
+                            >
+                              {t("common.cancel")}
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            variant="danger"
+                            onClick={() =>
+                              setAppFormState((prev) => ({
+                                ...prev,
+                                [app.id]: {
+                                  ...prev[app.id],
+                                  declineReasonShown: true,
+                                },
+                              }))
+                            }
+                            disabled={declineMutation.isPending}
+                            className="text-xs"
+                          >
+                            {t("people.applications.decline")}
+                          </Button>
+                        )}
+                      </div>
+
+                      {approveMutation.error && (
+                        <ErrorState
+                          message={
+                            approveMutation.error instanceof Error
+                              ? approveMutation.error.message
+                              : "Failed to approve"
+                          }
+                        />
+                      )}
+                      {declineMutation.error && (
+                        <ErrorState
+                          message={
+                            declineMutation.error instanceof Error
+                              ? declineMutation.error.message
+                              : "Failed to decline"
+                          }
+                        />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+      )}
+
       <Card>
         <CardTitle>{t("people.title")}</CardTitle>
         {members.length === 0 ? (

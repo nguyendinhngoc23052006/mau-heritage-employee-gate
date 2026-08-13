@@ -16,7 +16,11 @@ export type RuleTrigger =
   | "manager_manual";
 export type PrizeFineKind = "prize" | "fine";
 export type PrizeFineStatus = "pending" | "paid" | "cancelled";
-export type ApplicationStatus = "pending" | "approved" | "declined" | "withdrawn";
+export type ApplicationStatus =
+  | "pending"
+  | "approved"
+  | "declined"
+  | "withdrawn";
 
 export interface Profile {
   id: string;

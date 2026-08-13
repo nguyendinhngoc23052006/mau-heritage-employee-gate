@@ -11,7 +11,9 @@ export interface StorePreview {
   name: string;
 }
 
-export async function previewStoreByCode(code: string): Promise<StorePreview | null> {
+export async function previewStoreByCode(
+  code: string,
+): Promise<StorePreview | null> {
   const supabase = getSupabase();
   const { data, error } = await supabase.rpc("preview_store_by_code", {
     p_join_code: code,
@@ -88,9 +90,13 @@ export async function declineApplication(params: {
   return data as StoreApplication;
 }
 
-export async function withdrawApplication(id: string): Promise<StoreApplication> {
+export async function withdrawApplication(
+  id: string,
+): Promise<StoreApplication> {
   const supabase = getSupabase();
-  const { data, error } = await supabase.rpc("withdraw_application", { p_id: id });
+  const { data, error } = await supabase.rpc("withdraw_application", {
+    p_id: id,
+  });
   if (error) throw error;
   return data as StoreApplication;
 }
