@@ -4,6 +4,7 @@ import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
 import { ErrorState, LoadingState } from "../components/ui/EmptyState";
 import { Input, Label } from "../components/ui/Input";
+import { PasswordInput } from "../components/ui/PasswordInput";
 import { useSession } from "../hooks/useSession";
 import { useT } from "../lib/i18n";
 import { signInWithPassword, signUpWithPassword } from "../services/auth";
@@ -124,9 +125,8 @@ export function InviteAcceptPage() {
           </div>
           <div>
             <Label htmlFor="invite-password">{t("auth.password_label")}</Label>
-            <Input
+            <PasswordInput
               id="invite-password"
-              type="password"
               autoComplete={
                 mode === "signup" ? "new-password" : "current-password"
               }

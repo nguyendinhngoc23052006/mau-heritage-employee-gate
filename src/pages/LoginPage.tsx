@@ -3,6 +3,7 @@ import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
 import { Input, Label } from "../components/ui/Input";
+import { PasswordInput } from "../components/ui/PasswordInput";
 import { useSession } from "../hooks/useSession";
 import { useT } from "../lib/i18n";
 import { signInWithPassword, signUpWithPassword } from "../services/auth";
@@ -70,9 +71,8 @@ export function LoginPage() {
           </div>
           <div>
             <Label htmlFor="password">{t("auth.password_label")}</Label>
-            <Input
+            <PasswordInput
               id="password"
-              type="password"
               autoComplete={
                 mode === "signup" ? "new-password" : "current-password"
               }

@@ -7,58 +7,46 @@ export async function createStore(params: {
   currency?: string;
 }): Promise<Store> {
   const supabase = getSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("not authenticated");
-
-  const { data, error } = await supabase
-    .from("stores")
-    .insert({
-      name: params.name,
-      timezone: params.timezone ?? "Asia/Ho_Chi_Minh",
-      currency: params.currency ?? "VND",
-      created_by: user.id,
-    })
-    .select()
-    .single();
+  const { data, error } = await supabase.rpc("create_store_with_owner", {
+    p_name: params.name,
+    p_timezone: params.timezone ?? "Asia/Ho_Chi_Minh",
+    p_currency: params.currency ?? "VND",
+  });
   if (error) throw error;
-
-  await supabase
-    .from("memberships")
-    .insert({
-      user_id: user.id,
-      store_id: data.id,
-      role: "owner",
-    })
-    .select()
-    .single();
-
-  return data;
+  return data as Store;
 }
 
-export async function getStore(id: string): Promise<Store> {
+export async function getStore(id: string): Promise<Store | null> {
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from("stores")
     .select("*")
     .eq("id", id)
-    .single();
+    .maybeSingle();
   if (error) throw error;
-  return data;
+  return (data as Store | null) ?? null;
 }
 
 export async function updateStore(
   id: string,
-  updates: { name?: string; timezone?: string; currency?: string },
-) {
+  patch: Partial<Pick<Store, "name" | "timezone" | "currency">>,
+): Promise<Store> {
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from("stores")
-    .update(updates)
+    .update(patch)
     .eq("id", id)
-    .select()
+    .select("*")
     .single();
   if (error) throw error;
-  return data;
+  return data as Store;
+}
+
+export async function regenerateJoinCode(storeId: string): Promise<string> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc("regenerate_join_code", {
+    p_store_id: storeId,
+  });
+  if (error) throw error;
+  return data as string;
 }

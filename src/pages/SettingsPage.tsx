@@ -7,7 +7,7 @@ import { ErrorState, LoadingState } from "../components/ui/EmptyState";
 import { Input, Label } from "../components/ui/Input";
 import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
 import { useT } from "../lib/i18n";
-import { getStore, updateStore } from "../services/stores";
+import { getStore, regenerateJoinCode, updateStore } from "../services/stores";
 
 export function SettingsPage() {
   const t = useT();
@@ -63,8 +63,30 @@ export function SettingsPage() {
     updateMutation.mutate({ name, timezone, currency });
   }
 
+  const regenerateMutation = useMutation({
+    mutationFn: () =>
+      storeId ? regenerateJoinCode(storeId) : Promise.resolve(""),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["store", storeId] });
+    },
+  });
+
+  const [copiedJoinCode, setCopiedJoinCode] = useState(false);
+
+  async function handleCopyJoinCode(code: string) {
+    await navigator.clipboard.writeText(code);
+    setCopiedJoinCode(true);
+    setTimeout(() => setCopiedJoinCode(false), 2000);
+  }
+
+  function handleRegenerateJoinCode() {
+    if (window.confirm(`${t("store.settings.join_code_regenerate")}?`)) {
+      regenerateMutation.mutate();
+    }
+  }
+
   return (
-    <div className="max-w-md">
+    <div className="max-w-md space-y-6">
       <Card>
         <CardTitle>{t("store.settings.title")}</CardTitle>
         <div className="space-y-4">
@@ -123,6 +145,74 @@ export function SettingsPage() {
           </Button>
         </div>
       </Card>
+
+      {canEdit && (
+        <Card>
+          <CardTitle>{t("store.settings.join_code_title")}</CardTitle>
+          <p className="text-sm text-slate-600 mb-4">
+            {t("store.settings.join_code_hint")}
+          </p>
+          <div className="space-y-4">
+            {store?.join_code ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <code className="rounded bg-slate-100 px-3 py-1 font-mono text-sm">
+                    {store.join_code}
+                  </code>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      if (store.join_code) handleCopyJoinCode(store.join_code);
+                    }}
+                    disabled={regenerateMutation.isPending}
+                    className="text-xs"
+                  >
+                    {copiedJoinCode
+                      ? t("store.settings.join_code_copied")
+                      : t("store.settings.join_code_copy")}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={handleRegenerateJoinCode}
+                    disabled={regenerateMutation.isPending}
+                    className="text-xs"
+                  >
+                    {regenerateMutation.isPending
+                      ? t("common.loading")
+                      : t("store.settings.join_code_regenerate")}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-slate-600">
+                  {t("store.settings.join_code_empty")}
+                </p>
+                <Button
+                  onClick={() => regenerateMutation.mutate()}
+                  disabled={regenerateMutation.isPending}
+                  className="w-full"
+                >
+                  {regenerateMutation.isPending
+                    ? t("common.loading")
+                    : t("store.settings.join_code_generate")}
+                </Button>
+              </>
+            )}
+            {regenerateMutation.error && (
+              <ErrorState
+                message={
+                  regenerateMutation.error instanceof Error
+                    ? regenerateMutation.error.message
+                    : "Failed to regenerate join code"
+                }
+              />
+            )}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

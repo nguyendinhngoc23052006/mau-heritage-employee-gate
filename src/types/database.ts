@@ -16,6 +16,11 @@ export type RuleTrigger =
   | "manager_manual";
 export type PrizeFineKind = "prize" | "fine";
 export type PrizeFineStatus = "pending" | "paid" | "cancelled";
+export type ApplicationStatus =
+  | "pending"
+  | "approved"
+  | "declined"
+  | "withdrawn";
 
 export interface Profile {
   id: string;
@@ -32,8 +37,21 @@ export interface Store {
   name: string;
   timezone: string;
   currency: string;
+  join_code: string | null;
   created_at: string;
   created_by: string | null;
+}
+
+export interface StoreApplication {
+  id: string;
+  user_id: string;
+  store_id: string;
+  note: string | null;
+  status: ApplicationStatus;
+  submitted_at: string;
+  decided_at: string | null;
+  decided_by: string | null;
+  decision_reason: string | null;
 }
 
 export interface Membership {
