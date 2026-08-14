@@ -28,6 +28,7 @@ export function SalesPage() {
   const role = useRoleOn(storeId);
   const isManager = isManagerRole(role);
 
+  // No hooks below this line, so an early return here is hook-order-safe.
   if (!storeId || !user)
     return (
       <ErrorState

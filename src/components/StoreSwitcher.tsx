@@ -2,6 +2,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useMemberships } from "../hooks/useMemberships";
 import { useT } from "../lib/i18n";
 
+const ADD_SENTINEL = "__add__";
+
 export function StoreSwitcher() {
   const { data, isLoading } = useMemberships();
   const { storeId } = useParams();
@@ -13,18 +15,20 @@ export function StoreSwitcher() {
       <span className="text-sm text-slate-500">{t("common.loading")}</span>
     );
   if (!data || data.length === 0) return null;
-  if (data.length === 1) {
-    return (
-      <span className="text-sm font-medium text-slate-700">
-        {data[0].store.name}
-      </span>
-    );
-  }
+
+  const onChange = (value: string) => {
+    if (value === ADD_SENTINEL) {
+      navigate("/onboarding?add=1");
+    } else {
+      navigate(`/store/${value}`);
+    }
+  };
+
   return (
     <select
       className="rounded-md border border-slate-300 px-2 py-1 text-sm"
       value={storeId ?? ""}
-      onChange={(e) => navigate(`/store/${e.target.value}`)}
+      onChange={(e) => onChange(e.target.value)}
       aria-label={t("store.switcher.label")}
     >
       {data.map((m) => (
@@ -32,6 +36,7 @@ export function StoreSwitcher() {
           {m.store.name}
         </option>
       ))}
+      <option value={ADD_SENTINEL}>{t("store.switcher.add")}</option>
     </select>
   );
 }

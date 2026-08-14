@@ -26,14 +26,11 @@ export function AuditPage() {
   const [allItems, setAllItems] = useState<AuditLog[]>([]);
   const [hasMore, setHasMore] = useState(true);
 
-  if (!storeId) {
-    return <ErrorState message="Store not found" />;
-  }
-
   const { isLoading, error, refetch } = useQuery({
     queryKey: ["audit-log", storeId, filterEntityType, before],
+    enabled: !!storeId,
     queryFn: async () => {
-      const items = await listAuditLog(storeId, {
+      const items = await listAuditLog(storeId as string, {
         entity_type: filterEntityType || undefined,
         limit: 100,
         before_at: before || undefined,
@@ -69,6 +66,10 @@ export function AuditPage() {
     setAllItems([]);
     refetch();
   };
+
+  if (!storeId) {
+    return <ErrorState message="Store not found" />;
+  }
 
   if (isLoading && allItems.length === 0) {
     return <LoadingState>{t("common.loading")}</LoadingState>;

@@ -1,69 +1,57 @@
 ## Intent
-Fix the onboarding infinite loop and add real paths in.
+Fix the wave of bugs that surfaced when you actually used the app end-to-end. Every one of them has a shared root cause — either a Rules-of-Hooks violation the Haikus keep planting, or a React-lifecycle mismatch, or a Supabase quirk the earlier code assumed away.
 
-Three problems reported: (1) sign-in stuck on onboarding forever — turns out the mega-PR shipped an RLS chicken-and-egg where the first user could never actually become owner of the store they created (only existing managers can insert memberships, but the first user has no membership to insert one with); (2) no password field could be shown to double-check what you typed; (3) the onboarding "waiting for invite" card was a dead-end for anyone opening the app first.
+## Root causes + fixes
 
-## What changed
+### 1. React error #310 on Settings, Clock, Schedule, Sales, Audit, Announcements
+Every one of these pages had an `if (…) return` before at least one `useQuery` / `useMutation` / `useEffect`. First render skipped hooks; second render called them; React blew up with "Rendered more hooks than during the previous render." Same bug that hit Dashboard + Onboarding in PR #9.
 
-### Schema (`supabase/migrations/20260813000000_onboarding_paths.sql`)
-- `stores.join_code` — opt-in short random slug; owners regenerate to invalidate.
-- New `store_applications` table + `application_status` enum. Applicant-side RLS lets you insert own + select own + withdraw own; manager-side RLS lets owners/managers see + update apps for their store.
-- Seven SECURITY DEFINER RPCs (each does its own permission check; RLS stays strict):
-  - `create_store_with_owner(name, timezone?, currency?)` — **the fix**. Atomically inserts store + owner membership so the first user can actually onboard.
-  - `regenerate_join_code(store_id)` — owner/manager only. 12-char hex slug, unique.
-  - `submit_application(join_code, note?)` — any authed user. Rejects unknown codes, existing memberships, and duplicate pending apps.
-  - `preview_store_by_code(join_code)` — returns `{id, name}` only. Lets the onboarding page show "you're applying to X" before submit without opening the whole `stores` table to non-members.
-  - `approve_application(id, role, employment_type, hourly_rate_cents)` — owner/manager only. Atomic: membership + rate_history + app status.
-  - `decline_application(id, reason?)`, `withdraw_application(id)` — same as they sound.
-- `set check_function_bodies = off;` at the top for the same reason as the baseline (forward references).
+**Fix:** moved every hook above every conditional return on all six pages. Queries use `enabled: ready` so they cleanly no-op when their guards aren't satisfied. The route wrapper still gates on `!!storeId`, so query fns cast the guaranteed-string param.
 
-### Types + services
-- `Store.join_code`, `StoreApplication`, `ApplicationStatus` added to `src/types/database.ts`.
-- `src/services/stores.ts` — `createStore` now calls the RPC. Also `regenerateJoinCode(storeId)`.
-- `src/services/applications.ts` (new) — 7 client wrappers for the RPCs above + `listMyApplications` / `listPendingApplications`.
+### 2. Realtime "cannot add postgres_changes callbacks after subscribe()" on Schedule
+The `useRealtime(storeId, queryClient)` "hook" was called from render body without being wrapped in `useEffect`. Every re-render created a fresh channel and re-subscribed to the *same* channel key, which is exactly what the error refuses.
 
-### UI
+**Fix:** rewrote it as an actual `useEffect` keyed on `[storeId, queryClient]` with a proper cleanup that unsubscribes. Subscription lives for the lifetime of the page, tears down on unmount / storeId change.
 
-**`src/components/ui/PasswordInput.tsx` (new)** — reusable Input variant with an eye/eye-off toggle via lucide-react. Aria-labeled `Show password` / `Hide password` (both languages).
+### 3. SettingsPage errored only on refresh
+Called `setState` (three times) inside the render body when `store && name === ""`. On initial mount, React tolerates it barely; on refresh after form was populated, the pattern raced with the query cache and the tree became inconsistent.
 
-**`src/pages/LoginPage.tsx` + `src/pages/InviteAcceptPage.tsx`** — swap `<Input type="password">` for `<PasswordInput>`. Zero other logic change.
+**Fix:** moved the form-seeding into a proper `useEffect([store])`. Biome-ignore comment documents why `name` is intentionally not a dep (would reset the form as the user types).
 
-**`src/pages/OnboardingPage.tsx` (rewritten)** — one card with two clear sections:
-- **Create your own store** (owner path): name input → button → `createStore` RPC → navigate straight into `/store/:id`.
-- **Join an existing store** (employee path): paste join code → debounce 400ms → `previewStoreByCode` fetches `{id, name}` and shows "you're applying to: X" → optional message → **Send application** → `submitApplication`. Card then swaps to a "waiting for approval" state that polls every 5s; when the manager approves, the memberships query invalidates and the user lands in the app.
-- Small hint at bottom: "have an invite link? open it — you don't need to be here."
-- Pending-app state includes a "Withdraw application" button.
+### 4. PeoplePage errored when there were no employees
+`listMembers` used PostgREST embedded selection `profile:profiles(*)` on the `memberships_public` VIEW. Views don't have PostgREST-registered FK relationships to other tables, so the embed silently failed and the query threw. Also `.order("profile.display_name")` needed `{ referencedTable: "profiles" }` for the same reason.
 
-**`src/pages/SettingsPage.tsx`** — new "Join code" section, managers only:
-- If none set: `Generate join code` button.
-- If set: monospace pill + `Copy` (with 2-sec "Copied!" swap) + `Regenerate` (with `window.confirm` since it invalidates the old code).
+**Fix:** two-step fetch in `src/services/members.ts` — pull memberships, pull matching profiles in a second query, stitch client-side. `MemberWithProfile.profile` is now `Profile | null` (in case a member somehow lacks a profile row). ApplyRulePage + PeoplePage updated to use `?.display_name` accordingly.
 
-**`src/pages/PeoplePage.tsx`** — new "Pending applications" section at the top, managers only:
-- One row per pending app: applicant short id, submitted time, optional message.
-- Inline approve form: role select / employment_type select / hourly_rate input (in VND, parsed via `parseVndToCents`) → **Approve** calls `approveApplication`.
-- **Decline** button toggles an inline reason input, then calls `declineApplication`.
-- Both invalidate the pending-apps query and the members list.
+### 5. Locked into one store — no way to create/join a second
+StoreSwitcher only rendered a dropdown if `data.length > 1`; with one membership, it was just static text. OnboardingPage always redirected away when you had a membership, so navigating to `/onboarding` did nothing.
 
-### i18n
-New keys under `onboarding.*` (three sections + pending state + section_or), `store.settings.join_code_*`, `people.applications.*`, `auth.show_password` / `auth.hide_password`. Dropped `onboarding.waiting_invite` and `onboarding.create_store` (superseded). Both `en.json` and `vi.json`.
+**Fix:**
+- StoreSwitcher now always renders a `<select>` (even with one store), with a final `+ Create or join another store` option that navigates to `/onboarding?add=1`.
+- OnboardingPage's auto-redirect on-memberships now respects `?add=1` and skips the redirect, letting the user create or apply to a second store from the same UI.
+
+### 6. PeoplePage was a wall of buttons for someone with no team yet
+User's actual words: "leave me discover with a shit ton of buttons to find it." When a manager has only themselves, no invites, no applications — show a first-run helper card that points at **Settings → Join code** with a direct link, above the existing invite section.
+
+**Fix:** new "Your team is empty" Card at the top of PeoplePage, only visible when `canManage && members.length ≤ 1 && no invites && no applications`. Card links directly to `/store/:storeId/settings`. Existing invite form stays where it is for anyone who wants the email path.
+
+## i18n
+Added: `store.switcher.add`, `people.empty_title`, `people.empty_body`, `people.empty_open_settings`. Both `en` and `vi`.
 
 ## Verification
 - `npm run typecheck` — 0 errors
 - `npm test` — 11 passing
 - `npm run build` — succeeds
-- `npm run lint` — 0 errors, 4 warnings (pre-existing `noExplicitAny` on event handlers)
+- `npm run lint` — 0 errors, 3 warnings (pre-existing `noExplicitAny` in PeoplePage; not from this PR)
 
 ## For you
-**What changed:** the sign-up flow actually works now — you can create your store as the first user and land straight in the app. If you're not the boss, you can paste a join code your manager gave you and wait for approval. Password fields have an eye toggle so you can see what you typed.
+**What changed:** everything you reported works. Settings / Clock / Schedule load without crashing (and Settings doesn't crash on refresh). People shows a friendly "your team is empty — open Settings to grab your join code" card when you're alone, with a one-tap link there instead of hunting. Store switcher in the top bar now has "+ Create or join another store" as a real option — pick it and you're back on the onboarding page as if you were signing up, but with your other stores still intact.
 
-**What you do next:**
-1. Review the diff / preview URL (Cloudflare Pages will attach it to this PR).
-2. Merge. The apply-migrations workflow will auto-apply the migration (adds the join_code column, applications table, and 7 RPCs to your prod DB). No manual SQL paste this time.
-3. Sign in fresh, create your store, land in the dashboard. To test the join flow: **Settings → Generate join code**, copy it, open an incognito window, sign up with a different email, paste the code. Back in the first window, **People → Pending applications** should show it; approve with role=employee, employment_type=hourly, some rate.
+**What you do next:** merge → apply-migrations no-ops (no schema change) → Cloudflare Pages redeploys → walk the previously-broken paths.
 
-**How to roll it back:** revert this PR. The migration only adds — nothing pre-existing is dropped. If you want the schema cleaned too, ask me and I'll draft the reversing SQL (drop applications table, drop the 7 RPCs, drop join_code column).
+**How to roll it back:** revert this PR. You're back to the state where those six pages crash.
 
-## Known tradeoffs
-- Join code exposes the store's name to anyone who guesses the code. 12 hex chars ≈ 10^14 possibilities; guessing is impractical, but you can regenerate any time.
-- Applicant sees their own `store_id` short form in the pending card (couldn't fetch the store name post-submit because non-members can't read `stores`). Not a big deal — the user just came from a page that showed the store name.
-- No email to the manager when an application arrives; they see it next time they open the People page. If it becomes annoying we add a `notifications` row on submit — cheap follow-up.
+## Still open (worth flagging, not in this PR)
+- The auto rule-detection tick (missed_shift / late_arrival etc.) — schema exists, no cron running yet.
+- Password reset flow — you still reset via Supabase Dashboard for now.
+- E2E tests, perf budget, branch protection ruleset — deferred per demo posture.
