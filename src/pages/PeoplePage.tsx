@@ -1,16 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { type JSX, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
+import { Dialog } from "../components/ui/Dialog";
 import {
   EmptyState,
   ErrorState,
   LoadingState,
 } from "../components/ui/EmptyState";
-import { Input, Label } from "../components/ui/Input";
+import { Input, Label, Textarea } from "../components/ui/Input";
+import { Select } from "../components/ui/Select";
 import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
 import { useSession } from "../hooks/useSession";
+import { errorMessage } from "../lib/errorMessage";
 import { useT } from "../lib/i18n";
 import { parseVndToCents } from "../lib/money";
 import {
@@ -27,11 +31,14 @@ import {
 import {
   deactivateMember,
   listMembers,
+  updateHourlyRate,
   updateMemberRole,
 } from "../services/members";
-import type { EmploymentType, Role } from "../types/database";
+import { grantManualPoints } from "../services/points";
+import { listRules } from "../services/rules";
+import type { EmploymentType, Role, Rule } from "../types/database";
 
-export function PeoplePage() {
+export function PeoplePage(): JSX.Element {
   const t = useT();
   const { storeId } = useParams<{ storeId: string }>();
   const { user } = useSession();
@@ -53,11 +60,27 @@ export function PeoplePage() {
         role: Role;
         employment_type: EmploymentType;
         hourly_rate_input: string;
-        declineReasonShown: boolean;
+        declineDialogOpen: boolean;
         declineReason: string;
       }
     >
   >({});
+
+  const [grantPointsDialogOpen, setGrantPointsDialogOpen] = useState(false);
+  const [grantPointsUserId, setGrantPointsUserId] = useState("");
+  const [grantPointsRuleId, setGrantPointsRuleId] = useState("");
+  const [grantPointsNote, setGrantPointsNote] = useState("");
+  const [grantPointsSuccess, setGrantPointsSuccess] = useState(false);
+  const [grantPointsSuccessRule, setGrantPointsSuccessRule] =
+    useState<Rule | null>(null);
+
+  const [editRateDialogOpen, setEditRateDialogOpen] = useState(false);
+  const [editRateUserId, setEditRateUserId] = useState("");
+  const [editRateValue, setEditRateValue] = useState("");
+
+  const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
+  const [deactivateUserId, setDeactivateUserId] = useState("");
+  const [deactivateMemberName, setDeactivateMemberName] = useState("");
 
   const membersQuery = useQuery({
     queryKey: ["members", storeId],
@@ -75,6 +98,12 @@ export function PeoplePage() {
     queryKey: ["applications", "pending", storeId],
     queryFn: () =>
       storeId ? listPendingApplications(storeId) : Promise.resolve([]),
+    enabled: !!storeId && canManage,
+  });
+
+  const rulesQuery = useQuery({
+    queryKey: ["rules", storeId],
+    queryFn: () => (storeId ? listRules(storeId) : Promise.resolve([])),
     enabled: !!storeId && canManage,
   });
 
@@ -120,6 +149,52 @@ export function PeoplePage() {
         : Promise.resolve(null as any),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["members", storeId] });
+      setDeactivateDialogOpen(false);
+    },
+  });
+
+  const grantPointsMutation = useMutation({
+    mutationFn: () =>
+      storeId
+        ? grantManualPoints({
+            storeId,
+            ruleId: grantPointsRuleId,
+            userId: grantPointsUserId,
+            note: grantPointsNote || undefined,
+          })
+        : Promise.resolve(null as any),
+    onSuccess: () => {
+      const rule = manualRules.find((r) => r.id === grantPointsRuleId);
+      if (rule) {
+        setGrantPointsSuccessRule(rule);
+        setGrantPointsSuccess(true);
+        setTimeout(() => {
+          setGrantPointsDialogOpen(false);
+          setGrantPointsSuccess(false);
+          setGrantPointsSuccessRule(null);
+          setGrantPointsRuleId("");
+          setGrantPointsNote("");
+        }, 1200);
+      }
+    },
+  });
+
+  const editRateMutation = useMutation({
+    mutationFn: () => {
+      const rateCents = parseVndToCents(editRateValue);
+      if (rateCents === null) throw new Error("Invalid hourly rate");
+      return storeId
+        ? updateHourlyRate({
+            storeId,
+            userId: editRateUserId,
+            hourlyRateCents: rateCents,
+          })
+        : Promise.resolve(null as any);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["members", storeId] });
+      setEditRateDialogOpen(false);
+      setEditRateValue("");
     },
   });
 
@@ -151,7 +226,8 @@ export function PeoplePage() {
   if (
     membersQuery.isLoading ||
     invitesQuery.isLoading ||
-    applicationsQuery.isLoading
+    applicationsQuery.isLoading ||
+    rulesQuery.isLoading
   ) {
     return <LoadingState>{t("common.loading")}</LoadingState>;
   }
@@ -159,11 +235,7 @@ export function PeoplePage() {
   if (membersQuery.error) {
     return (
       <ErrorState
-        message={
-          membersQuery.error instanceof Error
-            ? membersQuery.error.message
-            : "Error loading members"
-        }
+        message={errorMessage(membersQuery.error, "Error loading members")}
       />
     );
   }
@@ -171,6 +243,12 @@ export function PeoplePage() {
   const members = membersQuery.data ?? [];
   const invites = invitesQuery.data ?? [];
   const applications = applicationsQuery.data ?? [];
+  const rules = rulesQuery.data ?? [];
+  const manualRules = rules.filter((r) => r.active && r.kind === "manual");
+
+  const activeOwnerCount = members.filter(
+    (m) => m.role === "owner" && m.active,
+  ).length;
 
   function getAppFormState(appId: string) {
     if (!appFormState[appId]) {
@@ -180,7 +258,7 @@ export function PeoplePage() {
           role: "employee" as Role,
           employment_type: "hourly" as EmploymentType,
           hourly_rate_input: "0",
-          declineReasonShown: false,
+          declineDialogOpen: false,
           declineReason: "",
         },
       }));
@@ -205,11 +283,18 @@ export function PeoplePage() {
 
   function handleDeclineApplication(appId: string) {
     const state = getAppFormState(appId);
-    if (!window.confirm("Confirm decline?")) return;
     declineMutation.mutate({
       id: appId,
       reason: state.declineReason || undefined,
     });
+    setAppFormState((prev) => ({
+      ...prev,
+      [appId]: {
+        ...prev[appId],
+        declineDialogOpen: false,
+        declineReason: "",
+      },
+    }));
   }
 
   function handleCreateInvite() {
@@ -262,6 +347,26 @@ export function PeoplePage() {
             <div className="space-y-4">
               {applications.map((app) => {
                 const state = getAppFormState(app.id);
+                const roleOptions: Array<{ value: Role; label: string }> = [
+                  { value: "employee", label: t("people.role_employee") },
+                  { value: "manager", label: t("people.role_manager") },
+                  { value: "owner", label: t("people.role_owner") },
+                ];
+                const employmentOptions: Array<{
+                  value: EmploymentType;
+                  label: string;
+                }> = [
+                  {
+                    value: "full_time",
+                    label: t("people.employment_full_time"),
+                  },
+                  {
+                    value: "part_time",
+                    label: t("people.employment_part_time"),
+                  },
+                  { value: "hourly", label: t("people.employment_hourly") },
+                ];
+
                 return (
                   <div
                     key={app.id}
@@ -286,52 +391,47 @@ export function PeoplePage() {
                         )}
                       </div>
 
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
                           <Label>{t("people.applications.role")}</Label>
-                          <select
+                          <Select
                             value={state.role}
-                            onChange={(e) =>
+                            onChange={(v) =>
                               setAppFormState((prev) => ({
                                 ...prev,
                                 [app.id]: {
                                   ...prev[app.id],
-                                  role: e.target.value as Role,
+                                  role: v as Role,
                                 },
                               }))
                             }
-                            className="block w-full rounded-md border border-slate-300 px-2 py-1 text-xs mt-1"
+                            options={roleOptions}
                             disabled={approveMutation.isPending}
-                          >
-                            <option value="employee">Employee</option>
-                            <option value="manager">Manager</option>
-                            <option value="owner">Owner</option>
-                          </select>
+                            ariaLabel={t("people.applications.role")}
+                            className="mt-1"
+                          />
                         </div>
 
                         <div>
                           <Label>
                             {t("people.applications.employment_type")}
                           </Label>
-                          <select
+                          <Select
                             value={state.employment_type}
-                            onChange={(e) =>
+                            onChange={(v) =>
                               setAppFormState((prev) => ({
                                 ...prev,
                                 [app.id]: {
                                   ...prev[app.id],
-                                  employment_type: e.target
-                                    .value as EmploymentType,
+                                  employment_type: v as EmploymentType,
                                 },
                               }))
                             }
-                            className="block w-full rounded-md border border-slate-300 px-2 py-1 text-xs mt-1"
+                            options={employmentOptions}
                             disabled={approveMutation.isPending}
-                          >
-                            <option value="full_time">Full-time</option>
-                            <option value="part_time">Part-time</option>
-                            <option value="hourly">Hourly</option>
-                          </select>
+                            ariaLabel={t("people.applications.employment_type")}
+                            className="mt-1"
+                          />
                         </div>
 
                         <div>
@@ -366,36 +466,56 @@ export function PeoplePage() {
                             : t("people.applications.approve")}
                         </Button>
 
-                        {state.declineReasonShown ? (
+                        <Button
+                          variant="danger"
+                          onClick={() =>
+                            setAppFormState((prev) => ({
+                              ...prev,
+                              [app.id]: {
+                                ...prev[app.id],
+                                declineDialogOpen: true,
+                              },
+                            }))
+                          }
+                          disabled={declineMutation.isPending}
+                          className="text-xs"
+                        >
+                          {t("people.applications.decline")}
+                        </Button>
+                      </div>
+
+                      {approveMutation.error && (
+                        <Alert variant="error">
+                          {errorMessage(
+                            approveMutation.error,
+                            "Failed to approve",
+                          )}
+                        </Alert>
+                      )}
+                      {declineMutation.error && (
+                        <Alert variant="error">
+                          {errorMessage(
+                            declineMutation.error,
+                            "Failed to decline",
+                          )}
+                        </Alert>
+                      )}
+
+                      <Dialog
+                        open={state.declineDialogOpen}
+                        onClose={() =>
+                          setAppFormState((prev) => ({
+                            ...prev,
+                            [app.id]: {
+                              ...prev[app.id],
+                              declineDialogOpen: false,
+                              declineReason: "",
+                            },
+                          }))
+                        }
+                        title={t("people.decline_reason_title")}
+                        footer={
                           <>
-                            <Input
-                              type="text"
-                              value={state.declineReason}
-                              onChange={(e) =>
-                                setAppFormState((prev) => ({
-                                  ...prev,
-                                  [app.id]: {
-                                    ...prev[app.id],
-                                    declineReason: e.target.value,
-                                  },
-                                }))
-                              }
-                              placeholder={t(
-                                "people.applications.decline_reason",
-                              )}
-                              className="text-xs flex-1"
-                              disabled={declineMutation.isPending}
-                            />
-                            <Button
-                              variant="danger"
-                              onClick={() => handleDeclineApplication(app.id)}
-                              disabled={declineMutation.isPending}
-                              className="text-xs"
-                            >
-                              {declineMutation.isPending
-                                ? t("common.loading")
-                                : t("common.delete")}
-                            </Button>
                             <Button
                               variant="secondary"
                               onClick={() =>
@@ -403,55 +523,40 @@ export function PeoplePage() {
                                   ...prev,
                                   [app.id]: {
                                     ...prev[app.id],
-                                    declineReasonShown: false,
+                                    declineDialogOpen: false,
                                     declineReason: "",
                                   },
                                 }))
                               }
-                              disabled={declineMutation.isPending}
-                              className="text-xs"
                             >
                               {t("common.cancel")}
                             </Button>
+                            <Button
+                              variant="danger"
+                              onClick={() => handleDeclineApplication(app.id)}
+                              disabled={declineMutation.isPending}
+                            >
+                              {declineMutation.isPending
+                                ? t("common.loading")
+                                : t("people.applications.decline")}
+                            </Button>
                           </>
-                        ) : (
-                          <Button
-                            variant="danger"
-                            onClick={() =>
-                              setAppFormState((prev) => ({
-                                ...prev,
-                                [app.id]: {
-                                  ...prev[app.id],
-                                  declineReasonShown: true,
-                                },
-                              }))
-                            }
-                            disabled={declineMutation.isPending}
-                            className="text-xs"
-                          >
-                            {t("people.applications.decline")}
-                          </Button>
-                        )}
-                      </div>
-
-                      {approveMutation.error && (
-                        <ErrorState
-                          message={
-                            approveMutation.error instanceof Error
-                              ? approveMutation.error.message
-                              : "Failed to approve"
+                        }
+                      >
+                        <Textarea
+                          value={state.declineReason}
+                          onChange={(e) =>
+                            setAppFormState((prev) => ({
+                              ...prev,
+                              [app.id]: {
+                                ...prev[app.id],
+                                declineReason: e.target.value,
+                              },
+                            }))
                           }
+                          placeholder={t("people.decline_reason_placeholder")}
                         />
-                      )}
-                      {declineMutation.error && (
-                        <ErrorState
-                          message={
-                            declineMutation.error instanceof Error
-                              ? declineMutation.error.message
-                              : "Failed to decline"
-                          }
-                        />
-                      )}
+                      </Dialog>
                     </div>
                   </div>
                 );
@@ -467,47 +572,109 @@ export function PeoplePage() {
           <EmptyState>{t("common.empty")}</EmptyState>
         ) : (
           <div className="space-y-2">
-            {members.map((member) => (
-              <div
-                key={member.user_id}
-                className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2"
-              >
-                <div className="flex-1">
-                  <div className="font-medium text-sm text-slate-900">
-                    {member.profile?.display_name ||
-                      member.user_id.substring(0, 8)}
+            {members.map((member) => {
+              const isLastOwner =
+                member.role === "owner" && activeOwnerCount === 1;
+              const isSelf = member.user_id === user?.id;
+              const roleOptions: Array<{ value: Role; label: string }> = [
+                { value: "employee", label: t("people.role_employee") },
+                { value: "manager", label: t("people.role_manager") },
+                { value: "owner", label: t("people.role_owner") },
+              ];
+
+              return (
+                <div
+                  key={member.user_id}
+                  className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2"
+                >
+                  <div className="flex-1">
+                    <div className="font-medium text-sm text-slate-900">
+                      {member.profile?.display_name ||
+                        member.user_id.substring(0, 8)}
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      {t(`people.role_${member.role}`)}
+                    </div>
                   </div>
-                  <div className="text-xs text-slate-500">{member.role}</div>
+                  {canManage && (
+                    <div className="flex gap-2">
+                      <div
+                        title={
+                          isLastOwner
+                            ? t("people.last_owner_blocked")
+                            : undefined
+                        }
+                      >
+                        <Select
+                          value={member.role}
+                          onChange={(v) =>
+                            updateRoleMutation.mutate({
+                              userId: member.user_id,
+                              newRole: v as Role,
+                            })
+                          }
+                          options={roleOptions}
+                          disabled={updateRoleMutation.isPending || isLastOwner}
+                          ariaLabel={t("people.applications.role")}
+                          className="text-xs"
+                        />
+                      </div>
+                      <Button
+                        onClick={() => {
+                          setGrantPointsUserId(member.user_id);
+                          setGrantPointsRuleId("");
+                          setGrantPointsNote("");
+                          setGrantPointsSuccess(false);
+                          setGrantPointsDialogOpen(true);
+                        }}
+                        disabled={grantPointsMutation.isPending}
+                        className="text-xs"
+                      >
+                        {t("people.grant_points")}
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          setEditRateUserId(member.user_id);
+                          setEditRateValue("");
+                          setEditRateDialogOpen(true);
+                        }}
+                        disabled={editRateMutation.isPending}
+                        className="text-xs"
+                      >
+                        {t("people.edit_rate")}
+                      </Button>
+                      <div
+                        title={
+                          isLastOwner
+                            ? t("people.last_owner_blocked")
+                            : undefined
+                        }
+                      >
+                        <Button
+                          variant="danger"
+                          onClick={() => {
+                            setDeactivateUserId(member.user_id);
+                            setDeactivateMemberName(
+                              member.profile?.display_name ||
+                                member.user_id.substring(0, 8),
+                            );
+                            setDeactivateDialogOpen(true);
+                          }}
+                          disabled={
+                            deactivateMutation.isPending ||
+                            isLastOwner ||
+                            isSelf
+                          }
+                          className="text-xs"
+                        >
+                          {t("people.deactivate")}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                {canManage && (
-                  <div className="flex gap-2">
-                    <select
-                      value={member.role}
-                      onChange={(e) =>
-                        updateRoleMutation.mutate({
-                          userId: member.user_id,
-                          newRole: e.target.value as Role,
-                        })
-                      }
-                      className="rounded-md border border-slate-300 px-2 py-1 text-xs"
-                      disabled={updateRoleMutation.isPending}
-                    >
-                      <option value="owner">Owner</option>
-                      <option value="manager">Manager</option>
-                      <option value="employee">Employee</option>
-                    </select>
-                    <Button
-                      variant="danger"
-                      onClick={() => deactivateMutation.mutate(member.user_id)}
-                      disabled={deactivateMutation.isPending}
-                      className="text-xs"
-                    >
-                      {t("common.delete")}
-                    </Button>
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </Card>
@@ -575,35 +742,52 @@ export function PeoplePage() {
 
                 <div>
                   <Label htmlFor="invite-role">{t("people.invite.role")}</Label>
-                  <select
+                  <Select
                     id="invite-role"
                     value={inviteRole}
-                    onChange={(e) => setInviteRole(e.target.value as Role)}
-                    className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                    onChange={(v) => setInviteRole(v as Role)}
+                    options={[
+                      {
+                        value: "employee",
+                        label: t("people.role_employee"),
+                      },
+                      {
+                        value: "manager",
+                        label: t("people.role_manager"),
+                      },
+                    ]}
                     disabled={createInviteMutation.isPending}
-                  >
-                    <option value="employee">Employee</option>
-                    <option value="manager">Manager</option>
-                  </select>
+                    ariaLabel={t("people.invite.role")}
+                  />
                 </div>
 
                 <div>
                   <Label htmlFor="invite-employment">
                     {t("people.invite.employment_type")}
                   </Label>
-                  <select
+                  <Select
                     id="invite-employment"
                     value={inviteEmploymentType}
-                    onChange={(e) =>
-                      setInviteEmploymentType(e.target.value as EmploymentType)
+                    onChange={(v) =>
+                      setInviteEmploymentType(v as EmploymentType)
                     }
-                    className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                    options={[
+                      {
+                        value: "full_time",
+                        label: t("people.employment_full_time"),
+                      },
+                      {
+                        value: "part_time",
+                        label: t("people.employment_part_time"),
+                      },
+                      {
+                        value: "hourly",
+                        label: t("people.employment_hourly"),
+                      },
+                    ]}
                     disabled={createInviteMutation.isPending}
-                  >
-                    <option value="full_time">Full-time</option>
-                    <option value="part_time">Part-time</option>
-                    <option value="hourly">Hourly</option>
-                  </select>
+                    ariaLabel={t("people.invite.employment_type")}
+                  />
                 </div>
 
                 <div>
@@ -623,13 +807,12 @@ export function PeoplePage() {
                 </div>
 
                 {createInviteMutation.error && (
-                  <ErrorState
-                    message={
-                      createInviteMutation.error instanceof Error
-                        ? createInviteMutation.error.message
-                        : "Failed to create invite"
-                    }
-                  />
+                  <Alert variant="error">
+                    {errorMessage(
+                      createInviteMutation.error,
+                      "Failed to create invite",
+                    )}
+                  </Alert>
                 )}
 
                 <div className="flex gap-2">
@@ -663,6 +846,186 @@ export function PeoplePage() {
           </Card>
         </>
       )}
+
+      <Dialog
+        open={grantPointsDialogOpen}
+        onClose={() => {
+          setGrantPointsDialogOpen(false);
+          setGrantPointsRuleId("");
+          setGrantPointsNote("");
+          setGrantPointsSuccess(false);
+        }}
+        title={t("people.grant_points_title", {
+          name:
+            members.find((m) => m.user_id === grantPointsUserId)?.profile
+              ?.display_name ||
+            members
+              .find((m) => m.user_id === grantPointsUserId)
+              ?.user_id?.substring(0, 8) ||
+            "",
+        })}
+        footer={
+          !grantPointsSuccess && (
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setGrantPointsDialogOpen(false);
+                  setGrantPointsRuleId("");
+                  setGrantPointsNote("");
+                }}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                onClick={() => grantPointsMutation.mutate()}
+                disabled={grantPointsMutation.isPending || !grantPointsRuleId}
+              >
+                {grantPointsMutation.isPending
+                  ? t("common.loading")
+                  : t("people.grant_points_submit")}
+              </Button>
+            </>
+          )
+        }
+      >
+        {grantPointsSuccess && grantPointsSuccessRule ? (
+          <Alert variant="success">
+            {t("people.grant_points_success", {
+              points: grantPointsSuccessRule.points_delta,
+            })}
+          </Alert>
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <Label>{t("people.grant_points_rule")}</Label>
+              <Select
+                value={grantPointsRuleId}
+                onChange={setGrantPointsRuleId}
+                options={manualRules.map((r) => ({
+                  value: r.id,
+                  label: r.name,
+                }))}
+                searchable
+                ariaLabel={t("people.grant_points_rule")}
+                placeholder={t("common.select_placeholder")}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label>{t("people.grant_points_note")}</Label>
+              <Textarea
+                value={grantPointsNote}
+                onChange={(e) => setGrantPointsNote(e.target.value)}
+                placeholder={t("people.grant_points_note")}
+              />
+            </div>
+            {grantPointsMutation.error && (
+              <Alert variant="error">
+                {errorMessage(
+                  grantPointsMutation.error,
+                  "Failed to grant points",
+                )}
+              </Alert>
+            )}
+          </div>
+        )}
+      </Dialog>
+
+      <Dialog
+        open={editRateDialogOpen}
+        onClose={() => {
+          setEditRateDialogOpen(false);
+          setEditRateValue("");
+        }}
+        title={t("people.edit_rate_title", {
+          name:
+            members.find((m) => m.user_id === editRateUserId)?.profile
+              ?.display_name ||
+            members
+              .find((m) => m.user_id === editRateUserId)
+              ?.user_id?.substring(0, 8) ||
+            "",
+        })}
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setEditRateDialogOpen(false);
+                setEditRateValue("");
+              }}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              onClick={() => editRateMutation.mutate()}
+              disabled={editRateMutation.isPending || !editRateValue}
+            >
+              {editRateMutation.isPending
+                ? t("common.loading")
+                : t("common.save")}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <Label>{t("people.edit_rate_new")}</Label>
+            <Input
+              type="text"
+              value={editRateValue}
+              onChange={(e) => setEditRateValue(e.target.value)}
+              placeholder="0"
+              className="mt-1"
+            />
+          </div>
+          <p className="text-sm text-slate-600">
+            {t("people.edit_rate_effective")}
+          </p>
+          {editRateMutation.error && (
+            <Alert variant="error">
+              {errorMessage(editRateMutation.error, "Failed to update rate")}
+            </Alert>
+          )}
+        </div>
+      </Dialog>
+
+      <Dialog
+        open={deactivateDialogOpen}
+        onClose={() => setDeactivateDialogOpen(false)}
+        title={t("people.deactivate_confirm_title", {
+          name: deactivateMemberName,
+        })}
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => setDeactivateDialogOpen(false)}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => deactivateMutation.mutate(deactivateUserId)}
+              disabled={deactivateMutation.isPending}
+            >
+              {deactivateMutation.isPending
+                ? t("common.loading")
+                : t("people.deactivate")}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-slate-600">
+          {t("people.deactivate_confirm_body")}
+        </p>
+        {deactivateMutation.error && (
+          <Alert variant="error" className="mt-4">
+            {errorMessage(deactivateMutation.error, "Failed to deactivate")}
+          </Alert>
+        )}
+      </Dialog>
     </div>
   );
 }

@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
 import { Input, Label } from "../components/ui/Input";
 import { PasswordInput } from "../components/ui/PasswordInput";
 import { useSession } from "../hooks/useSession";
+import { errorMessage } from "../lib/errorMessage";
 import { useT } from "../lib/i18n";
 import { signInWithPassword, signUpWithPassword } from "../services/auth";
 
@@ -43,7 +45,9 @@ export function LoginPage() {
       const to = params.get("return") || "/onboarding";
       navigate(to, { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Sign-in failed");
+      const fallback =
+        mode === "signup" ? t("auth.signup_failed") : t("auth.signin_failed");
+      setError(errorMessage(err, fallback));
     } finally {
       setBusy(false);
     }
@@ -82,12 +86,18 @@ export function LoginPage() {
               minLength={6}
               disabled={busy}
             />
+            {mode === "signin" && (
+              <div className="text-right mt-2">
+                <Link
+                  to="/reset-password"
+                  className="text-xs text-slate-600 hover:text-slate-900 underline"
+                >
+                  {t("auth.forgot_password")}
+                </Link>
+              </div>
+            )}
           </div>
-          {error && (
-            <div className="text-sm text-red-600">
-              {t("auth.failed", { message: error })}
-            </div>
-          )}
+          {error && <Alert variant="error">{error}</Alert>}
           <Button
             type="submit"
             disabled={busy || !email || password.length < 6}

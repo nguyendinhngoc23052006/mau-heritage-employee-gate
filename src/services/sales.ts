@@ -48,16 +48,19 @@ export async function listMySales(
 
 export async function listPendingSales(
   storeId: string,
-): Promise<SalesReport[]> {
+): Promise<(SalesReport & { submitter_display_name: string | null })[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from("sales_reports")
-    .select("*")
+    .select("*, user:profiles(display_name)")
     .eq("store_id", storeId)
     .eq("status", "pending")
     .order("submitted_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []) as SalesReport[];
+  return (data ?? []).map((row: any) => ({
+    ...row,
+    submitter_display_name: row.user?.display_name ?? null,
+  })) as (SalesReport & { submitter_display_name: string | null })[];
 }
 
 export async function approveSales(id: string): Promise<SalesReport> {

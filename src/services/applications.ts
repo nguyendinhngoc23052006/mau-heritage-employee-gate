@@ -100,3 +100,25 @@ export async function withdrawApplication(
   if (error) throw error;
   return data as StoreApplication;
 }
+
+export async function listMyDeclinedApplications(): Promise<
+  (StoreApplication & { store_name?: string })[]
+> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("store_applications")
+    .select("*")
+    .eq("status", "declined")
+    .order("decided_at", { ascending: false });
+  if (error) throw error;
+  return (data as (StoreApplication & { store_name?: string })[]) ?? [];
+}
+
+export async function dismissDeclinedApplication(id: string): Promise<void> {
+  const supabase = getSupabase();
+  const { error } = await supabase
+    .from("store_applications")
+    .delete()
+    .eq("id", id);
+  if (error) throw error;
+}

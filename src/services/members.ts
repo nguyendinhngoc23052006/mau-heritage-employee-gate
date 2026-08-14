@@ -72,3 +72,26 @@ export async function deactivateMember(userId: string, storeId: string) {
   if (error) throw error;
   return data;
 }
+
+export async function updateHourlyRate(params: {
+  storeId: string;
+  userId: string;
+  hourlyRateCents: number;
+}) {
+  const supabase = getSupabase();
+  const uid = (await supabase.auth.getUser()).data.user?.id;
+  if (!uid) throw new Error("Not authenticated");
+
+  const { data, error } = await supabase
+    .from("rate_history")
+    .insert({
+      user_id: params.userId,
+      store_id: params.storeId,
+      hourly_rate_cents: params.hourlyRateCents,
+      changed_by: uid,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}

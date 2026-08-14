@@ -1,15 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
-import { ErrorState, LoadingState } from "../components/ui/EmptyState";
+import { Dialog } from "../components/ui/Dialog";
+import { LoadingState } from "../components/ui/EmptyState";
 import { Input, Label, Textarea } from "../components/ui/Input";
 import { useMemberships } from "../hooks/useMemberships";
 import { useSession } from "../hooks/useSession";
+import { errorMessage } from "../lib/errorMessage";
 import { useT } from "../lib/i18n";
 import {
+  dismissDeclinedApplication,
   listMyApplications,
+  listMyDeclinedApplications,
   previewStoreByCode,
   submitApplication,
   withdrawApplication,
@@ -27,7 +32,11 @@ export function OnboardingPage() {
   const [params] = useSearchParams();
   const addAnother = params.get("add") === "1";
   const { loading: sessionLoading } = useSession();
-  const { data: memberships, isLoading: membershipsLoading } = useMemberships();
+  const {
+    data: memberships,
+    isLoading: membershipsLoading,
+    isDeactivated,
+  } = useMemberships();
 
   const [storeName, setStoreName] = useState("");
   const [joinCode, setJoinCode] = useState("");
@@ -40,12 +49,24 @@ export function OnboardingPage() {
   const [debounceTimer, setDebounceTimer] = useState<ReturnType<
     typeof setTimeout
   > | null>(null);
+  const [approvedStore, setApprovedStore] = useState<string | null>(null);
+  const [reclaimConfirmOpen, setReclaimConfirmOpen] = useState(false);
+  const [reclaimConfirmStore, setReclaimConfirmStore] = useState<string | null>(
+    null,
+  );
+  const previewedRef = useRef(false);
 
   // Query applications with 5s refetch
   const { data: applications, isLoading: applicationsLoading } = useQuery({
     queryKey: ["applications", "mine"],
     queryFn: async () => listMyApplications(),
     refetchInterval: 5_000,
+  });
+
+  // Query declined applications
+  const { data: declinedApplications } = useQuery({
+    queryKey: ["applications", "declined"],
+    queryFn: async () => listMyDeclinedApplications(),
   });
 
   // Query orphaned stores the user created but no longer owns
@@ -57,6 +78,8 @@ export function OnboardingPage() {
   const reclaimMutation = useMutation({
     mutationFn: async (storeId: string) => reclaimStore(storeId),
     onSuccess: (membership) => {
+      setReclaimConfirmOpen(false);
+      setReclaimConfirmStore(null);
       queryClient.invalidateQueries({ queryKey: ["memberships", "mine"] });
       queryClient.invalidateQueries({ queryKey: ["stores", "orphaned"] });
       navigate(`/store/${membership.store_id}`, { replace: true });
@@ -66,20 +89,36 @@ export function OnboardingPage() {
   // Check for approved application and invalidate memberships
   useEffect(() => {
     if (!applications) return;
-    const hasApproved = applications.some((app) => app.status === "approved");
-    if (hasApproved) {
+    const approved = applications.find((app) => app.status === "approved");
+    if (approved) {
+      setApprovedStore(approved.store_id.substring(0, 8));
       queryClient.invalidateQueries({ queryKey: ["memberships", "mine"] });
     }
   }, [applications, queryClient]);
 
   // Redirect once memberships appear — UNLESS `?add=1`, which is the signal
   // from the store-switcher that the user wants to add a second store.
-  // useEffect keeps hook order stable regardless of the redirect decision.
+  // Also check for deactivation and handle approved app navigation with delay.
   const firstMembershipStoreId =
     memberships && memberships.length > 0 ? memberships[0].store_id : null;
   useEffect(() => {
     if (addAnother) return;
     if (sessionLoading || membershipsLoading) return;
+
+    // Check for deactivation
+    if (isDeactivated) {
+      navigate("/deactivated", { replace: true });
+      return;
+    }
+
+    // Handle approved redirect
+    if (approvedStore && firstMembershipStoreId) {
+      const timer = setTimeout(() => {
+        navigate(`/store/${firstMembershipStoreId}`, { replace: true });
+      }, 1200);
+      return () => clearTimeout(timer);
+    }
+
     if (firstMembershipStoreId) {
       navigate(`/store/${firstMembershipStoreId}`, { replace: true });
     }
@@ -88,6 +127,8 @@ export function OnboardingPage() {
     sessionLoading,
     membershipsLoading,
     firstMembershipStoreId,
+    isDeactivated,
+    approvedStore,
     navigate,
   ]);
 
@@ -121,6 +162,14 @@ export function OnboardingPage() {
     },
   });
 
+  // Dismiss declined application mutation
+  const dismissDeclinedMutation = useMutation({
+    mutationFn: async (id: string) => dismissDeclinedApplication(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["applications", "declined"] });
+    },
+  });
+
   // Handle create store
   const handleCreateStore = useCallback(() => {
     if (!storeName.trim()) return;
@@ -144,6 +193,7 @@ export function OnboardingPage() {
         setPreviewedStoreName(null);
         setPreviewError(null);
         setPreviewedCode(null);
+        previewedRef.current = false;
       }
     },
     [debounceTimer],
@@ -158,10 +208,12 @@ export function OnboardingPage() {
         if (preview) {
           setPreviewedStoreName(preview.name);
           setPreviewedCode(code);
+          previewedRef.current = true;
         } else {
           setPreviewError(t("onboarding.join_unknown_code"));
           setPreviewedStoreName(null);
           setPreviewedCode(null);
+          previewedRef.current = false;
         }
       } catch (err) {
         setPreviewError(
@@ -169,6 +221,7 @@ export function OnboardingPage() {
         );
         setPreviewedStoreName(null);
         setPreviewedCode(null);
+        previewedRef.current = false;
       }
     },
     [t],
@@ -184,11 +237,27 @@ export function OnboardingPage() {
   // Handle submit application
   const handleSubmitApplication = useCallback(() => {
     if (!previewedCode) return;
-    submitApplicationMutation.mutate({
-      code: previewedCode,
-      note: joinNote || undefined,
-    });
-  }, [previewedCode, joinNote, submitApplicationMutation]);
+    submitApplicationMutation.mutate(
+      {
+        code: previewedCode,
+        note: joinNote || undefined,
+      },
+      {
+        onError: (err: unknown) => {
+          const anyErr = err as { code?: string; message?: string };
+          if (
+            anyErr.code === "42501" ||
+            (anyErr.message && anyErr.message.includes("join code"))
+          ) {
+            if (previewedRef.current) {
+              setPreviewError(t("onboarding.code_stale_hint"));
+              previewedRef.current = false;
+            }
+          }
+        },
+      },
+    );
+  }, [previewedCode, joinNote, submitApplicationMutation, t]);
 
   // Withdraw application
   const handleWithdraw = useCallback(
@@ -211,11 +280,56 @@ export function OnboardingPage() {
     );
   }
 
+  // Show declined applications
+  if (
+    declinedApplications &&
+    declinedApplications.length > 0 &&
+    !pendingApplication
+  ) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-8">
+        <div className="w-full max-w-md space-y-4">
+          {declinedApplications.map((app) => (
+            <Card key={app.id}>
+              <CardTitle>{t("onboarding.declined_title")}</CardTitle>
+              <p className="text-sm text-slate-600 mb-2">
+                {t("onboarding.declined_body", {
+                  store: app.store_id.substring(0, 8),
+                })}
+              </p>
+              {app.decision_reason && (
+                <p className="text-sm text-slate-600 mb-4">
+                  {t("onboarding.declined_reason", {
+                    reason: app.decision_reason,
+                  })}
+                </p>
+              )}
+              <Button
+                onClick={() => dismissDeclinedMutation.mutate(app.id)}
+                disabled={dismissDeclinedMutation.isPending}
+                className="w-full"
+              >
+                {dismissDeclinedMutation.isPending
+                  ? t("common.loading")
+                  : t("onboarding.declined_dismiss")}
+              </Button>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   // Show pending application
   if (pendingApplication) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-8">
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-md space-y-4">
+          {approvedStore && (
+            <Alert variant="success">
+              {t("onboarding.approved_toast", { store: approvedStore })}
+            </Alert>
+          )}
           <Card>
             <CardTitle>{t("onboarding.pending_title")}</CardTitle>
             <p className="text-sm text-slate-600 mb-4">
@@ -242,6 +356,11 @@ export function OnboardingPage() {
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md space-y-4">
+        {approvedStore && (
+          <Alert variant="success">
+            {t("onboarding.approved_toast", { store: approvedStore })}
+          </Alert>
+        )}
         {orphanedStores && orphanedStores.length > 0 && (
           <Card>
             <CardTitle>{t("onboarding.reclaim_title")}</CardTitle>
@@ -265,7 +384,10 @@ export function OnboardingPage() {
                     </div>
                   </div>
                   <Button
-                    onClick={() => reclaimMutation.mutate(s.id)}
+                    onClick={() => {
+                      setReclaimConfirmOpen(true);
+                      setReclaimConfirmStore(s.id);
+                    }}
                     disabled={reclaimMutation.isPending}
                     variant="primary"
                     className="text-xs"
@@ -279,17 +401,53 @@ export function OnboardingPage() {
             </div>
             {reclaimMutation.error && (
               <div className="mt-3">
-                <ErrorState
-                  message={
-                    reclaimMutation.error instanceof Error
-                      ? reclaimMutation.error.message
-                      : "Failed to reclaim"
-                  }
-                />
+                <Alert variant="error">
+                  {errorMessage(reclaimMutation.error, t("auth.signin_failed"))}
+                </Alert>
               </div>
             )}
           </Card>
         )}
+
+        <Dialog
+          open={reclaimConfirmOpen}
+          onClose={() => {
+            setReclaimConfirmOpen(false);
+            setReclaimConfirmStore(null);
+          }}
+          title={t("onboarding.reclaim_confirm_title")}
+          footer={
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setReclaimConfirmOpen(false);
+                  setReclaimConfirmStore(null);
+                }}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                onClick={() => {
+                  if (reclaimConfirmStore) {
+                    reclaimMutation.mutate(reclaimConfirmStore);
+                  }
+                }}
+                disabled={reclaimMutation.isPending}
+              >
+                {t("onboarding.reclaim_confirm_button")}
+              </Button>
+            </>
+          }
+        >
+          <p className="text-sm text-slate-600">
+            {t("onboarding.reclaim_confirm_body", {
+              store:
+                orphanedStores?.find((s) => s.id === reclaimConfirmStore)
+                  ?.name || "",
+            })}
+          </p>
+        </Dialog>
 
         <Card>
           <CardTitle>{t("onboarding.title")}</CardTitle>
@@ -318,13 +476,12 @@ export function OnboardingPage() {
                   />
                 </div>
                 {createStoreMutation.error && (
-                  <ErrorState
-                    message={
-                      createStoreMutation.error instanceof Error
-                        ? createStoreMutation.error.message
-                        : "Failed to create store"
-                    }
-                  />
+                  <Alert variant="error">
+                    {errorMessage(
+                      createStoreMutation.error,
+                      t("auth.signin_failed"),
+                    )}
+                  </Alert>
                 )}
                 <Button
                   onClick={handleCreateStore}
@@ -387,12 +544,18 @@ export function OnboardingPage() {
                   </div>
                 </div>
 
-                {previewError && <ErrorState message={previewError} />}
+                {previewError && (
+                  <Alert
+                    variant={previewError.includes("Reason") ? "info" : "error"}
+                  >
+                    {previewError}
+                  </Alert>
+                )}
 
                 {previewedStoreName && (
-                  <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-md p-3">
+                  <Alert variant="success">
                     {t("onboarding.join_preview", { name: previewedStoreName })}
-                  </div>
+                  </Alert>
                 )}
 
                 {previewedStoreName && (
@@ -410,6 +573,15 @@ export function OnboardingPage() {
                         rows={3}
                       />
                     </div>
+
+                    {submitApplicationMutation.error && (
+                      <Alert variant="error">
+                        {errorMessage(
+                          submitApplicationMutation.error,
+                          t("auth.signin_failed"),
+                        )}
+                      </Alert>
+                    )}
 
                     <Button
                       onClick={handleSubmitApplication}

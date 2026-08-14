@@ -1,8 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { useParams } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
-import { ErrorState, LoadingState } from "../components/ui/EmptyState";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "../components/ui/EmptyState";
 import { useSession } from "../hooks/useSession";
 import { useT } from "../lib/i18n";
 import {
@@ -37,9 +42,10 @@ export function ClockPage() {
     queryKey: ["clock", "events", userId, storeId],
     enabled: ready,
     queryFn: () => {
-      const today = new Date().toISOString().split("T")[0];
+      const from = new Date();
+      from.setDate(from.getDate() - 30);
       return listMyClockEvents(userId as string, storeId as string, {
-        from: `${today}T00:00:00Z`,
+        from: from.toISOString(),
       });
     },
   });
@@ -117,23 +123,44 @@ export function ClockPage() {
         )}
       </Card>
 
-      {events && events.length > 0 && (
-        <div>
-          <CardTitle>{t("schedule.title")}'s times</CardTitle>
-          <div className="space-y-2">
-            {events.map((event) => (
-              <Card key={event.id} className="text-sm">
-                <div className="flex items-center justify-between">
-                  <span className={event.kind === "in" ? "font-semibold" : ""}>
-                    {event.kind === "in" ? t("clock.in") : t("clock.out")}
-                  </span>
-                  <span>{formatTime(event.at)}</span>
-                </div>
-              </Card>
-            ))}
+      <Card>
+        <CardTitle>{t("clock.history_title")}</CardTitle>
+        {!events || events.length === 0 ? (
+          <EmptyState>{t("clock.history_empty")}</EmptyState>
+        ) : (
+          <div className="overflow-x-auto mt-4">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200">
+                  <th className="px-4 py-2 text-left text-slate-600">
+                    {t("audit.at")}
+                  </th>
+                  <th className="px-4 py-2 text-left text-slate-600">
+                    {t("audit.action")}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {events.map((event) => (
+                  <tr
+                    key={event.id}
+                    className="border-b border-slate-100 hover:bg-slate-50"
+                  >
+                    <td className="px-4 py-2 text-slate-900">
+                      {format(new Date(event.at), "yyyy-MM-dd HH:mm")}
+                    </td>
+                    <td className="px-4 py-2 text-slate-600">
+                      {event.kind === "in"
+                        ? t("clock.history_in")
+                        : t("clock.history_out")}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
-      )}
+        )}
+      </Card>
     </div>
   );
 }

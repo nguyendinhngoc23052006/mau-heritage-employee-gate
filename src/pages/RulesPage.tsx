@@ -2,12 +2,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
+import { Checkbox } from "../components/ui/Checkbox";
 import {
   EmptyState,
   ErrorState,
   LoadingState,
 } from "../components/ui/EmptyState";
 import { Input, Label } from "../components/ui/Input";
+import { Select } from "../components/ui/Select";
 import { useT } from "../lib/i18n";
 import { formatVnd } from "../lib/money";
 import { createRule, listRules, updateRule } from "../services/rules";
@@ -126,51 +128,56 @@ export function RulesPage({ storeId }: RulesPageProps) {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <Label htmlFor="rule-kind">{t("rules.kind_label")}</Label>
-                <select
+                <Select
                   id="rule-kind"
                   value={formData.kind}
-                  onChange={(e) =>
+                  onChange={(v) =>
                     setFormData({
                       ...formData,
-                      kind: e.target.value as "auto" | "manual",
+                      kind: v as "auto" | "manual",
                     })
                   }
-                  className="w-full px-3 py-2 border rounded-md"
-                >
-                  <option value="manual">{t("rules.kind_manual")}</option>
-                  <option value="auto">{t("rules.kind_auto")}</option>
-                </select>
+                  options={[
+                    { value: "manual", label: t("rules.kind_manual") },
+                    { value: "auto", label: t("rules.kind_auto") },
+                  ]}
+                />
               </div>
 
               <div>
                 <Label htmlFor="rule-trigger">{t("rules.trigger")}</Label>
-                <select
+                <Select
                   id="rule-trigger"
                   value={formData.trigger_type}
-                  onChange={(e) =>
+                  onChange={(v) =>
                     setFormData({
                       ...formData,
-                      trigger_type: e.target.value as RuleTrigger,
+                      trigger_type: v as RuleTrigger,
                     })
                   }
-                  className="w-full px-3 py-2 border rounded-md"
-                >
-                  <option value="manager_manual">
-                    {t("rules.trigger_manager_manual")}
-                  </option>
-                  <option value="missed_shift">
-                    {t("rules.trigger_missed_shift")}
-                  </option>
-                  <option value="late_arrival">
-                    {t("rules.trigger_late_arrival")}
-                  </option>
-                  <option value="till_variance">
-                    {t("rules.trigger_till_variance")}
-                  </option>
-                  <option value="points_threshold">
-                    {t("rules.trigger_points_threshold")}
-                  </option>
-                </select>
+                  options={[
+                    {
+                      value: "manager_manual",
+                      label: t("rules.trigger_manager_manual"),
+                    },
+                    {
+                      value: "missed_shift",
+                      label: t("rules.trigger_missed_shift"),
+                    },
+                    {
+                      value: "late_arrival",
+                      label: t("rules.trigger_late_arrival"),
+                    },
+                    {
+                      value: "till_variance",
+                      label: t("rules.trigger_till_variance"),
+                    },
+                    {
+                      value: "points_threshold",
+                      label: t("rules.trigger_points_threshold"),
+                    },
+                  ]}
+                />
               </div>
             </div>
 
@@ -206,17 +213,12 @@ export function RulesPage({ storeId }: RulesPageProps) {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <input
-                id="rule-active"
-                type="checkbox"
-                checked={formData.active}
-                onChange={(e) =>
-                  setFormData({ ...formData, active: e.target.checked })
-                }
-              />
-              <Label htmlFor="rule-active">{t("rules.active")}</Label>
-            </div>
+            <Checkbox
+              id="rule-active"
+              checked={formData.active}
+              onChange={(v) => setFormData({ ...formData, active: v })}
+              label={t("rules.active")}
+            />
 
             <div className="flex gap-2">
               <Button
@@ -251,6 +253,7 @@ export function RulesPage({ storeId }: RulesPageProps) {
                 <th className="text-left px-4 py-2">{t("rules.points")}</th>
                 <th className="text-left px-4 py-2">{t("rules.amount")}</th>
                 <th className="text-left px-4 py-2">{t("rules.active")}</th>
+                {/* TODO i18n: "Actions" column header has no key yet */}
                 <th className="text-left px-4 py-2">Actions</th>
               </tr>
             </thead>
@@ -263,12 +266,14 @@ export function RulesPage({ storeId }: RulesPageProps) {
                   <td className="px-4 py-2">{formatVnd(rule.amount_cents)}</td>
                   <td className="px-4 py-2">{rule.active ? "✓" : "✗"}</td>
                   <td className="px-4 py-2">
+                    {/* TODO i18n: "Actions" column header has no key yet */}
                     <Button
                       variant="secondary"
                       onClick={() => toggleMutation.mutate(rule)}
                       disabled={toggleMutation.isPending}
                       className="text-xs px-2 py-1"
                     >
+                      {/* TODO i18n: "Disable" / "Enable" has no key yet */}
                       {rule.active ? "Disable" : "Enable"}
                     </Button>
                   </td>
