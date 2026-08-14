@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
 import { ErrorState, LoadingState } from "../components/ui/EmptyState";
 import { Input, Label } from "../components/ui/Input";
+import { Select } from "../components/ui/Select";
 import { useT } from "../lib/i18n";
 import { getMyProfile, updateMyProfile } from "../services/profiles";
 
@@ -86,31 +88,28 @@ export function ProfilePage() {
 
           <div>
             <Label htmlFor="locale">{t("profile.locale")}</Label>
-            <select
+            <Select
               id="locale"
               value={locale}
-              onChange={(e) => setLocale(e.target.value)}
+              onChange={setLocale}
               disabled={updateMutation.isPending}
-              className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
-            >
-              <option value="vi">Tiếng Việt</option>
-              <option value="en">English</option>
-            </select>
+              options={[
+                { value: "vi", label: "Tiếng Việt" },
+                { value: "en", label: "English" },
+              ]}
+              ariaLabel={t("profile.locale")}
+            />
           </div>
 
           {updateMutation.error && (
-            <ErrorState
-              message={
-                updateMutation.error instanceof Error
-                  ? updateMutation.error.message
-                  : "Failed to save profile"
-              }
-            />
+            <Alert variant="error">
+              {updateMutation.error instanceof Error
+                ? updateMutation.error.message
+                : "Failed to save profile"}
+            </Alert>
           )}
 
-          {saved && (
-            <div className="text-sm text-green-600">{t("profile.saved")}</div>
-          )}
+          {saved && <Alert variant="success">{t("profile.saved")}</Alert>}
 
           <Button
             onClick={handleSave}

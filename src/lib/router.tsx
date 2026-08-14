@@ -5,6 +5,8 @@ import {
 } from "react-router-dom";
 import { AuthGate } from "../components/AuthGate";
 import { Layout } from "../components/Layout";
+import { DeactivatedPage } from "../pages/DeactivatedPage";
+import { ResetPasswordPage } from "../pages/ResetPasswordPage";
 
 import { announcementsRoutes } from "../routes/announcements";
 import { auditRoutes } from "../routes/audit";
@@ -41,6 +43,8 @@ export const router = createBrowserRouter([
   ...authRoutes,
   ...onboardingRoutes,
   ...inviteRoutes,
+  { path: "/deactivated", element: <DeactivatedPage /> },
+  { path: "/reset-password", element: <ResetPasswordPage /> },
   {
     path: "/store/:storeId",
     element: (

@@ -4,6 +4,7 @@ import { getSupabase } from "../lib/supabaseClient";
 import { Nav } from "./Nav";
 import { StoreSwitcher } from "./StoreSwitcher";
 import { Button } from "./ui/Button";
+import { Select } from "./ui/Select";
 
 export function Layout() {
   const t = useT();
@@ -28,15 +29,16 @@ export function Layout() {
           <StoreSwitcher />
         </div>
         <div className="flex items-center gap-2">
-          <select
-            className="rounded-md border border-slate-300 px-2 py-1 text-xs"
+          <Select
             value={locale}
-            onChange={(e) => setLocale(e.target.value)}
-            aria-label={t("profile.locale")}
-          >
-            <option value="vi">Tiếng Việt</option>
-            <option value="en">English</option>
-          </select>
+            onChange={setLocale}
+            options={[
+              { value: "vi", label: "Tiếng Việt" },
+              { value: "en", label: "English" },
+            ]}
+            ariaLabel={t("profile.locale")}
+            className="w-32"
+          />
           <Button variant="ghost" onClick={signOut}>
             {t("nav.signout")}
           </Button>

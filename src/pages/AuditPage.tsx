@@ -12,7 +12,7 @@ import {
 import { Input } from "../components/ui/Input";
 import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
 import { useT } from "../lib/i18n";
-import { listAuditLog } from "../services/audit";
+import { exportAuditCsv, listAuditLog } from "../services/audit";
 import type { AuditLog } from "../types/database";
 
 export function AuditPage() {
@@ -125,6 +125,18 @@ export function AuditPage() {
           </div>
         </div>
       </Card>
+
+      {/* Export Button */}
+      {allItems.length > 0 && (
+        <div className="flex justify-end mb-4">
+          <Button
+            onClick={() => exportAuditCsv(storeId as string)}
+            variant="secondary"
+          >
+            {t("audit.export_csv")}
+          </Button>
+        </div>
+      )}
 
       {/* Table */}
       {allItems.length === 0 ? (

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
 import {
@@ -8,6 +9,8 @@ import {
   LoadingState,
 } from "../components/ui/EmptyState";
 import { Input, Label } from "../components/ui/Input";
+import { Select } from "../components/ui/Select";
+import { errorMessage } from "../lib/errorMessage";
 import { useT } from "../lib/i18n";
 import { listMembers } from "../services/members";
 import { applyManualRule, listRules } from "../services/rules";
@@ -103,13 +106,16 @@ export function ApplyRulePage({ storeId }: ApplyRulePageProps) {
         <h1 className="text-2xl font-bold">{t("rules.apply")}</h1>
       </div>
 
-      {successMessage && (
-        <div className="p-4 bg-green-100 text-green-800 rounded-md">
-          {successMessage}
-        </div>
+      {successMessage && <Alert variant="success">{successMessage}</Alert>}
+
+      {applyMutation.error && (
+        <Alert variant="error">
+          {errorMessage(applyMutation.error, "Failed to apply rule")}
+        </Alert>
       )}
 
       <Card>
+        {/* TODO i18n: "Apply a rule" */}
         <CardTitle>Apply a rule</CardTitle>
         <form
           onSubmit={async (e) => {
@@ -120,24 +126,26 @@ export function ApplyRulePage({ storeId }: ApplyRulePageProps) {
           className="space-y-4"
         >
           <div>
+            {/* TODO i18n: "Select rule" */}
             <Label htmlFor="rule-select">Select rule</Label>
-            <select
+            <Select
               id="rule-select"
               value={selectedRuleId}
-              onChange={(e) => setSelectedRuleId(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md"
-            >
-              <option value="">-- Choose a rule --</option>
-              {rules?.map((rule) => (
-                <option key={rule.id} value={rule.id}>
-                  {rule.name}
-                </option>
-              ))}
-            </select>
+              onChange={setSelectedRuleId}
+              searchable
+              options={
+                rules?.map((rule) => ({
+                  value: rule.id,
+                  label: rule.name,
+                })) || []
+              }
+              placeholder="-- Choose a rule --"
+            />
           </div>
 
           {selectedRule && (
             <div className="p-4 bg-slate-100 rounded-md space-y-2 text-sm">
+              {/* TODO i18n: "Points delta" and "Amount (VND)" */}
               <div>
                 <strong>Points delta:</strong> {selectedRule.points_delta}
               </div>
@@ -148,23 +156,27 @@ export function ApplyRulePage({ storeId }: ApplyRulePageProps) {
           )}
 
           <div>
+            {/* TODO i18n: "Select employee" */}
             <Label htmlFor="user-select">Select employee</Label>
-            <select
+            <Select
               id="user-select"
               value={selectedUserId}
-              onChange={(e) => setSelectedUserId(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md"
-            >
-              <option value="">-- Choose an employee --</option>
-              {members?.map((member) => (
-                <option key={member.user_id} value={member.user_id}>
-                  {member.profile?.display_name || member.user_id}
-                </option>
-              ))}
-            </select>
+              onChange={setSelectedUserId}
+              searchable
+              options={
+                members?.map((member) => ({
+                  value: member.user_id,
+                  label:
+                    member.profile?.display_name ||
+                    member.user_id.substring(0, 8),
+                })) || []
+              }
+              placeholder="-- Choose an employee --"
+            />
           </div>
 
           <div>
+            {/* TODO i18n: "Reason (optional)" and placeholder */}
             <Label htmlFor="reason">Reason (optional)</Label>
             <Input
               id="reason"
@@ -181,6 +193,7 @@ export function ApplyRulePage({ storeId }: ApplyRulePageProps) {
             }
             className="w-full"
           >
+            {/* TODO i18n: "Apply rule" */}
             {applyMutation.isPending ? t("common.loading") : "Apply rule"}
           </Button>
         </form>

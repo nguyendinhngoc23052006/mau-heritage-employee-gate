@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
-import { ErrorState, LoadingState } from "../components/ui/EmptyState";
+import { LoadingState } from "../components/ui/EmptyState";
 import { Input, Label } from "../components/ui/Input";
 import { PasswordInput } from "../components/ui/PasswordInput";
 import { useSession } from "../hooks/useSession";
+import { errorMessage } from "../lib/errorMessage";
 import { useT } from "../lib/i18n";
 import { signInWithPassword, signUpWithPassword } from "../services/auth";
 import { acceptInvite } from "../services/invites";
@@ -57,7 +59,9 @@ export function InviteAcceptPage() {
           : await signInWithPassword(email, password);
       if (authError) setError(authError.message);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Sign-in failed");
+      const fallback =
+        mode === "signup" ? t("auth.signup_failed") : t("auth.signin_failed");
+      setError(errorMessage(err, fallback));
     } finally {
       setBusy(false);
     }
@@ -85,7 +89,7 @@ export function InviteAcceptPage() {
         <Card className="w-full max-w-sm">
           <CardTitle>{t("invite.accept.title")}</CardTitle>
           <div className="space-y-4">
-            <ErrorState message={error} />
+            <Alert variant="error">{error}</Alert>
             <Button
               onClick={() => {
                 setError(null);

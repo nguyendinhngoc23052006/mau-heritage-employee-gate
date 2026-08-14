@@ -2,17 +2,28 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Button } from "../components/ui/Button";
-import { Card } from "../components/ui/Card";
+import { Card, CardTitle } from "../components/ui/Card";
+import { Dialog } from "../components/ui/Dialog";
 import {
   EmptyState,
   ErrorState,
   LoadingState,
 } from "../components/ui/EmptyState";
 import { Input, Label, Textarea } from "../components/ui/Input";
+import { Select } from "../components/ui/Select";
 import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
+import { useSession } from "../hooks/useSession";
 import { useT } from "../lib/i18n";
 import { getSupabase } from "../lib/supabaseClient";
-import { claimShift, createShift, listShifts } from "../services/shifts";
+import {
+  approveSwap,
+  claimShift,
+  createShift,
+  declineSwap,
+  listPendingSwaps,
+  listShifts,
+  requestShiftSwap,
+} from "../services/shifts";
 import type { Shift } from "../types/database";
 
 function formatDate(iso: string): string {
@@ -28,10 +39,15 @@ function formatDate(iso: string): string {
 export function SchedulePage() {
   const t = useT();
   const { storeId } = useParams<{ storeId: string }>();
+  const { user } = useSession();
   const role = useRoleOn(storeId);
   const queryClient = useQueryClient();
 
   const [showNewForm, setShowNewForm] = useState(false);
+  const [swapDialogShiftId, setSwapDialogShiftId] = useState<string | null>(
+    null,
+  );
+  const [selectedSwapUserId, setSelectedSwapUserId] = useState("");
   const [formData, setFormData] = useState({
     starts_at: "",
     ends_at: "",
@@ -66,6 +82,31 @@ export function SchedulePage() {
         queryClient.invalidateQueries({ queryKey: ["shifts", storeId] });
       }
     },
+  });
+
+  const swapMutation = useMutation({
+    mutationFn: () => {
+      if (!swapDialogShiftId || !selectedSwapUserId)
+        throw new Error("Missing data");
+      return requestShiftSwap({
+        shiftId: swapDialogShiftId,
+        toUserId: selectedSwapUserId,
+      });
+    },
+    onSuccess: () => {
+      if (storeId) {
+        queryClient.invalidateQueries({ queryKey: ["shifts", storeId] });
+        queryClient.invalidateQueries({ queryKey: ["shift_swaps", storeId] });
+      }
+      setSwapDialogShiftId(null);
+      setSelectedSwapUserId("");
+    },
+  });
+
+  const { data: pendingSwaps } = useQuery({
+    queryKey: ["shift_swaps", storeId],
+    enabled: ready && isManagerRole(role),
+    queryFn: () => listPendingSwaps(storeId as string),
   });
 
   const createMutation = useMutation({
@@ -140,6 +181,33 @@ export function SchedulePage() {
         )}
       </div>
 
+      {isManager && pendingSwaps && pendingSwaps.length > 0 && (
+        <PendingSwapsSection
+          swaps={pendingSwaps}
+          onApprove={(id) => {
+            return approveSwap(id).then(() => {
+              if (storeId) {
+                queryClient.invalidateQueries({
+                  queryKey: ["shifts", storeId],
+                });
+                queryClient.invalidateQueries({
+                  queryKey: ["shift_swaps", storeId],
+                });
+              }
+            });
+          }}
+          onDecline={(id) => {
+            return declineSwap(id).then(() => {
+              if (storeId) {
+                queryClient.invalidateQueries({
+                  queryKey: ["shift_swaps", storeId],
+                });
+              }
+            });
+          }}
+        />
+      )}
+
       {showNewForm && isManager && (
         <NewShiftForm
           formData={formData}
@@ -159,9 +227,26 @@ export function SchedulePage() {
               key={shift.id}
               shift={shift}
               onClaim={() => claimMutation.mutate(shift.id)}
+              currentUserId={user?.id}
+              onRequestSwap={() => setSwapDialogShiftId(shift.id)}
             />
           ))}
         </div>
+      )}
+
+      {swapDialogShiftId && (
+        <SwapRequestDialog
+          open={true}
+          storeId={storeId as string}
+          selectedUserId={selectedSwapUserId}
+          onSelectedUserChange={setSelectedSwapUserId}
+          onSubmit={() => swapMutation.mutate()}
+          onClose={() => {
+            setSwapDialogShiftId(null);
+            setSelectedSwapUserId("");
+          }}
+          isLoading={swapMutation.isPending}
+        />
       )}
     </div>
   );
@@ -170,11 +255,16 @@ export function SchedulePage() {
 function ShiftRow({
   shift,
   onClaim,
+  currentUserId,
+  onRequestSwap,
 }: {
   shift: Shift;
   onClaim: () => void;
+  currentUserId?: string;
+  onRequestSwap: () => void;
 }) {
   const t = useT();
+  const isClaimedByMe = shift.claimed_by === currentUserId;
 
   return (
     <Card className="flex items-center justify-between">
@@ -193,11 +283,18 @@ function ShiftRow({
               : "Cancelled"}
         </div>
       </div>
-      {shift.status === "open" && (
-        <Button onClick={onClaim} variant="primary" className="ml-4">
-          {t("schedule.claim")}
-        </Button>
-      )}
+      <div className="ml-4 flex gap-2">
+        {shift.status === "open" && (
+          <Button onClick={onClaim} variant="primary">
+            {t("schedule.claim")}
+          </Button>
+        )}
+        {isClaimedByMe && shift.status === "claimed" && (
+          <Button onClick={onRequestSwap} variant="secondary">
+            {t("swap.request_button")}
+          </Button>
+        )}
+      </div>
     </Card>
   );
 }
@@ -267,6 +364,143 @@ function NewShiftForm({
             {t("common.cancel")}
           </Button>
         </div>
+      </div>
+    </Card>
+  );
+}
+
+function SwapRequestDialog({
+  open,
+  storeId,
+  selectedUserId,
+  onSelectedUserChange,
+  onSubmit,
+  onClose,
+  isLoading,
+}: {
+  open: boolean;
+  storeId: string;
+  selectedUserId: string;
+  onSelectedUserChange: (id: string) => void;
+  onSubmit: () => void;
+  onClose: () => void;
+  isLoading: boolean;
+}) {
+  const t = useT();
+  const { data: members } = useQuery({
+    queryKey: ["members", storeId],
+    queryFn: async () => {
+      const supabase = getSupabase();
+      const { data, error } = await supabase
+        .from("memberships")
+        .select("user_id, user:profiles(display_name)")
+        .eq("store_id", storeId)
+        .eq("active", true);
+      if (error) throw error;
+      return (data ?? []).map((m: any) => ({
+        value: m.user_id,
+        label: m.user?.display_name || m.user_id.substring(0, 8),
+      }));
+    },
+  });
+
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      title={t("swap.request_title")}
+      footer={
+        <div className="flex gap-2">
+          <Button
+            onClick={onSubmit}
+            disabled={isLoading || !selectedUserId}
+            variant="primary"
+          >
+            {t("common.confirm")}
+          </Button>
+          <Button onClick={onClose} variant="secondary">
+            {t("common.cancel")}
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        <div>
+          <Label htmlFor="swap-user">Employee</Label>
+          <Select
+            id="swap-user"
+            value={selectedUserId}
+            onChange={onSelectedUserChange}
+            options={members ?? []}
+            placeholder={t("common.select_placeholder")}
+          />
+        </div>
+      </div>
+    </Dialog>
+  );
+}
+
+function PendingSwapsSection({
+  swaps,
+  onApprove,
+  onDecline,
+}: {
+  swaps: any[];
+  onApprove: (id: string) => Promise<void>;
+  onDecline: (id: string) => Promise<void>;
+}) {
+  const t = useT();
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [decliningId, setDecliningId] = useState<string | null>(null);
+
+  return (
+    <Card className="mb-6">
+      <CardTitle>{t("swap.approve_title")}</CardTitle>
+      <div className="space-y-3 mt-4">
+        {swaps.map((swap) => (
+          <div
+            key={swap.id}
+            className="border-t border-slate-200 pt-3 first:border-0 first:pt-0"
+          >
+            <div className="text-sm text-slate-600 mb-3">
+              <span className="font-medium">
+                {swap.from_user_name || "Unknown"}
+              </span>
+              {" → "}
+              <span className="font-medium">
+                {swap.to_user_name || "Unknown"}
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => {
+                  setApprovingId(swap.id);
+                  onApprove(swap.id)
+                    .catch(console.error)
+                    .finally(() => setApprovingId(null));
+                }}
+                disabled={approvingId === swap.id || decliningId === swap.id}
+                variant="primary"
+                className="flex-1 text-xs"
+              >
+                {t("swap.approve_button")}
+              </Button>
+              <Button
+                onClick={() => {
+                  setDecliningId(swap.id);
+                  onDecline(swap.id)
+                    .catch(console.error)
+                    .finally(() => setDecliningId(null));
+                }}
+                disabled={approvingId === swap.id || decliningId === swap.id}
+                variant="secondary"
+                className="flex-1 text-xs"
+              >
+                {t("swap.decline_button")}
+              </Button>
+            </div>
+          </div>
+        ))}
       </div>
     </Card>
   );

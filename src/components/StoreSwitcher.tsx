@@ -1,6 +1,7 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useMemberships } from "../hooks/useMemberships";
 import { useT } from "../lib/i18n";
+import { Select } from "./ui/Select";
 
 const ADD_SENTINEL = "__add__";
 
@@ -24,19 +25,23 @@ export function StoreSwitcher() {
     }
   };
 
+  const options = [
+    ...data.map((m) => ({
+      value: m.store_id,
+      label: m.store.name,
+    })),
+    { value: ADD_SENTINEL, label: t("store.switcher.add") },
+  ];
+
+  const searchable = data.length >= 6;
+
   return (
-    <select
-      className="rounded-md border border-slate-300 px-2 py-1 text-sm"
+    <Select
       value={storeId ?? ""}
-      onChange={(e) => onChange(e.target.value)}
-      aria-label={t("store.switcher.label")}
-    >
-      {data.map((m) => (
-        <option key={m.store_id} value={m.store_id}>
-          {m.store.name}
-        </option>
-      ))}
-      <option value={ADD_SENTINEL}>{t("store.switcher.add")}</option>
-    </select>
+      onChange={onChange}
+      options={options}
+      ariaLabel={t("store.switcher.label")}
+      searchable={searchable}
+    />
   );
 }

@@ -258,7 +258,7 @@ function PendingSalesRow({
   onDispute,
   isApproving,
 }: {
-  report: SalesReport;
+  report: SalesReport & { submitter_display_name?: string | null };
   onApprove: () => void;
   onDispute: () => void;
   isApproving: boolean;
@@ -268,6 +268,11 @@ function PendingSalesRow({
 
   return (
     <div className="space-y-2">
+      {report.submitter_display_name && (
+        <div className="text-xs font-medium text-slate-700">
+          {t("sales.review_by", { name: report.submitter_display_name })}
+        </div>
+      )}
       <div className="flex items-center justify-between text-sm">
         <span className="font-semibold">{formatVnd(totalCents)}</span>
         <span className="text-slate-500">

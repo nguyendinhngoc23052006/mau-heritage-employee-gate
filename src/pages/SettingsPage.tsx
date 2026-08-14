@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
+import { Dialog } from "../components/ui/Dialog";
 import { ErrorState, LoadingState } from "../components/ui/EmptyState";
 import { Input, Label } from "../components/ui/Input";
 import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
@@ -22,6 +24,7 @@ export function SettingsPage() {
   const [currency, setCurrency] = useState("");
   const [saved, setSaved] = useState(false);
   const [copiedJoinCode, setCopiedJoinCode] = useState(false);
+  const [showRegenDialog, setShowRegenDialog] = useState(false);
 
   const {
     data: store,
@@ -81,9 +84,12 @@ export function SettingsPage() {
   }
 
   function handleRegenerateJoinCode() {
-    if (window.confirm(`${t("store.settings.join_code_regenerate")}?`)) {
-      regenerateMutation.mutate();
-    }
+    setShowRegenDialog(true);
+  }
+
+  function confirmRegenerate() {
+    setShowRegenDialog(false);
+    regenerateMutation.mutate();
   }
 
   return (
@@ -124,17 +130,12 @@ export function SettingsPage() {
           </div>
 
           {updateMutation.error && (
-            <ErrorState
-              message={errorMessage(
-                updateMutation.error,
-                "Failed to save settings",
-              )}
-            />
+            <Alert variant="error">
+              {errorMessage(updateMutation.error, "Failed to save settings")}
+            </Alert>
           )}
 
-          {saved && (
-            <div className="text-sm text-green-600">{t("profile.saved")}</div>
-          )}
+          {saved && <Alert variant="success">{t("profile.saved")}</Alert>}
 
           <Button
             onClick={handleSave}
@@ -202,16 +203,45 @@ export function SettingsPage() {
               </>
             )}
             {regenerateMutation.error && (
-              <ErrorState
-                message={errorMessage(
+              <Alert variant="error">
+                {errorMessage(
                   regenerateMutation.error,
                   "Failed to regenerate join code",
                 )}
-              />
+              </Alert>
             )}
           </div>
         </Card>
       )}
+
+      <Dialog
+        open={showRegenDialog}
+        onClose={() => setShowRegenDialog(false)}
+        title={t("store.settings.join_code_regenerate")}
+        footer={
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => setShowRegenDialog(false)}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={confirmRegenerate}
+              disabled={regenerateMutation.isPending}
+            >
+              {regenerateMutation.isPending
+                ? t("common.loading")
+                : t("store.settings.join_code_regenerate")}
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-sm text-slate-600">
+          {t("store.settings.join_code_regenerate")}?
+        </p>
+      </Dialog>
     </div>
   );
 }
