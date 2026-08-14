@@ -1,5 +1,5 @@
 import { getSupabase } from "../lib/supabaseClient";
-import type { Store } from "../types/database";
+import type { Membership, Store } from "../types/database";
 
 export async function createStore(params: {
   name: string;
@@ -49,4 +49,26 @@ export async function regenerateJoinCode(storeId: string): Promise<string> {
   });
   if (error) throw error;
   return data as string;
+}
+
+export interface OrphanedStore {
+  id: string;
+  name: string;
+  created_at: string;
+}
+
+export async function listMyOrphanedStores(): Promise<OrphanedStore[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc("list_my_orphaned_stores");
+  if (error) throw error;
+  return (data as OrphanedStore[]) ?? [];
+}
+
+export async function reclaimStore(storeId: string): Promise<Membership> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc("reclaim_store", {
+    p_store_id: storeId,
+  });
+  if (error) throw error;
+  return data as Membership;
 }

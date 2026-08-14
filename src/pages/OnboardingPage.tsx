@@ -14,7 +14,11 @@ import {
   submitApplication,
   withdrawApplication,
 } from "../services/applications";
-import { createStore } from "../services/stores";
+import {
+  createStore,
+  listMyOrphanedStores,
+  reclaimStore,
+} from "../services/stores";
 
 export function OnboardingPage() {
   const t = useT();
@@ -42,6 +46,21 @@ export function OnboardingPage() {
     queryKey: ["applications", "mine"],
     queryFn: async () => listMyApplications(),
     refetchInterval: 5_000,
+  });
+
+  // Query orphaned stores the user created but no longer owns
+  const { data: orphanedStores } = useQuery({
+    queryKey: ["stores", "orphaned"],
+    queryFn: async () => listMyOrphanedStores(),
+  });
+
+  const reclaimMutation = useMutation({
+    mutationFn: async (storeId: string) => reclaimStore(storeId),
+    onSuccess: (membership) => {
+      queryClient.invalidateQueries({ queryKey: ["memberships", "mine"] });
+      queryClient.invalidateQueries({ queryKey: ["stores", "orphaned"] });
+      navigate(`/store/${membership.store_id}`, { replace: true });
+    },
   });
 
   // Check for approved application and invalidate memberships
@@ -222,7 +241,56 @@ export function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-8">
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-md space-y-4">
+        {orphanedStores && orphanedStores.length > 0 && (
+          <Card>
+            <CardTitle>{t("onboarding.reclaim_title")}</CardTitle>
+            <p className="text-xs text-slate-600 mb-3">
+              {t("onboarding.reclaim_hint")}
+            </p>
+            <div className="space-y-2">
+              {orphanedStores.map((s) => (
+                <div
+                  key={s.id}
+                  className="flex items-center justify-between gap-2 rounded border border-amber-200 bg-amber-50 p-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-semibold text-slate-900">
+                      {s.name}
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      {t("onboarding.reclaim_created", {
+                        when: new Date(s.created_at).toLocaleDateString(),
+                      })}
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => reclaimMutation.mutate(s.id)}
+                    disabled={reclaimMutation.isPending}
+                    variant="primary"
+                    className="text-xs"
+                  >
+                    {reclaimMutation.isPending
+                      ? t("common.loading")
+                      : t("onboarding.reclaim_button")}
+                  </Button>
+                </div>
+              ))}
+            </div>
+            {reclaimMutation.error && (
+              <div className="mt-3">
+                <ErrorState
+                  message={
+                    reclaimMutation.error instanceof Error
+                      ? reclaimMutation.error.message
+                      : "Failed to reclaim"
+                  }
+                />
+              </div>
+            )}
+          </Card>
+        )}
+
         <Card>
           <CardTitle>{t("onboarding.title")}</CardTitle>
 
@@ -360,7 +428,7 @@ export function OnboardingPage() {
         </Card>
 
         {/* Hint */}
-        <p className="text-xs text-slate-500 mt-4 text-center">
+        <p className="text-xs text-slate-500 text-center">
           {t("onboarding.invite_hint")}
         </p>
       </div>
