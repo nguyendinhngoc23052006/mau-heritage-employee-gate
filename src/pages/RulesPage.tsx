@@ -99,8 +99,8 @@ export function RulesPage({ storeId }: RulesPageProps) {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="p-6 space-y-6 max-w-3xl mx-auto">
+      <div className="flex justify-between items-center gap-3">
         <h1 className="text-2xl font-bold">{t("rules.title")}</h1>
         <Button onClick={() => setShowForm(!showForm)}>
           {t("rules.new_rule")}
@@ -119,13 +119,13 @@ export function RulesPage({ storeId }: RulesPageProps) {
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
-                placeholder="e.g., Late arrival fine"
+                placeholder={t("rules.name_placeholder")}
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <Label htmlFor="rule-kind">Kind</Label>
+                <Label htmlFor="rule-kind">{t("rules.kind_label")}</Label>
                 <select
                   id="rule-kind"
                   value={formData.kind}
@@ -137,8 +137,8 @@ export function RulesPage({ storeId }: RulesPageProps) {
                   }
                   className="w-full px-3 py-2 border rounded-md"
                 >
-                  <option value="manual">Manual</option>
-                  <option value="auto">Auto</option>
+                  <option value="manual">{t("rules.kind_manual")}</option>
+                  <option value="auto">{t("rules.kind_auto")}</option>
                 </select>
               </div>
 
@@ -155,16 +155,26 @@ export function RulesPage({ storeId }: RulesPageProps) {
                   }
                   className="w-full px-3 py-2 border rounded-md"
                 >
-                  <option value="manager_manual">Manager Manual</option>
-                  <option value="missed_shift">Missed Shift</option>
-                  <option value="late_arrival">Late Arrival</option>
-                  <option value="till_variance">Till Variance</option>
-                  <option value="points_threshold">Points Threshold</option>
+                  <option value="manager_manual">
+                    {t("rules.trigger_manager_manual")}
+                  </option>
+                  <option value="missed_shift">
+                    {t("rules.trigger_missed_shift")}
+                  </option>
+                  <option value="late_arrival">
+                    {t("rules.trigger_late_arrival")}
+                  </option>
+                  <option value="till_variance">
+                    {t("rules.trigger_till_variance")}
+                  </option>
+                  <option value="points_threshold">
+                    {t("rules.trigger_points_threshold")}
+                  </option>
                 </select>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <Label htmlFor="points-delta">{t("rules.points")}</Label>
                 <Input
