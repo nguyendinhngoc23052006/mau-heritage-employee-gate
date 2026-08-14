@@ -37,23 +37,25 @@ export function Nav() {
   });
 
   return (
-    <nav className="flex flex-wrap gap-1 border-b border-slate-200 bg-white px-4 py-2">
-      {visible.map((i) => (
-        <NavLink
-          key={i.to}
-          to={i.to === "" ? "." : i.to}
-          end={i.to === ""}
-          className={({ isActive }) =>
-            `rounded-md px-3 py-1.5 text-sm font-medium transition ${
-              isActive
-                ? "bg-slate-900 text-white"
-                : "text-slate-700 hover:bg-slate-100"
-            }`
-          }
-        >
-          {t(i.labelKey)}
-        </NavLink>
-      ))}
+    <nav className="border-b border-slate-200 bg-white">
+      <div className="flex gap-1 overflow-x-auto whitespace-nowrap px-4 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {visible.map((i) => (
+          <NavLink
+            key={i.to}
+            to={i.to === "" ? "." : i.to}
+            end={i.to === ""}
+            className={({ isActive }) =>
+              `shrink-0 rounded-md px-3 py-1.5 text-sm font-medium transition ${
+                isActive
+                  ? "bg-slate-900 text-white"
+                  : "text-slate-700 hover:bg-slate-100"
+              }`
+            }
+          >
+            {t(i.labelKey)}
+          </NavLink>
+        ))}
+      </div>
     </nav>
   );
 }

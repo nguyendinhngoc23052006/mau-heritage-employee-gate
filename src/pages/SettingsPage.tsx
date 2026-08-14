@@ -6,6 +6,7 @@ import { Card, CardTitle } from "../components/ui/Card";
 import { ErrorState, LoadingState } from "../components/ui/EmptyState";
 import { Input, Label } from "../components/ui/Input";
 import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
+import { errorMessage } from "../lib/errorMessage";
 import { useT } from "../lib/i18n";
 import { getStore, regenerateJoinCode, updateStore } from "../services/stores";
 
@@ -66,11 +67,7 @@ export function SettingsPage() {
   }
 
   if (error) {
-    return (
-      <ErrorState
-        message={error instanceof Error ? error.message : "Error loading store"}
-      />
-    );
+    return <ErrorState message={errorMessage(error, "Error loading store")} />;
   }
 
   function handleSave() {
@@ -128,11 +125,10 @@ export function SettingsPage() {
 
           {updateMutation.error && (
             <ErrorState
-              message={
-                updateMutation.error instanceof Error
-                  ? updateMutation.error.message
-                  : "Failed to save settings"
-              }
+              message={errorMessage(
+                updateMutation.error,
+                "Failed to save settings",
+              )}
             />
           )}
 
@@ -207,11 +203,10 @@ export function SettingsPage() {
             )}
             {regenerateMutation.error && (
               <ErrorState
-                message={
-                  regenerateMutation.error instanceof Error
-                    ? regenerateMutation.error.message
-                    : "Failed to regenerate join code"
-                }
+                message={errorMessage(
+                  regenerateMutation.error,
+                  "Failed to regenerate join code",
+                )}
               />
             )}
           </div>
