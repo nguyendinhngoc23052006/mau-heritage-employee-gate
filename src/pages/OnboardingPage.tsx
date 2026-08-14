@@ -51,16 +51,16 @@ export function OnboardingPage() {
     }
   }, [applications, queryClient]);
 
-  // Redirect if user has memberships
-  if (
-    !sessionLoading &&
-    !membershipsLoading &&
-    memberships &&
-    memberships.length > 0
-  ) {
-    navigate(`/store/${memberships[0].store_id}`, { replace: true });
-    return null;
-  }
+  // Redirect once memberships appear. useEffect keeps hook order stable
+  // regardless of the redirect decision (React #310 avoidance).
+  const firstMembershipStoreId =
+    memberships && memberships.length > 0 ? memberships[0].store_id : null;
+  useEffect(() => {
+    if (sessionLoading || membershipsLoading) return;
+    if (firstMembershipStoreId) {
+      navigate(`/store/${firstMembershipStoreId}`, { replace: true });
+    }
+  }, [sessionLoading, membershipsLoading, firstMembershipStoreId, navigate]);
 
   // Create store mutation
   const createStoreMutation = useMutation({
