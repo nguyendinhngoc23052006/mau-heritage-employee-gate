@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
@@ -20,6 +20,7 @@ export function SettingsPage() {
   const [timezone, setTimezone] = useState("");
   const [currency, setCurrency] = useState("");
   const [saved, setSaved] = useState(false);
+  const [copiedJoinCode, setCopiedJoinCode] = useState(false);
 
   const {
     data: store,
@@ -41,6 +42,25 @@ export function SettingsPage() {
     },
   });
 
+  const regenerateMutation = useMutation({
+    mutationFn: () =>
+      storeId ? regenerateJoinCode(storeId) : Promise.resolve(""),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["store", storeId] });
+    },
+  });
+
+  // Populate form once when the store first loads. useEffect avoids the
+  // prior "setState during render" bug that caused an inconsistent tree.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only re-sync on store change; `name` intentionally omitted so the form doesn't reset itself while the user is typing
+  useEffect(() => {
+    if (store && name === "") {
+      setName(store.name);
+      setTimezone(store.timezone);
+      setCurrency(store.currency);
+    }
+  }, [store]);
+
   if (isLoading) {
     return <LoadingState>{t("common.loading")}</LoadingState>;
   }
@@ -53,25 +73,9 @@ export function SettingsPage() {
     );
   }
 
-  if (store && name === "") {
-    setName(store.name);
-    setTimezone(store.timezone);
-    setCurrency(store.currency);
-  }
-
   function handleSave() {
     updateMutation.mutate({ name, timezone, currency });
   }
-
-  const regenerateMutation = useMutation({
-    mutationFn: () =>
-      storeId ? regenerateJoinCode(storeId) : Promise.resolve(""),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["store", storeId] });
-    },
-  });
-
-  const [copiedJoinCode, setCopiedJoinCode] = useState(false);
 
   async function handleCopyJoinCode(code: string) {
     await navigator.clipboard.writeText(code);

@@ -24,52 +24,56 @@ export function ClockPage() {
   const { storeId } = useParams<{ storeId: string }>();
   const { user } = useSession();
   const queryClient = useQueryClient();
-
-  if (!storeId || !user)
-    return (
-      <ErrorState
-        message={t("common.error", { message: "Not authenticated" })}
-      />
-    );
+  const userId = user?.id;
+  const ready = Boolean(storeId && userId);
 
   const { data: clockState, isLoading: stateLoading } = useQuery({
-    queryKey: ["clock", "state", user.id, storeId],
-    queryFn: () => getCurrentClockState(user.id, storeId),
+    queryKey: ["clock", "state", userId, storeId],
+    enabled: ready,
+    queryFn: () => getCurrentClockState(userId as string, storeId as string),
   });
 
   const { data: events, isLoading: eventsLoading } = useQuery({
-    queryKey: ["clock", "events", user.id, storeId],
+    queryKey: ["clock", "events", userId, storeId],
+    enabled: ready,
     queryFn: () => {
       const today = new Date().toISOString().split("T")[0];
-      return listMyClockEvents(user.id, storeId, {
+      return listMyClockEvents(userId as string, storeId as string, {
         from: `${today}T00:00:00Z`,
       });
     },
   });
 
   const clockInMutation = useMutation({
-    mutationFn: () => clockIn(storeId),
+    mutationFn: () => clockIn(storeId as string),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["clock", "state", user.id, storeId],
+        queryKey: ["clock", "state", userId, storeId],
       });
       queryClient.invalidateQueries({
-        queryKey: ["clock", "events", user.id, storeId],
+        queryKey: ["clock", "events", userId, storeId],
       });
     },
   });
 
   const clockOutMutation = useMutation({
-    mutationFn: () => clockOut(storeId),
+    mutationFn: () => clockOut(storeId as string),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["clock", "state", user.id, storeId],
+        queryKey: ["clock", "state", userId, storeId],
       });
       queryClient.invalidateQueries({
-        queryKey: ["clock", "events", user.id, storeId],
+        queryKey: ["clock", "events", userId, storeId],
       });
     },
   });
+
+  if (!ready)
+    return (
+      <ErrorState
+        message={t("common.error", { message: "Not authenticated" })}
+      />
+    );
 
   if (stateLoading || eventsLoading)
     return <LoadingState>{t("common.loading")}</LoadingState>;

@@ -58,7 +58,7 @@ export function ApplyRulePage({ storeId }: ApplyRulePageProps) {
     },
     onSuccess: () => {
       const member = members?.find((m) => m.user_id === selectedUserId);
-      const displayName = member?.profile.display_name || "User";
+      const displayName = member?.profile?.display_name || "User";
 
       setSuccessMessage(t("rules.applied", { name: displayName }));
       setSelectedRuleId("");
@@ -158,7 +158,7 @@ export function ApplyRulePage({ storeId }: ApplyRulePageProps) {
               <option value="">-- Choose an employee --</option>
               {members?.map((member) => (
                 <option key={member.user_id} value={member.user_id}>
-                  {member.profile.display_name || member.user_id}
+                  {member.profile?.display_name || member.user_id}
                 </option>
               ))}
             </select>

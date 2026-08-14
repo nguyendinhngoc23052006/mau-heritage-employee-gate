@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
 import { ErrorState, LoadingState } from "../components/ui/EmptyState";
@@ -20,6 +20,8 @@ export function OnboardingPage() {
   const t = useT();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [params] = useSearchParams();
+  const addAnother = params.get("add") === "1";
   const { loading: sessionLoading } = useSession();
   const { data: memberships, isLoading: membershipsLoading } = useMemberships();
 
@@ -51,16 +53,24 @@ export function OnboardingPage() {
     }
   }, [applications, queryClient]);
 
-  // Redirect once memberships appear. useEffect keeps hook order stable
-  // regardless of the redirect decision (React #310 avoidance).
+  // Redirect once memberships appear — UNLESS `?add=1`, which is the signal
+  // from the store-switcher that the user wants to add a second store.
+  // useEffect keeps hook order stable regardless of the redirect decision.
   const firstMembershipStoreId =
     memberships && memberships.length > 0 ? memberships[0].store_id : null;
   useEffect(() => {
+    if (addAnother) return;
     if (sessionLoading || membershipsLoading) return;
     if (firstMembershipStoreId) {
       navigate(`/store/${firstMembershipStoreId}`, { replace: true });
     }
-  }, [sessionLoading, membershipsLoading, firstMembershipStoreId, navigate]);
+  }, [
+    addAnother,
+    sessionLoading,
+    membershipsLoading,
+    firstMembershipStoreId,
+    navigate,
+  ]);
 
   // Create store mutation
   const createStoreMutation = useMutation({

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
 import {
@@ -10,6 +10,7 @@ import {
 } from "../components/ui/EmptyState";
 import { Input, Label } from "../components/ui/Input";
 import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
+import { useSession } from "../hooks/useSession";
 import { useT } from "../lib/i18n";
 import { parseVndToCents } from "../lib/money";
 import {
@@ -33,6 +34,7 @@ import type { EmploymentType, Role } from "../types/database";
 export function PeoplePage() {
   const t = useT();
   const { storeId } = useParams<{ storeId: string }>();
+  const { user } = useSession();
   const queryClient = useQueryClient();
   const role = useRoleOn(storeId);
   const canManage = isManagerRole(role);
@@ -224,8 +226,33 @@ export function PeoplePage() {
     await navigator.clipboard.writeText(link);
   }
 
+  // Team-is-empty helper: manager, only self on the store, no pending invites,
+  // no pending applications. Point at Settings → Join code instead of leaving
+  // them to hunt for the invite affordance.
+  const isTeamEmpty =
+    canManage &&
+    members.length <= 1 &&
+    members.every((m) => m.user_id === user?.id) &&
+    invites.length === 0 &&
+    applications.length === 0;
+
   return (
     <div className="space-y-6">
+      {isTeamEmpty && storeId && (
+        <Card>
+          <CardTitle>{t("people.empty_title")}</CardTitle>
+          <p className="text-sm text-slate-600 mb-3">
+            {t("people.empty_body")}
+          </p>
+          <Link
+            to={`/store/${storeId}/settings`}
+            className="inline-block rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
+          >
+            {t("people.empty_open_settings")}
+          </Link>
+        </Card>
+      )}
+
       {canManage && (
         <Card>
           <CardTitle>{t("people.applications.title")}</CardTitle>
@@ -447,7 +474,8 @@ export function PeoplePage() {
               >
                 <div className="flex-1">
                   <div className="font-medium text-sm text-slate-900">
-                    {member.profile.display_name || "Unknown"}
+                    {member.profile?.display_name ||
+                      member.user_id.substring(0, 8)}
                   </div>
                   <div className="text-xs text-slate-500">{member.role}</div>
                 </div>

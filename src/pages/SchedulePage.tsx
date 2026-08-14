@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -38,10 +38,7 @@ export function SchedulePage() {
     notes: "",
   });
 
-  if (!storeId)
-    return (
-      <ErrorState message={t("common.error", { message: "Store not found" })} />
-    );
+  const ready = Boolean(storeId);
 
   const {
     data: shifts,
@@ -49,12 +46,13 @@ export function SchedulePage() {
     error,
   } = useQuery({
     queryKey: ["shifts", storeId],
+    enabled: ready,
     queryFn: () => {
       const from = new Date();
       from.setDate(from.getDate() - 1);
       const to = new Date();
       to.setDate(to.getDate() + 14);
-      return listShifts(storeId, {
+      return listShifts(storeId as string, {
         from: from.toISOString(),
         to: to.toISOString(),
       });
@@ -64,67 +62,75 @@ export function SchedulePage() {
   const claimMutation = useMutation({
     mutationFn: (shiftId: string) => claimShift(shiftId),
     onSuccess: (result) => {
-      if (result) {
+      if (result && storeId) {
         queryClient.invalidateQueries({ queryKey: ["shifts", storeId] });
       }
     },
   });
 
   const createMutation = useMutation({
-    mutationFn: () =>
-      createShift({
+    mutationFn: () => {
+      if (!storeId) throw new Error("no store");
+      return createShift({
         store_id: storeId,
         starts_at: formData.starts_at,
         ends_at: formData.ends_at,
         notes: formData.notes || undefined,
-      }),
+      });
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["shifts", storeId] });
+      if (storeId)
+        queryClient.invalidateQueries({ queryKey: ["shifts", storeId] });
       setFormData({ starts_at: "", ends_at: "", notes: "" });
       setShowNewForm(false);
     },
   });
 
-  // Realtime subscription
-  useRealtime(storeId, queryClient);
+  // Realtime subscription — proper effect so it runs once per storeId and
+  // gets torn down on unmount / storeId change. The prior render-body call
+  // created a fresh channel every re-render, whose second .subscribe() blew
+  // up with "cannot add postgres_changes callbacks after subscribe()".
+  useEffect(() => {
+    if (!storeId) return;
+    const supabase = getSupabase();
+    const channel = supabase
+      .channel(`shifts:${storeId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "shifts",
+          filter: `store_id=eq.${storeId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["shifts", storeId] });
+        },
+      )
+      .subscribe();
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [storeId, queryClient]);
 
+  if (!storeId)
+    return (
+      <ErrorState message={t("common.error", { message: "Store not found" })} />
+    );
   if (error)
     return (
       <ErrorState message={t("common.error", { message: String(error) })} />
     );
   if (isLoading) return <LoadingState>{t("common.loading")}</LoadingState>;
-  if (!shifts || shifts.length === 0)
-    return (
-      <div className="p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">{t("schedule.title")}</h1>
-          {isManagerRole(role) && (
-            <Button
-              onClick={() => setShowNewForm(!showNewForm)}
-              variant="primary"
-            >
-              {t("schedule.new_shift")}
-            </Button>
-          )}
-        </div>
-        {showNewForm && isManagerRole(role) && (
-          <NewShiftForm
-            formData={formData}
-            setFormData={setFormData}
-            onSubmit={() => createMutation.mutate()}
-            isLoading={createMutation.isPending}
-            onCancel={() => setShowNewForm(false)}
-          />
-        )}
-        <EmptyState>{t("common.empty")}</EmptyState>
-      </div>
-    );
+
+  const isManager = isManagerRole(role);
+  const empty = !shifts || shifts.length === 0;
 
   return (
     <div className="p-6">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold">{t("schedule.title")}</h1>
-        {isManagerRole(role) && (
+        {isManager && (
           <Button
             onClick={() => setShowNewForm(!showNewForm)}
             variant="primary"
@@ -134,7 +140,7 @@ export function SchedulePage() {
         )}
       </div>
 
-      {showNewForm && isManagerRole(role) && (
+      {showNewForm && isManager && (
         <NewShiftForm
           formData={formData}
           setFormData={setFormData}
@@ -144,15 +150,19 @@ export function SchedulePage() {
         />
       )}
 
-      <div className="space-y-2">
-        {shifts.map((shift) => (
-          <ShiftRow
-            key={shift.id}
-            shift={shift}
-            onClaim={() => claimMutation.mutate(shift.id)}
-          />
-        ))}
-      </div>
+      {empty ? (
+        <EmptyState>{t("common.empty")}</EmptyState>
+      ) : (
+        <div className="space-y-2">
+          {shifts.map((shift) => (
+            <ShiftRow
+              key={shift.id}
+              shift={shift}
+              onClaim={() => claimMutation.mutate(shift.id)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -192,6 +202,12 @@ function ShiftRow({
   );
 }
 
+interface NewShiftFormData {
+  starts_at: string;
+  ends_at: string;
+  notes: string;
+}
+
 function NewShiftForm({
   formData,
   setFormData,
@@ -199,8 +215,8 @@ function NewShiftForm({
   isLoading,
   onCancel,
 }: {
-  formData: { starts_at: string; ends_at: string; notes: string };
-  setFormData: (data: any) => void;
+  formData: NewShiftFormData;
+  setFormData: (data: NewShiftFormData) => void;
   onSubmit: () => void;
   isLoading: boolean;
   onCancel: () => void;
@@ -254,32 +270,4 @@ function NewShiftForm({
       </div>
     </Card>
   );
-}
-
-function useRealtime(
-  storeId: string,
-  queryClient: ReturnType<typeof useQueryClient>,
-) {
-  const supabase = getSupabase();
-
-  // Subscribe to shift changes and invalidate on any change
-  const channel = supabase
-    .channel(`shifts:${storeId}`)
-    .on(
-      "postgres_changes",
-      {
-        event: "*",
-        schema: "public",
-        table: "shifts",
-        filter: `store_id=eq.${storeId}`,
-      },
-      () => {
-        queryClient.invalidateQueries({ queryKey: ["shifts", storeId] });
-      },
-    )
-    .subscribe();
-
-  return () => {
-    channel.unsubscribe();
-  };
 }

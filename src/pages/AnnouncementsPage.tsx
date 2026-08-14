@@ -28,17 +28,15 @@ export function AnnouncementsPage() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
 
-  if (!storeId) {
-    return <ErrorState message="Store not found" />;
-  }
-
   const { data, isLoading, error } = useQuery({
     queryKey: ["announcements", storeId],
-    queryFn: () => listAnnouncements(storeId, { activeOnly: true }),
+    enabled: !!storeId,
+    queryFn: () => listAnnouncements(storeId as string, { activeOnly: true }),
   });
 
   const createMutation = useMutation({
-    mutationFn: () => createAnnouncement({ store_id: storeId, title, body }),
+    mutationFn: () =>
+      createAnnouncement({ store_id: storeId as string, title, body }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["announcements", storeId] });
       setTitle("");
@@ -46,6 +44,10 @@ export function AnnouncementsPage() {
       setShowForm(false);
     },
   });
+
+  if (!storeId) {
+    return <ErrorState message="Store not found" />;
+  }
 
   if (isLoading) {
     return <LoadingState>{t("common.loading")}</LoadingState>;
