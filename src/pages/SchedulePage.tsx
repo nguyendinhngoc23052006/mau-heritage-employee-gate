@@ -170,7 +170,9 @@ export function SchedulePage() {
   return (
     <div className="p-6">
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{t("schedule.title")}</h1>
+        <h1 className="text-2xl font-bold font-display text-brand-ink">
+          {t("schedule.title")}
+        </h1>
         {isManager && (
           <Button
             onClick={() => setShowNewForm(!showNewForm)}

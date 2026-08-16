@@ -36,14 +36,18 @@ export async function submitApplication(params: {
   return data as StoreApplication;
 }
 
-export async function listMyApplications(): Promise<StoreApplication[]> {
+export async function listMyApplications(): Promise<
+  (StoreApplication & { store: { name: string } | null })[]
+> {
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from("store_applications")
-    .select("*")
+    .select("*, store:stores(name)")
     .order("submitted_at", { ascending: false });
   if (error) throw error;
-  return (data as StoreApplication[]) ?? [];
+  return (
+    (data as (StoreApplication & { store: { name: string } | null })[]) ?? []
+  );
 }
 
 export async function listPendingApplications(
@@ -102,16 +106,18 @@ export async function withdrawApplication(
 }
 
 export async function listMyDeclinedApplications(): Promise<
-  (StoreApplication & { store_name?: string })[]
+  (StoreApplication & { store: { name: string } | null })[]
 > {
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from("store_applications")
-    .select("*")
+    .select("*, store:stores(name)")
     .eq("status", "declined")
     .order("decided_at", { ascending: false });
   if (error) throw error;
-  return (data as (StoreApplication & { store_name?: string })[]) ?? [];
+  return (
+    (data as (StoreApplication & { store: { name: string } | null })[]) ?? []
+  );
 }
 
 export async function dismissDeclinedApplication(id: string): Promise<void> {

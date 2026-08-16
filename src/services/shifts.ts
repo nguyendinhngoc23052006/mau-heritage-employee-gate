@@ -98,19 +98,55 @@ export async function listPendingSwaps(storeId: string): Promise<
   })[]
 > {
   const supabase = getSupabase();
-  const { data, error } = await supabase
+
+  // First, get shift IDs in the store
+  const { data: shifts, error: shiftsError } = await supabase
+    .from("shifts")
+    .select("id")
+    .eq("store_id", storeId);
+  if (shiftsError) throw shiftsError;
+
+  const shiftIds = (shifts ?? []).map((s) => s.id);
+  if (shiftIds.length === 0) return [];
+
+  // Then get shift swaps for those shifts
+  const { data: swaps, error: swapsError } = await supabase
     .from("shift_swaps")
-    .select(
-      "*, shift:shifts(store_id), from_user:profiles!from_user_id(display_name), to_user:profiles!to_user_id(display_name)",
-    )
-    .eq("shift.store_id", storeId)
+    .select("*")
+    .in("shift_id", shiftIds)
     .eq("status", "requested");
-  if (error) throw error;
-  return (data ?? []).map((row: any) => ({
-    ...row,
-    from_user_name: row.from_user?.display_name ?? null,
-    to_user_name: row.to_user?.display_name ?? null,
-  })) as any[];
+  if (swapsError) throw swapsError;
+
+  const swapRows = (swaps ?? []) as import("../types/database").ShiftSwap[];
+  if (swapRows.length === 0) return [];
+
+  // Extract unique user IDs
+  const userIds = new Set<string>();
+  swapRows.forEach((s) => {
+    if (s.from_user_id) userIds.add(s.from_user_id);
+    if (s.to_user_id) userIds.add(s.to_user_id);
+  });
+  const uniqueIds = Array.from(userIds);
+
+  // Fetch profiles
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id, display_name")
+    .in("id", uniqueIds);
+  if (profilesError) throw profilesError;
+
+  const nameMap = new Map<string, string>(
+    ((profiles ?? []) as Array<{ id: string; display_name: string }>).map(
+      (p) => [p.id, p.display_name],
+    ),
+  );
+
+  return swapRows.map((s) => ({
+    ...s,
+    from_user_name:
+      (s.from_user_id ? nameMap.get(s.from_user_id) : null) ?? null,
+    to_user_name: (s.to_user_id ? nameMap.get(s.to_user_id) : null) ?? null,
+  }));
 }
 
 export async function approveSwap(id: string): Promise<void> {

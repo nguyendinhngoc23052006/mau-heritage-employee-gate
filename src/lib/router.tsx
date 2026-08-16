@@ -5,6 +5,7 @@ import {
 } from "react-router-dom";
 import { AuthGate } from "../components/AuthGate";
 import { Layout } from "../components/Layout";
+import { AnalyticsPage } from "../pages/AnalyticsPage";
 import { DeactivatedPage } from "../pages/DeactivatedPage";
 import { ResetPasswordPage } from "../pages/ResetPasswordPage";
 
@@ -34,6 +35,7 @@ const storeChildren: RouteObject[] = [
   ...payrollRoutes,
   ...announcementsRoutes,
   ...auditRoutes,
+  { path: "analytics", element: <AnalyticsPage /> },
   ...settingsRoutes,
   ...meRoutes,
 ];

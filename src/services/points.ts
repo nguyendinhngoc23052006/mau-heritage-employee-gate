@@ -59,26 +59,3 @@ export async function listMyPrizeFine(
   if (error) throw error;
   return (data ?? []) as PrizeFineEvent[];
 }
-
-export async function grantManualPoints(params: {
-  storeId: string;
-  ruleId: string;
-  userId: string;
-  note?: string;
-}): Promise<PointEvent> {
-  const supabase = getSupabase();
-
-  const { data, error } = await supabase
-    .from("point_events")
-    .insert({
-      store_id: params.storeId,
-      user_id: params.userId,
-      rule_id: params.ruleId,
-      note: params.note ?? null,
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data as PointEvent;
-}

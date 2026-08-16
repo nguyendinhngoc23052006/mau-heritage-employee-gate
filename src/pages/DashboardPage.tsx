@@ -91,7 +91,7 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-slate-900">
+      <h1 className="text-2xl font-semibold font-display text-brand-ink">
         {t("nav.dashboard")}
       </h1>
 

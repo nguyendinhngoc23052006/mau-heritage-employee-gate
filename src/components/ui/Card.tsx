@@ -6,15 +6,22 @@ export function Card({
 }: { children: ReactNode; className?: string }) {
   return (
     <div
-      className={`rounded-lg border border-slate-200 bg-white p-4 shadow-sm ${className ?? ""}`}
+      className={`rounded-lg border border-brand-hairline bg-white p-4 shadow-sm ${className ?? ""}`}
     >
       {children}
     </div>
   );
 }
 
-export function CardTitle({ children }: { children: ReactNode }) {
+export function CardTitle({
+  children,
+  className,
+}: { children: ReactNode; className?: string }) {
   return (
-    <h2 className="mb-2 text-lg font-semibold text-slate-900">{children}</h2>
+    <h2
+      className={`mb-2 text-lg font-semibold text-brand-ink font-display ${className ?? ""}`}
+    >
+      {children}
+    </h2>
   );
 }

@@ -108,7 +108,9 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">{t("payroll.title")}</h1>
+        <h1 className="text-2xl font-bold font-display text-brand-ink">
+          {t("payroll.title")}
+        </h1>
       </div>
 
       <Card>
@@ -143,7 +145,7 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
         <>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="border-b bg-slate-50">
+              <thead className="border-b bg-brand-cream-light">
                 <tr>
                   <th className="text-left px-4 py-2">Name</th>
                   <th className="text-right px-4 py-2">{t("payroll.hours")}</th>
@@ -158,7 +160,10 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
               </thead>
               <tbody>
                 {payroll.map((row) => (
-                  <tr key={row.user_id} className="border-b hover:bg-slate-50">
+                  <tr
+                    key={row.user_id}
+                    className="border-b hover:bg-brand-cream-light"
+                  >
                     <td className="px-4 py-2">
                       {row.display_name || row.user_id}
                     </td>
@@ -185,7 +190,7 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
                   </tr>
                 ))}
               </tbody>
-              <tfoot className="border-t font-semibold bg-slate-50">
+              <tfoot className="border-t font-semibold bg-brand-cream-light">
                 <tr>
                   <td colSpan={2} className="px-4 py-2">
                     Total
