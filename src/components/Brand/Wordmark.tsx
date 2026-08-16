@@ -8,7 +8,7 @@ export function Wordmark({ className }: Props) {
       className={`font-display font-black tracking-tight text-brand-navy dark:text-brand-cream ${className ?? ""}`}
       style={{ letterSpacing: "-0.02em", lineHeight: 1 }}
     >
-      MẦU HERITAGE
+      MÀU HERITAGE
     </span>
   );
 }

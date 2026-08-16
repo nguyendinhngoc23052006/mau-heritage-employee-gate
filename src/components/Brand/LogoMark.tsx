@@ -3,9 +3,9 @@ interface Props {
   ariaLabel?: string;
 }
 
-// PLACEHOLDER — replace inner <path> with the traced SVG when the brand
-// team provides the actual mark file. Approximates the two-blade wave.
-export function LogoMark({ className, ariaLabel = "Mầu Heritage" }: Props) {
+// PLACEHOLDER — approximates the two-crescent silhouette (peaked "roof" top +
+// bowl-like bottom). Replace with the traced SVG when the brand team sends it.
+export function LogoMark({ className, ariaLabel = "Màu Heritage" }: Props) {
   return (
     <svg
       viewBox="0 0 200 100"
@@ -15,11 +15,8 @@ export function LogoMark({ className, ariaLabel = "Mầu Heritage" }: Props) {
       aria-label={ariaLabel}
       fill="currentColor"
     >
-      <path d="M 10 55 Q 65 15 100 40 Q 135 15 190 55 Q 135 35 100 55 Q 65 35 10 55 Z" />
-      <path
-        d="M 10 55 Q 65 75 100 60 Q 135 75 190 55 Q 135 90 100 78 Q 65 90 10 55 Z"
-        opacity="0.85"
-      />
+      <path d="M 15 55 Q 100 15 185 55 Q 100 40 15 55 Z" />
+      <path d="M 15 55 Q 100 95 185 55 Q 100 70 15 55 Z" />
     </svg>
   );
 }
