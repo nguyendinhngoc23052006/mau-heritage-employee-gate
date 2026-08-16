@@ -70,7 +70,7 @@ export function SettingsPage() {
   }
 
   if (error) {
-    return <ErrorState message={errorMessage(error, "Error loading store")} />;
+    return <ErrorState message={errorMessage(error)} />;
   }
 
   function handleSave() {
@@ -130,9 +130,7 @@ export function SettingsPage() {
           </div>
 
           {updateMutation.error && (
-            <Alert variant="error">
-              {errorMessage(updateMutation.error, "Failed to save settings")}
-            </Alert>
+            <Alert variant="error">{errorMessage(updateMutation.error)}</Alert>
           )}
 
           {saved && <Alert variant="success">{t("profile.saved")}</Alert>}
@@ -204,10 +202,7 @@ export function SettingsPage() {
             )}
             {regenerateMutation.error && (
               <Alert variant="error">
-                {errorMessage(
-                  regenerateMutation.error,
-                  "Failed to regenerate join code",
-                )}
+                {errorMessage(regenerateMutation.error)}
               </Alert>
             )}
           </div>
@@ -217,7 +212,7 @@ export function SettingsPage() {
       <Dialog
         open={showRegenDialog}
         onClose={() => setShowRegenDialog(false)}
-        title={t("store.settings.join_code_regenerate")}
+        title={t("settings.regen_confirm_title")}
         footer={
           <div className="flex gap-2">
             <Button
@@ -238,9 +233,7 @@ export function SettingsPage() {
           </div>
         }
       >
-        <p className="text-sm text-slate-600">
-          {t("store.settings.join_code_regenerate")}?
-        </p>
+        <p>{t("settings.regen_confirm_body")}</p>
       </Dialog>
     </div>
   );

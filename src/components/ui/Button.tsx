@@ -7,11 +7,12 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const styles: Record<Variant, string> = {
-  primary: "bg-slate-900 text-white hover:bg-slate-800 disabled:bg-slate-400",
+  primary:
+    "bg-brand-navy text-brand-cream hover:bg-brand-navy-dark disabled:bg-brand-muted disabled:text-brand-cream/70",
   secondary:
-    "bg-white text-slate-900 border border-slate-300 hover:bg-slate-50 disabled:opacity-50",
+    "bg-white text-brand-ink border border-brand-hairline hover:bg-brand-cream-light disabled:opacity-50",
   danger: "bg-red-600 text-white hover:bg-red-700 disabled:opacity-50",
-  ghost: "text-slate-700 hover:bg-slate-100 disabled:opacity-50",
+  ghost: "text-brand-ink hover:bg-brand-cream-light disabled:opacity-50",
 };
 
 export function Button({ variant = "primary", className, ...props }: Props) {

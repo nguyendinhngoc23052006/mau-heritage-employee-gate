@@ -50,17 +50,38 @@ export async function listPendingSales(
   storeId: string,
 ): Promise<(SalesReport & { submitter_display_name: string | null })[]> {
   const supabase = getSupabase();
-  const { data, error } = await supabase
+  const { data: reports, error: reportsError } = await supabase
     .from("sales_reports")
-    .select("*, user:profiles(display_name)")
+    .select("*")
     .eq("store_id", storeId)
     .eq("status", "pending")
     .order("submitted_at", { ascending: false });
-  if (error) throw error;
-  return (data ?? []).map((row: any) => ({
-    ...row,
-    submitter_display_name: row.user?.display_name ?? null,
-  })) as (SalesReport & { submitter_display_name: string | null })[];
+  if (reportsError) throw reportsError;
+
+  const rows = (reports ?? []) as SalesReport[];
+  if (rows.length === 0) return [];
+
+  const userIds = rows
+    .map((r) => r.user_id)
+    .filter((id): id is string => id !== null && id !== undefined);
+  const uniqueIds = Array.from(new Set(userIds));
+
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id, display_name")
+    .in("id", uniqueIds);
+  if (profilesError) throw profilesError;
+
+  const nameMap = new Map<string, string>(
+    ((profiles ?? []) as Array<{ id: string; display_name: string }>).map(
+      (p) => [p.id, p.display_name],
+    ),
+  );
+
+  return rows.map((r) => ({
+    ...r,
+    submitter_display_name: (r.user_id ? nameMap.get(r.user_id) : null) ?? null,
+  }));
 }
 
 export async function approveSales(id: string): Promise<SalesReport> {

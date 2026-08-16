@@ -94,8 +94,10 @@ export function ApplyRulePage({ storeId }: ApplyRulePageProps) {
   if (!rules || rules.length === 0) {
     return (
       <div className="p-6">
-        <h1 className="text-2xl font-bold mb-4">{t("rules.apply")}</h1>
-        <EmptyState>No active rules available</EmptyState>
+        <h1 className="text-2xl font-bold font-display mb-4">
+          {t("rules.apply.title")}
+        </h1>
+        <EmptyState>{t("common.empty")}</EmptyState>
       </div>
     );
   }
@@ -103,20 +105,21 @@ export function ApplyRulePage({ storeId }: ApplyRulePageProps) {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">{t("rules.apply")}</h1>
+        <h1 className="text-2xl font-bold font-display">
+          {t("rules.apply.title")}
+        </h1>
       </div>
 
       {successMessage && <Alert variant="success">{successMessage}</Alert>}
 
       {applyMutation.error && (
         <Alert variant="error">
-          {errorMessage(applyMutation.error, "Failed to apply rule")}
+          {errorMessage(applyMutation.error, t("common.error_saving"))}
         </Alert>
       )}
 
       <Card>
-        {/* TODO i18n: "Apply a rule" */}
-        <CardTitle>Apply a rule</CardTitle>
+        <CardTitle>{t("rules.apply.title")}</CardTitle>
         <form
           onSubmit={async (e) => {
             e.preventDefault();
@@ -126,8 +129,7 @@ export function ApplyRulePage({ storeId }: ApplyRulePageProps) {
           className="space-y-4"
         >
           <div>
-            {/* TODO i18n: "Select rule" */}
-            <Label htmlFor="rule-select">Select rule</Label>
+            <Label htmlFor="rule-select">{t("rules.apply.select_rule")}</Label>
             <Select
               id="rule-select"
               value={selectedRuleId}
@@ -139,25 +141,27 @@ export function ApplyRulePage({ storeId }: ApplyRulePageProps) {
                   label: rule.name,
                 })) || []
               }
-              placeholder="-- Choose a rule --"
+              placeholder={t("rules.apply.select_rule_placeholder")}
             />
           </div>
 
           {selectedRule && (
             <div className="p-4 bg-slate-100 rounded-md space-y-2 text-sm">
-              {/* TODO i18n: "Points delta" and "Amount (VND)" */}
               <div>
-                <strong>Points delta:</strong> {selectedRule.points_delta}
+                <strong>{t("rules.points")}:</strong>{" "}
+                {selectedRule.points_delta}
               </div>
               <div>
-                <strong>Amount (VND):</strong> {selectedRule.amount_cents}
+                <strong>{t("rules.amount")}:</strong>{" "}
+                {selectedRule.amount_cents}
               </div>
             </div>
           )}
 
           <div>
-            {/* TODO i18n: "Select employee" */}
-            <Label htmlFor="user-select">Select employee</Label>
+            <Label htmlFor="user-select">
+              {t("rules.apply.select_employee")}
+            </Label>
             <Select
               id="user-select"
               value={selectedUserId}
@@ -171,18 +175,17 @@ export function ApplyRulePage({ storeId }: ApplyRulePageProps) {
                     member.user_id.substring(0, 8),
                 })) || []
               }
-              placeholder="-- Choose an employee --"
+              placeholder={t("rules.apply.select_employee_placeholder")}
             />
           </div>
 
           <div>
-            {/* TODO i18n: "Reason (optional)" and placeholder */}
-            <Label htmlFor="reason">Reason (optional)</Label>
+            <Label htmlFor="reason">{t("rules.apply.reason_label")}</Label>
             <Input
               id="reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Why are you applying this rule?"
+              placeholder={t("rules.apply.reason_placeholder")}
             />
           </div>
 
@@ -193,8 +196,9 @@ export function ApplyRulePage({ storeId }: ApplyRulePageProps) {
             }
             className="w-full"
           >
-            {/* TODO i18n: "Apply rule" */}
-            {applyMutation.isPending ? t("common.loading") : "Apply rule"}
+            {applyMutation.isPending
+              ? t("common.loading")
+              : t("rules.apply.button")}
           </Button>
         </form>
       </Card>

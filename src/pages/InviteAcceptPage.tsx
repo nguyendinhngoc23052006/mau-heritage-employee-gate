@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { LogoMark } from "../components/Brand/LogoMark";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
@@ -57,7 +58,11 @@ export function InviteAcceptPage() {
         mode === "signup"
           ? await signUpWithPassword(email, password)
           : await signInWithPassword(email, password);
-      if (authError) setError(authError.message);
+      if (authError) {
+        const fallback =
+          mode === "signup" ? t("auth.signup_failed") : t("auth.signin_failed");
+        setError(errorMessage(authError, fallback));
+      }
     } catch (err) {
       const fallback =
         mode === "signup" ? t("auth.signup_failed") : t("auth.signin_failed");
@@ -69,7 +74,7 @@ export function InviteAcceptPage() {
 
   if (sessionLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-brand-cream flex items-center justify-center">
         <LoadingState>{t("common.loading")}</LoadingState>
       </div>
     );
@@ -77,7 +82,7 @@ export function InviteAcceptPage() {
 
   if (user && busy) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-brand-cream flex items-center justify-center">
         <LoadingState>{t("common.loading")}</LoadingState>
       </div>
     );
@@ -85,9 +90,12 @@ export function InviteAcceptPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-brand-cream flex items-center justify-center px-4">
         <Card className="w-full max-w-sm">
-          <CardTitle>{t("invite.accept.title")}</CardTitle>
+          <LogoMark className="h-12 mx-auto text-brand-navy mb-3" />
+          <CardTitle className="font-display">
+            {t("invite.accept.title")}
+          </CardTitle>
           <div className="space-y-4">
             <Alert variant="error">{error}</Alert>
             <Button
@@ -106,9 +114,12 @@ export function InviteAcceptPage() {
 
   // Not signed in yet — show sign-up (default) or sign-in form.
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-brand-cream flex items-center justify-center px-4">
       <Card className="w-full max-w-sm">
-        <CardTitle>{t("invite.accept.title")}</CardTitle>
+        <LogoMark className="h-12 mx-auto text-brand-navy mb-3" />
+        <CardTitle className="font-display">
+          {t("invite.accept.title")}
+        </CardTitle>
         <p className="mb-3 text-sm text-slate-600">
           {mode === "signup"
             ? t("invite.accept.signup_prompt")

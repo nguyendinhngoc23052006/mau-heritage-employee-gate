@@ -103,7 +103,7 @@ export function RulesPage({ storeId }: RulesPageProps) {
   return (
     <div className="p-6 space-y-6 max-w-3xl mx-auto">
       <div className="flex justify-between items-center gap-3">
-        <h1 className="text-2xl font-bold">{t("rules.title")}</h1>
+        <h1 className="text-2xl font-bold font-display">{t("rules.title")}</h1>
         <Button onClick={() => setShowForm(!showForm)}>
           {t("rules.new_rule")}
         </Button>
@@ -253,28 +253,32 @@ export function RulesPage({ storeId }: RulesPageProps) {
                 <th className="text-left px-4 py-2">{t("rules.points")}</th>
                 <th className="text-left px-4 py-2">{t("rules.amount")}</th>
                 <th className="text-left px-4 py-2">{t("rules.active")}</th>
-                {/* TODO i18n: "Actions" column header has no key yet */}
-                <th className="text-left px-4 py-2">Actions</th>
+                <th className="text-left px-4 py-2">
+                  {t("rules.table.actions")}
+                </th>
               </tr>
             </thead>
             <tbody>
               {rules?.map((rule) => (
-                <tr key={rule.id} className="border-b hover:bg-slate-50">
+                <tr
+                  key={rule.id}
+                  className="border-b hover:bg-brand-cream-light"
+                >
                   <td className="px-4 py-2">{rule.name}</td>
                   <td className="px-4 py-2">{rule.trigger_type}</td>
                   <td className="px-4 py-2">{rule.points_delta}</td>
                   <td className="px-4 py-2">{formatVnd(rule.amount_cents)}</td>
                   <td className="px-4 py-2">{rule.active ? "✓" : "✗"}</td>
                   <td className="px-4 py-2">
-                    {/* TODO i18n: "Actions" column header has no key yet */}
                     <Button
                       variant="secondary"
                       onClick={() => toggleMutation.mutate(rule)}
                       disabled={toggleMutation.isPending}
                       className="text-xs px-2 py-1"
                     >
-                      {/* TODO i18n: "Disable" / "Enable" has no key yet */}
-                      {rule.active ? "Disable" : "Enable"}
+                      {rule.active
+                        ? t("rules.toggle.disable")
+                        : t("rules.toggle.enable")}
                     </Button>
                   </td>
                 </tr>

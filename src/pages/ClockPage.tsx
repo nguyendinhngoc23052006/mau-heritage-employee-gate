@@ -89,7 +89,9 @@ export function ClockPage() {
 
   return (
     <div className="p-6">
-      <h1 className="mb-6 text-2xl font-bold">{t("clock.title")}</h1>
+      <h1 className="mb-6 text-2xl font-bold font-display text-brand-ink">
+        {t("clock.title")}
+      </h1>
 
       <Card className="mb-6">
         {isClockedIn && lastInEvent ? (
@@ -144,7 +146,7 @@ export function ClockPage() {
                 {events.map((event) => (
                   <tr
                     key={event.id}
-                    className="border-b border-slate-100 hover:bg-slate-50"
+                    className="border-b border-slate-100 hover:bg-brand-cream-light"
                   >
                     <td className="px-4 py-2 text-slate-900">
                       {format(new Date(event.at), "yyyy-MM-dd HH:mm")}

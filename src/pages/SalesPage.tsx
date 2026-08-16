@@ -38,7 +38,9 @@ export function SalesPage() {
 
   return (
     <div className="p-6">
-      <h1 className="mb-6 text-2xl font-bold">{t("sales.title")}</h1>
+      <h1 className="mb-6 text-2xl font-bold font-display text-brand-ink">
+        {t("sales.title")}
+      </h1>
 
       <div className="space-y-6">
         {/* Employee form */}

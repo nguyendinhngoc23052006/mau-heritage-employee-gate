@@ -59,7 +59,7 @@ export function NotificationsInbox() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-slate-900">
+        <h1 className="text-2xl font-semibold font-display text-brand-ink">
           {t("notifications.title")} {unreadCount > 0 && `(${unreadCount})`}
         </h1>
         {unreadCount > 0 && (

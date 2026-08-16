@@ -19,19 +19,25 @@ export function AnalyticsPage() {
 
   if (!storeId) {
     return (
-      <ErrorState message={t("common.error", { message: "Store not found" })} />
+      <ErrorState
+        message={t("common.error", { message: t("analytics.store_not_found") })}
+      />
     );
   }
 
   if (!isManager) {
     return (
-      <ErrorState message={t("common.error", { message: "Access denied" })} />
+      <ErrorState
+        message={t("common.error", { message: t("analytics.access_denied") })}
+      />
     );
   }
 
   return (
-    <div className="p-6">
-      <h1 className="mb-6 text-2xl font-bold">{t("analytics.title")}</h1>
+    <div className="p-6 bg-brand-cream-light">
+      <h1 className="mb-6 text-2xl font-display text-brand-ink font-bold">
+        {t("analytics.title")}
+      </h1>
 
       <div className="space-y-6">
         <WeeklyTillVariance storeId={storeId} />
@@ -61,19 +67,20 @@ function WeeklyTillVariance({ storeId }: { storeId: string }) {
 
         const { data: reports, error } = await supabase
           .from("sales_reports")
-          .select("expected_cents, cash_cents, card_cents, qr_cents")
+          .select("variance_cents")
           .eq("store_id", storeId)
-          .eq("status", "approved")
+          .neq("status", "disputed")
           .gte("submitted_at", weekStart.toISOString())
           .lt("submitted_at", weekEnd.toISOString());
 
         if (error) throw error;
 
-        const variance = (reports ?? []).reduce((sum, r: any) => {
-          const actual = r.cash_cents + r.card_cents + r.qr_cents;
-          const expected = r.expected_cents ?? actual;
-          return sum + (actual - expected);
-        }, 0);
+        const variance = (reports ?? []).reduce(
+          (sum, r: { variance_cents: number | null }) => {
+            return sum + (r.variance_cents ?? 0);
+          },
+          0,
+        );
 
         weeks.push({
           week: `W${String(i + 1).padStart(2, "0")}`,
@@ -112,10 +119,12 @@ function WeeklyTillVariance({ storeId }: { storeId: string }) {
         <div className="overflow-x-auto mt-4">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200">
-                <th className="px-4 py-2 text-left text-slate-600">Week</th>
-                <th className="px-4 py-2 text-right text-slate-600">
-                  Variance
+              <tr className="border-b border-brand-hairline">
+                <th className="px-4 py-2 text-left text-brand-muted">
+                  {t("analytics.week_col")}
+                </th>
+                <th className="px-4 py-2 text-right text-brand-muted">
+                  {t("analytics.variance_col")}
                 </th>
               </tr>
             </thead>
@@ -123,10 +132,10 @@ function WeeklyTillVariance({ storeId }: { storeId: string }) {
               {data.map((row) => (
                 <tr
                   key={row.week}
-                  className="border-b border-slate-100 hover:bg-slate-50"
+                  className="border-b border-brand-hairline hover:bg-brand-cream"
                 >
-                  <td className="px-4 py-2 text-slate-900">{row.week}</td>
-                  <td className="px-4 py-2 text-right text-slate-600">
+                  <td className="px-4 py-2 text-brand-ink">{row.week}</td>
+                  <td className="px-4 py-2 text-right text-brand-muted">
                     {formatVnd(row.variance)}
                   </td>
                 </tr>
@@ -146,7 +155,7 @@ function MissedShiftsSection() {
     <Card>
       <CardTitle>{t("analytics.missed_shifts")}</CardTitle>
       <EmptyState>
-        Not yet available
+        {t("analytics.section_not_available")}
         {/* TODO: implement missed-shifts aggregate */}
       </EmptyState>
     </Card>
@@ -160,7 +169,7 @@ function LateArrivalRateSection() {
     <Card>
       <CardTitle>{t("analytics.late_rate")}</CardTitle>
       <EmptyState>
-        Not yet available
+        {t("analytics.section_not_available")}
         {/* TODO: implement late-arrival-rate aggregate */}
       </EmptyState>
     </Card>

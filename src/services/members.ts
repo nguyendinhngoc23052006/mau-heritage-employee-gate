@@ -79,19 +79,11 @@ export async function updateHourlyRate(params: {
   hourlyRateCents: number;
 }) {
   const supabase = getSupabase();
-  const uid = (await supabase.auth.getUser()).data.user?.id;
-  if (!uid) throw new Error("Not authenticated");
-
-  const { data, error } = await supabase
-    .from("rate_history")
-    .insert({
-      user_id: params.userId,
-      store_id: params.storeId,
-      hourly_rate_cents: params.hourlyRateCents,
-      changed_by: uid,
-    })
-    .select()
-    .single();
+  const { data, error } = await supabase.rpc("set_hourly_rate", {
+    p_store_id: params.storeId,
+    p_user_id: params.userId,
+    p_cents: params.hourlyRateCents,
+  });
   if (error) throw error;
   return data;
 }

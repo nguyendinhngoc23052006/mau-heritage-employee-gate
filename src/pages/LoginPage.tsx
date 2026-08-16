@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import { LogoMark } from "../components/Brand/LogoMark";
+import { Wordmark } from "../components/Brand/Wordmark";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
@@ -39,7 +41,9 @@ export function LoginPage() {
           ? await signUpWithPassword(email, password)
           : await signInWithPassword(email, password);
       if (authError) {
-        setError(authError.message);
+        const fallback =
+          mode === "signup" ? t("auth.signup_failed") : t("auth.signin_failed");
+        setError(errorMessage(authError, fallback));
         return;
       }
       const to = params.get("return") || "/onboarding";
@@ -54,9 +58,13 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-brand-cream flex items-center justify-center px-4">
       <Card className="w-full max-w-sm">
-        <CardTitle>
+        <div className="flex flex-col items-center gap-3 mb-4">
+          <LogoMark className="h-14 text-brand-navy" />
+          <Wordmark className="text-lg" />
+        </div>
+        <CardTitle className="font-display">
           {mode === "signup" ? t("auth.signup_title") : t("auth.title")}
         </CardTitle>
         <form onSubmit={handleSubmit} className="space-y-4">

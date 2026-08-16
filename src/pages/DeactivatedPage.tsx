@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { LogoMark } from "../components/Brand/LogoMark";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
 import { useT } from "../lib/i18n";
@@ -14,10 +15,11 @@ export function DeactivatedPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-brand-cream p-4">
       <Card className="max-w-md w-full">
-        <CardTitle>{t("deactivated.title")}</CardTitle>
-        <p className="text-sm text-slate-700 mt-2">{t("deactivated.body")}</p>
+        <LogoMark className="h-12 mx-auto text-brand-navy mb-3" />
+        <CardTitle className="font-display">{t("deactivated.title")}</CardTitle>
+        <p className="text-sm text-brand-ink mt-2">{t("deactivated.body")}</p>
         <div className="mt-4">
           <Button onClick={signOut} className="w-full">
             {t("deactivated.signout")}

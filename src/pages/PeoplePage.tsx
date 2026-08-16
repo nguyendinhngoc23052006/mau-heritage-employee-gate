@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type JSX, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
@@ -34,12 +34,12 @@ import {
   updateHourlyRate,
   updateMemberRole,
 } from "../services/members";
-import { grantManualPoints } from "../services/points";
-import { listRules } from "../services/rules";
+import { applyManualRule, listRules } from "../services/rules";
 import type { EmploymentType, Role, Rule } from "../types/database";
 
 export function PeoplePage(): JSX.Element {
   const t = useT();
+  const navigate = useNavigate();
   const { storeId } = useParams<{ storeId: string }>();
   const { user } = useSession();
   const queryClient = useQueryClient();
@@ -116,7 +116,7 @@ export function PeoplePage(): JSX.Element {
     }) =>
       storeId
         ? createInvite({ store_id: storeId, ...data })
-        : Promise.resolve(null as any),
+        : Promise.reject(new Error("Store ID required")),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invites", storeId] });
       setShowInviteForm(false);
@@ -136,7 +136,7 @@ export function PeoplePage(): JSX.Element {
     mutationFn: ({ userId, newRole }: { userId: string; newRole: Role }) =>
       storeId
         ? updateMemberRole(userId, storeId, newRole)
-        : Promise.resolve(null as any),
+        : Promise.reject(new Error("Store ID required")),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["members", storeId] });
     },
@@ -146,7 +146,7 @@ export function PeoplePage(): JSX.Element {
     mutationFn: (userId: string) =>
       storeId
         ? deactivateMember(userId, storeId)
-        : Promise.resolve(null as any),
+        : Promise.reject(new Error("Store ID required")),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["members", storeId] });
       setDeactivateDialogOpen(false);
@@ -154,15 +154,15 @@ export function PeoplePage(): JSX.Element {
   });
 
   const grantPointsMutation = useMutation({
-    mutationFn: () =>
-      storeId
-        ? grantManualPoints({
-            storeId,
-            ruleId: grantPointsRuleId,
-            userId: grantPointsUserId,
-            note: grantPointsNote || undefined,
-          })
-        : Promise.resolve(null as any),
+    mutationFn: () => {
+      const rule = manualRules.find((r) => r.id === grantPointsRuleId);
+      if (!rule) throw new Error("Rule not found");
+      return applyManualRule({
+        rule,
+        target_user_id: grantPointsUserId,
+        reason: grantPointsNote || undefined,
+      });
+    },
     onSuccess: () => {
       const rule = manualRules.find((r) => r.id === grantPointsRuleId);
       if (rule) {
@@ -183,13 +183,12 @@ export function PeoplePage(): JSX.Element {
     mutationFn: () => {
       const rateCents = parseVndToCents(editRateValue);
       if (rateCents === null) throw new Error("Invalid hourly rate");
-      return storeId
-        ? updateHourlyRate({
-            storeId,
-            userId: editRateUserId,
-            hourlyRateCents: rateCents,
-          })
-        : Promise.resolve(null as any);
+      if (!storeId) throw new Error("Store ID required");
+      return updateHourlyRate({
+        storeId,
+        userId: editRateUserId,
+        hourlyRateCents: rateCents,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["members", storeId] });
@@ -235,7 +234,7 @@ export function PeoplePage(): JSX.Element {
   if (membersQuery.error) {
     return (
       <ErrorState
-        message={errorMessage(membersQuery.error, "Error loading members")}
+        message={errorMessage(membersQuery.error, t("common.error_loading"))}
       />
     );
   }
@@ -329,12 +328,9 @@ export function PeoplePage(): JSX.Element {
           <p className="text-sm text-slate-600 mb-3">
             {t("people.empty_body")}
           </p>
-          <Link
-            to={`/store/${storeId}/settings`}
-            className="inline-block rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
-          >
+          <Button onClick={() => navigate(`/store/${storeId}/settings`)}>
             {t("people.empty_open_settings")}
-          </Link>
+          </Button>
         </Card>
       )}
 
@@ -985,7 +981,7 @@ export function PeoplePage(): JSX.Element {
           </p>
           {editRateMutation.error && (
             <Alert variant="error">
-              {errorMessage(editRateMutation.error, "Failed to update rate")}
+              {errorMessage(editRateMutation.error, t("common.error_saving"))}
             </Alert>
           )}
         </div>
@@ -1022,7 +1018,7 @@ export function PeoplePage(): JSX.Element {
         </p>
         {deactivateMutation.error && (
           <Alert variant="error" className="mt-4">
-            {errorMessage(deactivateMutation.error, "Failed to deactivate")}
+            {errorMessage(deactivateMutation.error, t("common.error_saving"))}
           </Alert>
         )}
       </Dialog>

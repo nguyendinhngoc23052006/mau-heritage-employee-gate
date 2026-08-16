@@ -20,6 +20,7 @@ const ITEMS: Item[] = [
   { to: "rules", labelKey: "nav.rules", managerOnly: true },
   { to: "payroll", labelKey: "nav.payroll", managerOnly: true },
   { to: "audit", labelKey: "nav.audit", managerOnly: true },
+  { to: "analytics", labelKey: "nav.analytics", managerOnly: true },
   { to: "settings", labelKey: "nav.settings", ownerOnly: true },
 ];
 
@@ -37,7 +38,7 @@ export function Nav() {
   });
 
   return (
-    <nav className="border-b border-slate-200 bg-white">
+    <nav className="border-b border-brand-hairline bg-white">
       <div className="flex gap-1 overflow-x-auto whitespace-nowrap px-4 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {visible.map((i) => (
           <NavLink
@@ -47,8 +48,8 @@ export function Nav() {
             className={({ isActive }) =>
               `shrink-0 rounded-md px-3 py-1.5 text-sm font-medium transition ${
                 isActive
-                  ? "bg-slate-900 text-white"
-                  : "text-slate-700 hover:bg-slate-100"
+                  ? "bg-brand-navy text-brand-cream"
+                  : "text-brand-ink hover:bg-brand-cream-light"
               }`
             }
           >

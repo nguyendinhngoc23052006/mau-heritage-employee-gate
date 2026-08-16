@@ -66,7 +66,7 @@ export function AnnouncementsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-slate-900">
+        <h1 className="text-2xl font-semibold font-display text-brand-ink">
           {t("announcements.title")}
         </h1>
         {isManager && (

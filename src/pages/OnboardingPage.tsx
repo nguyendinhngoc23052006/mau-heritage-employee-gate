@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { LogoMark } from "../components/Brand/LogoMark";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
@@ -24,6 +25,7 @@ import {
   listMyOrphanedStores,
   reclaimStore,
 } from "../services/stores";
+import type { StoreApplication } from "../types/database";
 
 export function OnboardingPage() {
   const t = useT();
@@ -31,12 +33,8 @@ export function OnboardingPage() {
   const queryClient = useQueryClient();
   const [params] = useSearchParams();
   const addAnother = params.get("add") === "1";
-  const { loading: sessionLoading } = useSession();
-  const {
-    data: memberships,
-    isLoading: membershipsLoading,
-    isDeactivated,
-  } = useMemberships();
+  const { user, loading: sessionLoading } = useSession();
+  const { data: memberships, isLoading: membershipsLoading } = useMemberships();
 
   const [storeName, setStoreName] = useState("");
   const [joinCode, setJoinCode] = useState("");
@@ -57,14 +55,18 @@ export function OnboardingPage() {
   const previewedRef = useRef(false);
 
   // Query applications with 5s refetch
-  const { data: applications, isLoading: applicationsLoading } = useQuery({
+  const { data: applications, isLoading: applicationsLoading } = useQuery<
+    (StoreApplication & { store: { name: string } | null })[]
+  >({
     queryKey: ["applications", "mine"],
     queryFn: async () => listMyApplications(),
     refetchInterval: 5_000,
   });
 
   // Query declined applications
-  const { data: declinedApplications } = useQuery({
+  const { data: declinedApplications } = useQuery<
+    (StoreApplication & { store: { name: string } | null })[]
+  >({
     queryKey: ["applications", "declined"],
     queryFn: async () => listMyDeclinedApplications(),
   });
@@ -74,6 +76,20 @@ export function OnboardingPage() {
     queryKey: ["stores", "orphaned"],
     queryFn: async () => listMyOrphanedStores(),
   });
+
+  // Compute derived values once memberships load
+  const firstMembershipStoreId =
+    memberships && memberships.length > 0 ? memberships[0].store_id : null;
+  const firstMembershipStoreName =
+    memberships && memberships.length > 0 ? memberships[0].store?.name : null;
+
+  // Compute deactivation locally: user exists AND memberships empty AND no pending/declined apps AND no orphaned stores
+  const isDeactivated =
+    user &&
+    (!memberships || memberships.length === 0) &&
+    (!applications || applications.length === 0) &&
+    (!declinedApplications || declinedApplications.length === 0) &&
+    (!orphanedStores || orphanedStores.length === 0);
 
   const reclaimMutation = useMutation({
     mutationFn: async (storeId: string) => reclaimStore(storeId),
@@ -90,20 +106,18 @@ export function OnboardingPage() {
   useEffect(() => {
     if (!applications) return;
     const approved = applications.find((app) => app.status === "approved");
-    if (approved) {
-      setApprovedStore(approved.store_id.substring(0, 8));
+    if (approved && firstMembershipStoreName) {
+      setApprovedStore(firstMembershipStoreName);
       queryClient.invalidateQueries({ queryKey: ["memberships", "mine"] });
     }
-  }, [applications, queryClient]);
+  }, [applications, firstMembershipStoreName, queryClient]);
 
   // Redirect once memberships appear — UNLESS `?add=1`, which is the signal
   // from the store-switcher that the user wants to add a second store.
   // Also check for deactivation and handle approved app navigation with delay.
-  const firstMembershipStoreId =
-    memberships && memberships.length > 0 ? memberships[0].store_id : null;
   useEffect(() => {
     if (addAnother) return;
-    if (sessionLoading || membershipsLoading) return;
+    if (sessionLoading || membershipsLoading || applicationsLoading) return;
 
     // Check for deactivation
     if (isDeactivated) {
@@ -126,6 +140,7 @@ export function OnboardingPage() {
     addAnother,
     sessionLoading,
     membershipsLoading,
+    applicationsLoading,
     firstMembershipStoreId,
     isDeactivated,
     approvedStore,
@@ -216,9 +231,7 @@ export function OnboardingPage() {
           previewedRef.current = false;
         }
       } catch (err) {
-        setPreviewError(
-          err instanceof Error ? err.message : "Failed to check code",
-        );
+        setPreviewError(errorMessage(err, t("onboarding.check_code_failed")));
         setPreviewedStoreName(null);
         setPreviewedCode(null);
         previewedRef.current = false;
@@ -274,7 +287,7 @@ export function OnboardingPage() {
 
   if (sessionLoading || membershipsLoading || applicationsLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-brand-cream flex items-center justify-center">
         <LoadingState>{t("common.loading")}</LoadingState>
       </div>
     );
@@ -287,14 +300,17 @@ export function OnboardingPage() {
     !pendingApplication
   ) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-8">
+      <div className="min-h-screen bg-brand-cream flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-md space-y-4">
           {declinedApplications.map((app) => (
             <Card key={app.id}>
-              <CardTitle>{t("onboarding.declined_title")}</CardTitle>
+              <LogoMark className="h-12 mx-auto text-brand-navy mb-3" />
+              <CardTitle className="font-display">
+                {t("onboarding.declined_title")}
+              </CardTitle>
               <p className="text-sm text-slate-600 mb-2">
                 {t("onboarding.declined_body", {
-                  store: app.store_id.substring(0, 8),
+                  store: app.store?.name ?? "cửa hàng",
                 })}
               </p>
               {app.decision_reason && (
@@ -323,7 +339,7 @@ export function OnboardingPage() {
   // Show pending application
   if (pendingApplication) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-8">
+      <div className="min-h-screen bg-brand-cream flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-md space-y-4">
           {approvedStore && (
             <Alert variant="success">
@@ -331,10 +347,13 @@ export function OnboardingPage() {
             </Alert>
           )}
           <Card>
-            <CardTitle>{t("onboarding.pending_title")}</CardTitle>
+            <LogoMark className="h-12 mx-auto text-brand-navy mb-3" />
+            <CardTitle className="font-display">
+              {t("onboarding.pending_title")}
+            </CardTitle>
             <p className="text-sm text-slate-600 mb-4">
               {t("onboarding.pending_body", {
-                store: pendingApplication.store_id.substring(0, 8),
+                store: pendingApplication.store?.name ?? "",
               })}
             </p>
             <Button
@@ -354,7 +373,7 @@ export function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-brand-cream flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md space-y-4">
         {approvedStore && (
           <Alert variant="success">
@@ -371,7 +390,7 @@ export function OnboardingPage() {
               {orphanedStores.map((s) => (
                 <div
                   key={s.id}
-                  className="flex items-center justify-between gap-2 rounded border border-amber-200 bg-amber-50 p-3"
+                  className="flex items-center justify-between gap-2 rounded border border-brand-hairline bg-brand-cream-light p-3"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-semibold text-slate-900">
@@ -402,7 +421,10 @@ export function OnboardingPage() {
             {reclaimMutation.error && (
               <div className="mt-3">
                 <Alert variant="error">
-                  {errorMessage(reclaimMutation.error, t("auth.signin_failed"))}
+                  {errorMessage(
+                    reclaimMutation.error,
+                    t("onboarding.reclaim_failed"),
+                  )}
                 </Alert>
               </div>
             )}
@@ -450,7 +472,10 @@ export function OnboardingPage() {
         </Dialog>
 
         <Card>
-          <CardTitle>{t("onboarding.title")}</CardTitle>
+          <LogoMark className="h-12 mx-auto text-brand-navy mb-3" />
+          <CardTitle className="font-display">
+            {t("onboarding.title")}
+          </CardTitle>
 
           <div className="space-y-6">
             {/* Create store section */}
@@ -479,7 +504,7 @@ export function OnboardingPage() {
                   <Alert variant="error">
                     {errorMessage(
                       createStoreMutation.error,
-                      t("auth.signin_failed"),
+                      t("onboarding.create_failed"),
                     )}
                   </Alert>
                 )}
@@ -544,13 +569,7 @@ export function OnboardingPage() {
                   </div>
                 </div>
 
-                {previewError && (
-                  <Alert
-                    variant={previewError.includes("Reason") ? "info" : "error"}
-                  >
-                    {previewError}
-                  </Alert>
-                )}
+                {previewError && <Alert variant="error">{previewError}</Alert>}
 
                 {previewedStoreName && (
                   <Alert variant="success">

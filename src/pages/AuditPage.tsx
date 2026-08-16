@@ -87,7 +87,7 @@ export function AuditPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-slate-900">
+      <h1 className="text-2xl font-semibold font-display text-brand-ink">
         {t("nav.audit")}
       </h1>
 
@@ -167,7 +167,7 @@ export function AuditPage() {
                   {allItems.map((item: AuditLog) => (
                     <tr
                       key={`${item.id}-${item.at}`}
-                      className="border-b border-slate-100 hover:bg-slate-50"
+                      className="border-b border-slate-100 hover:bg-brand-cream-light"
                     >
                       <td className="px-4 py-2 text-slate-900">
                         {new Date(item.at).toLocaleString()}

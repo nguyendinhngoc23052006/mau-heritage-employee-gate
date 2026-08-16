@@ -67,10 +67,9 @@ export function ResetPasswordPage() {
     try {
       await updatePassword(newPassword);
       setMessage({ type: "success", text: t("auth.reset_updated") });
-      const timer = setTimeout(() => {
+      setTimeout(() => {
         navigate("/onboarding", { replace: true });
       }, 1500);
-      return () => clearTimeout(timer);
     } catch (err) {
       setMessage({
         type: "error",
@@ -83,9 +82,11 @@ export function ResetPasswordPage() {
 
   if (state === "request") {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-brand-cream flex items-center justify-center px-4">
         <Card className="w-full max-w-sm">
-          <CardTitle>{t("auth.reset_title")}</CardTitle>
+          <CardTitle className="font-display">
+            {t("auth.reset_title")}
+          </CardTitle>
           <p className="text-sm text-slate-600 mb-4">{t("auth.reset_body")}</p>
           <form onSubmit={handleRequestReset} className="space-y-4">
             <div>
@@ -113,9 +114,9 @@ export function ResetPasswordPage() {
 
   // Confirm state
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-brand-cream flex items-center justify-center px-4">
       <Card className="w-full max-w-sm">
-        <CardTitle>{t("auth.reset_title")}</CardTitle>
+        <CardTitle className="font-display">{t("auth.reset_title")}</CardTitle>
         <form onSubmit={handleConfirmReset} className="space-y-4">
           <div>
             <Label htmlFor="new-password">{t("auth.reset_new_password")}</Label>
