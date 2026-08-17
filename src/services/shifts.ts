@@ -140,29 +140,11 @@ export async function listPendingSwaps(storeId: string): Promise<
   }));
 }
 
-// Legacy: only works for single-slot shifts (writes shifts.claimed_by, which is null on multi-slot shifts).
-// Multi-slot shift swaps are TODO; users should release + re-claim via the slot flow instead.
+// Atomically moves the from_user's slot to to_user + marks swap approved.
 export async function approveSwap(id: string): Promise<void> {
   const supabase = getSupabase();
-  // TODO: convert to atomic RPC
-  const { data: swap, error: fetchError } = await supabase
-    .from("shift_swaps")
-    .select("*")
-    .eq("id", id)
-    .single();
-  if (fetchError) throw fetchError;
-
-  const { error: updateShiftError } = await supabase
-    .from("shifts")
-    .update({ claimed_by: swap.to_user_id })
-    .eq("id", swap.shift_id);
-  if (updateShiftError) throw updateShiftError;
-
-  const { error: updateSwapError } = await supabase
-    .from("shift_swaps")
-    .update({ status: "approved", decided_at: new Date().toISOString() })
-    .eq("id", id);
-  if (updateSwapError) throw updateSwapError;
+  const { error } = await supabase.rpc("approve_shift_swap", { p_swap_id: id });
+  if (error) throw error;
 }
 
 export async function declineSwap(id: string): Promise<void> {

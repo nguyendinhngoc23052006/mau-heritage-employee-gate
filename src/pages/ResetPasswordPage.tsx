@@ -47,7 +47,7 @@ export function ResetPasswordPage() {
     } catch (err) {
       setMessage({
         type: "error",
-        text: errorMessage(err, t("auth.signin_failed")),
+        text: errorMessage(err, t("auth.reset_failed")),
       });
     } finally {
       setBusy(false);
@@ -73,7 +73,7 @@ export function ResetPasswordPage() {
     } catch (err) {
       setMessage({
         type: "error",
-        text: errorMessage(err, t("auth.signin_failed")),
+        text: errorMessage(err, t("auth.reset_failed")),
       });
     } finally {
       setBusy(false);

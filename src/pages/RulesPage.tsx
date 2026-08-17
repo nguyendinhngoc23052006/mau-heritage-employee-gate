@@ -10,6 +10,7 @@ import {
 } from "../components/ui/EmptyState";
 import { Input, Label } from "../components/ui/Input";
 import { Select } from "../components/ui/Select";
+import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
 import { useT } from "../lib/i18n";
 import { formatVnd } from "../lib/money";
 import { createRule, listRules, updateRule } from "../services/rules";
@@ -24,6 +25,8 @@ type RuleKind = "auto" | "manual";
 export function RulesPage({ storeId }: RulesPageProps) {
   const t = useT();
   const queryClient = useQueryClient();
+  const role = useRoleOn(storeId);
+  const isManager = isManagerRole(role);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState<{
     name: string;
@@ -87,6 +90,10 @@ export function RulesPage({ storeId }: RulesPageProps) {
     if (!formData.name.trim()) return;
     await createMutation.mutateAsync();
   };
+
+  if (!isManager) {
+    return <ErrorState message={t("analytics.access_denied")} />;
+  }
 
   if (isLoading) {
     return <LoadingState>{t("common.loading")}</LoadingState>;

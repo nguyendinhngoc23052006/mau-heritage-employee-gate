@@ -814,7 +814,12 @@ export function PeoplePage(): JSX.Element {
                 <div className="flex gap-2">
                   <Button
                     onClick={handleCreateInvite}
-                    disabled={createInviteMutation.isPending}
+                    disabled={
+                      createInviteMutation.isPending ||
+                      !inviteEmail.trim() ||
+                      !inviteEmail.includes("@") ||
+                      !inviteRole
+                    }
                     className="flex-1"
                   >
                     {createInviteMutation.isPending
@@ -887,7 +892,8 @@ export function PeoplePage(): JSX.Element {
       >
         {grantPointsSuccess && grantPointsSuccessRule ? (
           <Alert variant="success">
-            {t("people.grant_points_success", {
+            {t("people.grant_points_success_full", {
+              name: grantPointsSuccessRule.name,
               points: grantPointsSuccessRule.points_delta,
             })}
           </Alert>

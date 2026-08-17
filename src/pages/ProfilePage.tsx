@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
@@ -36,6 +36,17 @@ export function ProfilePage() {
     },
   });
 
+  // Populate form once when the profile first loads. useEffect avoids the
+  // prior "setState during render" bug that caused an inconsistent tree.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only sync when profile first loads; don't re-sync on user typing
+  useEffect(() => {
+    if (profile && displayName === "") {
+      setDisplayName(profile.display_name ?? "");
+      setPhone(profile.phone ?? "");
+      setLocale(profile.locale);
+    }
+  }, [profile]);
+
   if (isLoading) {
     return <LoadingState>{t("common.loading")}</LoadingState>;
   }
@@ -48,12 +59,6 @@ export function ProfilePage() {
         }
       />
     );
-  }
-
-  if (profile && displayName === "") {
-    setDisplayName(profile.display_name ?? "");
-    setPhone(profile.phone ?? "");
-    setLocale(profile.locale);
   }
 
   function handleSave() {

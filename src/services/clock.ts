@@ -6,13 +6,13 @@ export async function getCurrentClockState(
   storeId: string,
 ): Promise<ClockKind | null> {
   const supabase = getSupabase();
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Ho_Chi_Minh" });
   const { data, error } = await supabase
     .from("clock_events")
     .select("kind")
     .eq("user_id", userId)
     .eq("store_id", storeId)
-    .gte("at", `${today}T00:00:00Z`)
+    .gte("at", `${today}T00:00:00+07:00`)
     .order("at", { ascending: false })
     .limit(1)
     .single();

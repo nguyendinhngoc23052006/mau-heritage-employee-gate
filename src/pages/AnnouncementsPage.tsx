@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
+import { Dialog } from "../components/ui/Dialog";
 import {
   EmptyState,
   ErrorState,
@@ -13,6 +14,7 @@ import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
 import { useT } from "../lib/i18n";
 import {
   createAnnouncement,
+  deactivateAnnouncement,
   listAnnouncements,
 } from "../services/announcements";
 import type { Announcement } from "../types/database";
@@ -27,6 +29,8 @@ export function AnnouncementsPage() {
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
+  const [deactivateAnnouncementId, setDeactivateAnnouncementId] = useState("");
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["announcements", storeId],
@@ -42,6 +46,15 @@ export function AnnouncementsPage() {
       setTitle("");
       setBody("");
       setShowForm(false);
+    },
+  });
+
+  const deactivateMutation = useMutation({
+    mutationFn: (id: string) => deactivateAnnouncement(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["announcements", storeId] });
+      setDeactivateDialogOpen(false);
+      setDeactivateAnnouncementId("");
     },
   });
 
@@ -131,17 +144,69 @@ export function AnnouncementsPage() {
         <div className="space-y-3">
           {data?.map((announcement: Announcement) => (
             <Card key={announcement.id}>
-              <h3 className="mb-2 font-semibold text-slate-900">
-                {announcement.title}
-              </h3>
-              <p className="mb-2 text-sm text-slate-600">{announcement.body}</p>
-              <p className="text-xs text-slate-400">
-                {new Date(announcement.created_at).toLocaleString()}
-              </p>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1">
+                  <h3 className="mb-2 font-semibold text-slate-900">
+                    {announcement.title}
+                  </h3>
+                  <p className="mb-2 text-sm text-slate-600">{announcement.body}</p>
+                  <p className="text-xs text-slate-400">
+                    {new Date(announcement.created_at).toLocaleString()}
+                  </p>
+                </div>
+                {isManager && (
+                  <Button
+                    variant="danger"
+                    onClick={() => {
+                      setDeactivateAnnouncementId(announcement.id);
+                      setDeactivateDialogOpen(true);
+                    }}
+                    disabled={deactivateMutation.isPending}
+                    className="text-xs"
+                  >
+                    {t("announcements.deactivate")}
+                  </Button>
+                )}
+              </div>
             </Card>
           ))}
         </div>
       )}
+
+      <Dialog
+        open={deactivateDialogOpen}
+        onClose={() => {
+          setDeactivateDialogOpen(false);
+          setDeactivateAnnouncementId("");
+        }}
+        title={t("announcements.deactivate_confirm")}
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setDeactivateDialogOpen(false);
+                setDeactivateAnnouncementId("");
+              }}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => deactivateMutation.mutate(deactivateAnnouncementId)}
+              disabled={deactivateMutation.isPending}
+            >
+              {deactivateMutation.isPending
+                ? t("common.loading")
+                : t("announcements.deactivate")}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-slate-600">
+          {t("announcements.deactivate_confirm_body")}
+        </p>
+      </Dialog>
     </div>
   );
 }

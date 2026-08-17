@@ -10,6 +10,7 @@ interface Props {
   onClaim: (slotId: string) => void;
   onRelease: (slotId: string) => void;
   claimingSlotId?: string;
+  shiftStartsAt: string;
 }
 
 export function SlotGrid({
@@ -20,6 +21,7 @@ export function SlotGrid({
   onClaim,
   onRelease,
   claimingSlotId,
+  shiftStartsAt,
 }: Props) {
   const t = useT();
 
@@ -67,14 +69,20 @@ export function SlotGrid({
                 className="px-3 py-1 rounded bg-green-100 text-green-900 text-sm font-medium flex items-center gap-2"
               >
                 <span>{t("schedule.slot_mine")}</span>
-                <Button
-                  onClick={() => onRelease(slot.id)}
-                  disabled={claimingSlotId === slot.id}
-                  variant="secondary"
-                  className="px-2 py-0 text-xs h-auto"
-                >
-                  {t("schedule.slot_release")}
-                </Button>
+                {new Date(shiftStartsAt) > new Date() ? (
+                  <Button
+                    onClick={() => onRelease(slot.id)}
+                    disabled={claimingSlotId === slot.id}
+                    variant="secondary"
+                    className="px-2 py-0 text-xs h-auto"
+                  >
+                    {t("schedule.slot_release")}
+                  </Button>
+                ) : (
+                  <span className="text-xs opacity-60">
+                    {t("schedule.slot_shift_started")}
+                  </span>
+                )}
               </div>
             );
           }

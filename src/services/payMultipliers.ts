@@ -66,7 +66,7 @@ export async function deletePayMultiplier(id: string): Promise<void> {
 export async function getTodayMultiplier(
   storeId: string,
 ): Promise<PayMultiplier | null> {
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Ho_Chi_Minh" });
   const supabase = getSupabase();
   const { data, error } = await supabase
     .from("pay_multipliers")

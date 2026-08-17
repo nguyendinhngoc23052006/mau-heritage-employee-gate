@@ -335,5 +335,15 @@
   "schedule.day_empty_shifts": "No shifts scheduled for this day.",
   "schedule.day_shift_count": "{n} shifts",
   "schedule.multiplier_badge_short": "pay today",
-  "schedule.close_all_this_week": "Close all shifts this week"
+  "schedule.close_all_this_week": "Close all shifts this week",
+  "schedule.open_all_next_14d": "Open all shifts in next 14 days",
+  "schedule.close_all_next_14d": "Close all shifts in next 14 days",
+  "schedule.slot_shift_started": "Shift has started",
+  "announcements.deactivate": "Deactivate",
+  "announcements.deactivate_confirm": "Hide this announcement?",
+  "announcements.deactivate_confirm_body": "Employees will no longer see this announcement.",
+  "people.grant_points_success_full": "Applied {name} — {points} points.",
+  "notifications.mark_all_read": "Mark all as read",
+  "auth.reset_failed": "Password reset failed",
+  "invite.accept.email_mismatch_hint": "Sign in with the email your manager invited."
 }

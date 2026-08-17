@@ -47,6 +47,7 @@ export const router = createBrowserRouter([
   ...inviteRoutes,
   { path: "/deactivated", element: <DeactivatedPage /> },
   { path: "/reset-password", element: <ResetPasswordPage /> },
+  { path: "/health", element: <div>OK</div> },
   {
     path: "/store/:storeId",
     element: (

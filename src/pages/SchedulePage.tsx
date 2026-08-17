@@ -319,6 +319,18 @@ export function SchedulePage() {
           queryClient.invalidateQueries({ queryKey: ["shifts", storeId] });
         },
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "shift_slots",
+          filter: `store_id=eq.${storeId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["shift_slots", storeId] });
+        },
+      )
       .subscribe();
     return () => {
       channel.unsubscribe();
@@ -371,7 +383,7 @@ export function SchedulePage() {
                 className="text-xs sm:text-sm"
                 disabled={setStoreClaimOpenMutation.isPending}
               >
-                {t("schedule.open_all_this_week")}
+                {t("schedule.open_all_next_14d")}
               </Button>
               <Button
                 onClick={() => setStoreClaimOpenMutation.mutate(false)}
@@ -379,7 +391,7 @@ export function SchedulePage() {
                 className="text-xs sm:text-sm"
                 disabled={setStoreClaimOpenMutation.isPending}
               >
-                {t("schedule.close_all_this_week")}
+                {t("schedule.close_all_next_14d")}
               </Button>
               <Button
                 onClick={() => setShowNewForm(!showNewForm)}
@@ -593,6 +605,7 @@ export function SchedulePage() {
             setSelectedSwapUserId("");
           }}
           isLoading={swapMutation.isPending}
+          currentUserId={user?.id}
         />
       )}
 
@@ -676,6 +689,7 @@ function ShiftCard({
           onClaim={onClaimSlot}
           onRelease={onReleaseSlot}
           claimingSlotId={claimingSlotId}
+          shiftStartsAt={shift.starts_at}
         />
       </div>
 
@@ -773,6 +787,7 @@ function SwapRequestDialog({
   onSubmit,
   onClose,
   isLoading,
+  currentUserId,
 }: {
   open: boolean;
   storeId: string;
@@ -781,8 +796,10 @@ function SwapRequestDialog({
   onSubmit: () => void;
   onClose: () => void;
   isLoading: boolean;
+  currentUserId?: string;
 }) {
   const t = useT();
+  const { user } = useSession();
   const { data: members } = useQuery({
     queryKey: ["members_options", storeId],
     queryFn: async () => {
@@ -811,6 +828,9 @@ function SwapRequestDialog({
     },
   });
 
+  const uid = currentUserId || user?.id;
+  const filteredMembers = (members ?? []).filter((m) => m.value !== uid);
+
   return (
     <Dialog
       open={open}
@@ -838,7 +858,7 @@ function SwapRequestDialog({
             id="swap-user"
             value={selectedUserId}
             onChange={onSelectedUserChange}
-            options={members ?? []}
+            options={filteredMembers}
             placeholder={t("common.select_placeholder")}
           />
         </div>

@@ -21,7 +21,7 @@ const ITEMS: Item[] = [
   { to: "payroll", labelKey: "nav.payroll", managerOnly: true },
   { to: "audit", labelKey: "nav.audit", managerOnly: true },
   { to: "analytics", labelKey: "nav.analytics", managerOnly: true },
-  { to: "settings", labelKey: "nav.settings", ownerOnly: true },
+  { to: "settings", labelKey: "nav.settings", managerOnly: true },
 ];
 
 export function Nav() {

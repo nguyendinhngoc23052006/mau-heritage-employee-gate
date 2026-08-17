@@ -335,5 +335,15 @@
   "schedule.day_empty_shifts": "Ngày này chưa có ca nào.",
   "schedule.day_shift_count": "{n} ca",
   "schedule.multiplier_badge_short": "lương ngày này",
-  "schedule.close_all_this_week": "Đóng tất cả ca tuần này"
+  "schedule.close_all_this_week": "Đóng tất cả ca tuần này",
+  "schedule.open_all_next_14d": "Mở tất cả ca trong 14 ngày tới",
+  "schedule.close_all_next_14d": "Đóng tất cả ca trong 14 ngày tới",
+  "schedule.slot_shift_started": "Ca đã bắt đầu",
+  "announcements.deactivate": "Ngừng hiển thị",
+  "announcements.deactivate_confirm": "Ẩn thông báo này?",
+  "announcements.deactivate_confirm_body": "Nhân viên sẽ không thấy thông báo này nữa.",
+  "people.grant_points_success_full": "Đã áp dụng {name} — {points} điểm.",
+  "notifications.mark_all_read": "Đánh dấu tất cả đã đọc",
+  "auth.reset_failed": "Không thể đặt lại mật khẩu",
+  "invite.accept.email_mismatch_hint": "Đăng nhập bằng email mà quản lý đã mời."
 }
