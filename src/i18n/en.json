@@ -322,5 +322,10 @@
   "schedule.bulk_days_of_week": "Days of week",
   "schedule.slot_release_expired": "Release window expired",
   "schedule.open_all_this_week": "Open all shifts this week",
-  "settings.multipliers.overwrite_warning": "This date already has a multiplier. Overwrite?"
+  "settings.multipliers.overwrite_warning": "This date already has a multiplier. Overwrite?",
+  "common.optional": "Optional",
+  "schedule.bulk_templates_hint": "Each template creates one shift per selected day. Add more templates if you want multiple shifts per day (e.g. morning + evening).",
+  "schedule.bulk_slots_invalid": "Slots must be between 1 and 20.",
+  "schedule.bulk_time_invalid": "Start time must be before end time.",
+  "schedule.bulk_template_remove": "Remove this template"
 }

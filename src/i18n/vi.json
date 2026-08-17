@@ -322,5 +322,10 @@
   "schedule.bulk_days_of_week": "Ngày trong tuần",
   "schedule.slot_release_expired": "Đã hết thời gian bỏ ca",
   "schedule.open_all_this_week": "Mở tất cả ca tuần này",
-  "settings.multipliers.overwrite_warning": "Ngày này đã có hệ số. Ghi đè?"
+  "settings.multipliers.overwrite_warning": "Ngày này đã có hệ số. Ghi đè?",
+  "common.optional": "Tùy chọn",
+  "schedule.bulk_templates_hint": "Mỗi mẫu tạo một ca cho mỗi ngày đã chọn. Thêm mẫu nếu bạn muốn nhiều ca trong một ngày (vd. ca sáng + ca chiều).",
+  "schedule.bulk_slots_invalid": "Số nhân viên phải từ 1 đến 20.",
+  "schedule.bulk_time_invalid": "Giờ bắt đầu phải trước giờ kết thúc.",
+  "schedule.bulk_template_remove": "Xóa mẫu này"
 }
