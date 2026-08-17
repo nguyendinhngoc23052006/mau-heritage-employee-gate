@@ -328,5 +328,11 @@
   "schedule.bulk_slots_invalid": "Số nhân viên phải từ 1 đến 20.",
   "schedule.bulk_time_invalid": "Giờ bắt đầu phải trước giờ kết thúc.",
   "schedule.bulk_template_remove": "Xóa ca này",
-  "schedule.bulk_multiplier_moved_hint": "Cần ×2 hoặc ×3 lương cho một ngày cụ thể (lễ, Tết, Chủ nhật)? Thêm sau ở Cài đặt → Ngày lương đặc biệt."
+  "schedule.bulk_multiplier_moved_hint": "Cần ×2 hoặc ×3 lương cho một ngày cụ thể (lễ, Tết, Chủ nhật)? Thêm sau ở Cài đặt → Ngày lương đặc biệt.",
+  "schedule.week_prev": "Tuần trước",
+  "schedule.week_next": "Tuần sau",
+  "schedule.week_today": "Về tuần này",
+  "schedule.day_empty_shifts": "Ngày này chưa có ca nào.",
+  "schedule.day_shift_count": "{n} ca",
+  "schedule.multiplier_badge_short": "lương ngày này"
 }

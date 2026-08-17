@@ -328,5 +328,11 @@
   "schedule.bulk_slots_invalid": "Slots must be between 1 and 20.",
   "schedule.bulk_time_invalid": "Start time must be before end time.",
   "schedule.bulk_template_remove": "Remove this shift",
-  "schedule.bulk_multiplier_moved_hint": "Need ×2 or ×3 pay for a specific day (holiday, Tết, Sunday)? Add it later in Settings → Special pay days."
+  "schedule.bulk_multiplier_moved_hint": "Need ×2 or ×3 pay for a specific day (holiday, Tết, Sunday)? Add it later in Settings → Special pay days.",
+  "schedule.week_prev": "Previous week",
+  "schedule.week_next": "Next week",
+  "schedule.week_today": "Back to this week",
+  "schedule.day_empty_shifts": "No shifts scheduled for this day.",
+  "schedule.day_shift_count": "{n} shifts",
+  "schedule.multiplier_badge_short": "pay today"
 }
