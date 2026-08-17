@@ -334,5 +334,6 @@
   "schedule.week_today": "Về tuần này",
   "schedule.day_empty_shifts": "Ngày này chưa có ca nào.",
   "schedule.day_shift_count": "{n} ca",
-  "schedule.multiplier_badge_short": "lương ngày này"
+  "schedule.multiplier_badge_short": "lương ngày này",
+  "schedule.close_all_this_week": "Đóng tất cả ca tuần này"
 }

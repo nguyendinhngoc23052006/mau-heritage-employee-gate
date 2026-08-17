@@ -334,5 +334,6 @@
   "schedule.week_today": "Back to this week",
   "schedule.day_empty_shifts": "No shifts scheduled for this day.",
   "schedule.day_shift_count": "{n} shifts",
-  "schedule.multiplier_badge_short": "pay today"
+  "schedule.multiplier_badge_short": "pay today",
+  "schedule.close_all_this_week": "Close all shifts this week"
 }

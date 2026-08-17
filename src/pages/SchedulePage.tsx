@@ -260,7 +260,7 @@ export function SchedulePage() {
   });
 
   const setStoreClaimOpenMutation = useMutation({
-    mutationFn: () => setStoreClaimOpen(storeId as string, true),
+    mutationFn: (open: boolean) => setStoreClaimOpen(storeId as string, open),
     onSuccess: () =>
       queryClient.invalidateQueries({
         queryKey: ["shifts", storeId, weekStart, weekEnd],
@@ -366,12 +366,20 @@ export function SchedulePage() {
                 {t("schedule.bulk_create_button")}
               </Button>
               <Button
-                onClick={() => setStoreClaimOpenMutation.mutate()}
+                onClick={() => setStoreClaimOpenMutation.mutate(true)}
                 variant="secondary"
                 className="text-xs sm:text-sm"
                 disabled={setStoreClaimOpenMutation.isPending}
               >
                 {t("schedule.open_all_this_week")}
+              </Button>
+              <Button
+                onClick={() => setStoreClaimOpenMutation.mutate(false)}
+                variant="secondary"
+                className="text-xs sm:text-sm"
+                disabled={setStoreClaimOpenMutation.isPending}
+              >
+                {t("schedule.close_all_this_week")}
               </Button>
               <Button
                 onClick={() => setShowNewForm(!showNewForm)}
