@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
+import { Alert } from "../components/ui/Alert";
 import { Card, CardTitle } from "../components/ui/Card";
 import {
   EmptyState,
@@ -11,6 +12,7 @@ import { useT } from "../lib/i18n";
 import { getSupabase } from "../lib/supabaseClient";
 import { listAnnouncements } from "../services/announcements";
 import { listMyNotifications } from "../services/notifications";
+import { getTodayMultiplier } from "../services/payMultipliers";
 import type { Announcement, PointBalance } from "../types/database";
 
 export function DashboardPage() {
@@ -75,6 +77,14 @@ export function DashboardPage() {
     },
   });
 
+  // Today's pay multiplier
+  const { data: todayMultiplier } = useQuery({
+    queryKey: ["multiplier", "today", storeId],
+    queryFn: () =>
+      storeId ? getTodayMultiplier(storeId) : Promise.resolve(null),
+    enabled: !!storeId,
+  });
+
   if (!ready) {
     return <ErrorState message="Store or user not found" />;
   }
@@ -94,6 +104,15 @@ export function DashboardPage() {
       <h1 className="text-2xl font-semibold font-display text-brand-ink">
         {t("nav.dashboard")}
       </h1>
+
+      {todayMultiplier && (
+        <Alert variant="info">
+          {t("dashboard.today_multiplier", {
+            multiplier: todayMultiplier.multiplier,
+            reason: todayMultiplier.reason ?? "",
+          })}
+        </Alert>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">

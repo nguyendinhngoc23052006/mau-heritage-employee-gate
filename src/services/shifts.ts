@@ -61,15 +61,6 @@ export async function deleteShift(id: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function claimShift(shiftId: string): Promise<Shift | null> {
-  const supabase = getSupabase();
-  const { data, error } = await supabase.rpc("claim_shift", {
-    p_shift_id: shiftId,
-  });
-  if (error) throw error;
-  return (data ?? null) as Shift | null;
-}
-
 export async function requestShiftSwap(input: {
   shiftId: string;
   toUserId: string;
@@ -149,6 +140,8 @@ export async function listPendingSwaps(storeId: string): Promise<
   }));
 }
 
+// Legacy: only works for single-slot shifts (writes shifts.claimed_by, which is null on multi-slot shifts).
+// Multi-slot shift swaps are TODO; users should release + re-claim via the slot flow instead.
 export async function approveSwap(id: string): Promise<void> {
   const supabase = getSupabase();
   // TODO: convert to atomic RPC
