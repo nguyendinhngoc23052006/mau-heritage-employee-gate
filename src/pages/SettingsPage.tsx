@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { PayMultipliersCard } from "../components/settings/PayMultipliersCard";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
@@ -235,6 +236,8 @@ export function SettingsPage() {
       >
         <p>{t("settings.regen_confirm_body")}</p>
       </Dialog>
+
+      {canEdit && storeId && <PayMultipliersCard storeId={storeId} />}
     </div>
   );
 }

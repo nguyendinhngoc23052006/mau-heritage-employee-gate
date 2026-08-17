@@ -38,20 +38,44 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
   const handleDownloadCsv = () => {
     if (!payroll) return;
 
-    const rows = payroll.map((row) => ({
-      Name: row.display_name || row.user_id,
-      Hours: (row.minutes_worked / 60).toFixed(2),
-      "Hourly rate (VND)": row.hourly_rate_cents
-        ? row.hourly_rate_cents.toString()
-        : "0",
-      "Wages (VND)": row.wages_cents.toString(),
-      "Prizes (VND)": row.prizes_cents.toString(),
-      "Fines (VND)": row.fines_cents.toString(),
-      "Total (VND)": row.total_cents.toString(),
-    }));
+    const rows: Array<Record<string, string>> = [];
+
+    for (const row of payroll) {
+      // Aggregate row
+      rows.push({
+        Name: row.display_name || row.user_id,
+        Date: "",
+        Multiplier: "",
+        Hours: (row.minutes_worked / 60).toFixed(2),
+        "Hourly rate (VND)": row.hourly_rate_cents
+          ? row.hourly_rate_cents.toString()
+          : "0",
+        "Wages (VND)": row.wages_cents.toString(),
+        "Prizes (VND)": row.prizes_cents.toString(),
+        "Fines (VND)": row.fines_cents.toString(),
+        "Total (VND)": row.total_cents.toString(),
+      });
+
+      // Daily breakdown rows
+      for (const day of row.daily_breakdown) {
+        rows.push({
+          Name: "",
+          Date: day.date,
+          Multiplier: `×${day.multiplier.toFixed(1)}`,
+          Hours: (day.minutes / 60).toFixed(2),
+          "Hourly rate (VND)": "",
+          "Wages (VND)": day.wages.toString(),
+          "Prizes (VND)": "",
+          "Fines (VND)": "",
+          "Total (VND)": "",
+        });
+      }
+    }
 
     const headers = [
       "Name",
+      "Date",
+      "Multiplier",
       "Hours",
       "Hourly rate (VND)",
       "Wages (VND)",
@@ -149,6 +173,9 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
                 <tr>
                   <th className="text-left px-4 py-2">Name</th>
                   <th className="text-right px-4 py-2">{t("payroll.hours")}</th>
+                  <th className="text-right px-4 py-2">
+                    {t("payroll.multiplier_col")}
+                  </th>
                   <th className="text-right px-4 py-2">Rate (VND/hr)</th>
                   <th className="text-right px-4 py-2">{t("payroll.wages")}</th>
                   <th className="text-right px-4 py-2">
@@ -159,40 +186,52 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
                 </tr>
               </thead>
               <tbody>
-                {payroll.map((row) => (
-                  <tr
-                    key={row.user_id}
-                    className="border-b hover:bg-brand-cream-light"
-                  >
-                    <td className="px-4 py-2">
-                      {row.display_name || row.user_id}
-                    </td>
-                    <td className="text-right px-4 py-2">
-                      {(row.minutes_worked / 60).toFixed(1)}
-                    </td>
-                    <td className="text-right px-4 py-2">
-                      {row.hourly_rate_cents
-                        ? formatVnd(row.hourly_rate_cents)
-                        : "—"}
-                    </td>
-                    <td className="text-right px-4 py-2">
-                      {formatVnd(row.wages_cents)}
-                    </td>
-                    <td className="text-right px-4 py-2 text-green-600">
-                      {formatVnd(row.prizes_cents)}
-                    </td>
-                    <td className="text-right px-4 py-2 text-red-600">
-                      {formatVnd(row.fines_cents)}
-                    </td>
-                    <td className="text-right px-4 py-2 font-semibold">
-                      {formatVnd(row.total_cents)}
-                    </td>
-                  </tr>
-                ))}
+                {payroll.map((row) => {
+                  const maxMultiplier =
+                    row.daily_breakdown.length > 0
+                      ? Math.max(
+                          ...row.daily_breakdown.map((d) => d.multiplier),
+                        )
+                      : 1.0;
+
+                  return (
+                    <tr
+                      key={row.user_id}
+                      className="border-b hover:bg-brand-cream-light"
+                    >
+                      <td className="px-4 py-2">
+                        {row.display_name || row.user_id}
+                      </td>
+                      <td className="text-right px-4 py-2">
+                        {(row.minutes_worked / 60).toFixed(1)}
+                      </td>
+                      <td className="text-right px-4 py-2">
+                        ×{maxMultiplier.toFixed(1)}
+                      </td>
+                      <td className="text-right px-4 py-2">
+                        {row.hourly_rate_cents
+                          ? formatVnd(row.hourly_rate_cents)
+                          : "—"}
+                      </td>
+                      <td className="text-right px-4 py-2">
+                        {formatVnd(row.wages_cents)}
+                      </td>
+                      <td className="text-right px-4 py-2 text-green-600">
+                        {formatVnd(row.prizes_cents)}
+                      </td>
+                      <td className="text-right px-4 py-2 text-red-600">
+                        {formatVnd(row.fines_cents)}
+                      </td>
+                      <td className="text-right px-4 py-2 font-semibold">
+                        {formatVnd(row.total_cents)}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
               <tfoot className="border-t font-semibold bg-brand-cream-light">
                 <tr>
-                  <td colSpan={2} className="px-4 py-2">
+                  <td colSpan={3} className="px-4 py-2">
                     Total
                   </td>
                   <td className="px-4 py-2" />

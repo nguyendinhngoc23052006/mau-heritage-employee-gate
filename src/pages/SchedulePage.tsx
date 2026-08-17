@@ -1,8 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { BulkCreateModal } from "../components/schedule/BulkCreateModal";
+import { SlotGrid } from "../components/schedule/SlotGrid";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
+import { Checkbox } from "../components/ui/Checkbox";
 import { Dialog } from "../components/ui/Dialog";
 import {
   EmptyState,
@@ -15,16 +18,23 @@ import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
 import { useSession } from "../hooks/useSession";
 import { useT } from "../lib/i18n";
 import { getSupabase } from "../lib/supabaseClient";
+import { listPayMultipliers } from "../services/payMultipliers";
+import {
+  claimSlot,
+  listSlotsForShifts,
+  releaseSlot,
+  setShiftClaimOpen,
+  setStoreClaimOpen,
+} from "../services/shiftSlots";
 import {
   approveSwap,
-  claimShift,
   createShift,
   declineSwap,
   listPendingSwaps,
   listShifts,
   requestShiftSwap,
 } from "../services/shifts";
-import type { Shift } from "../types/database";
+import type { Shift, ShiftSlot } from "../types/database";
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -48,6 +58,7 @@ export function SchedulePage() {
     null,
   );
   const [selectedSwapUserId, setSelectedSwapUserId] = useState("");
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     starts_at: "",
     ends_at: "",
@@ -55,6 +66,19 @@ export function SchedulePage() {
   });
 
   const ready = Boolean(storeId);
+
+  // Calculate date range
+  const getDateRange = () => {
+    const from = new Date();
+    from.setDate(from.getDate() - 1);
+    const to = new Date();
+    to.setDate(to.getDate() + 14);
+    return { from: from.toISOString(), to: to.toISOString() };
+  };
+
+  const dateRange = getDateRange();
+  const fromDateISO = dateRange.from;
+  const toDateISO = dateRange.to;
 
   const {
     data: shifts,
@@ -64,21 +88,122 @@ export function SchedulePage() {
     queryKey: ["shifts", storeId],
     enabled: ready,
     queryFn: () => {
-      const from = new Date();
-      from.setDate(from.getDate() - 1);
-      const to = new Date();
-      to.setDate(to.getDate() + 14);
       return listShifts(storeId as string, {
-        from: from.toISOString(),
-        to: to.toISOString(),
+        from: fromDateISO,
+        to: toDateISO,
       });
     },
   });
 
-  const claimMutation = useMutation({
-    mutationFn: (shiftId: string) => claimShift(shiftId),
-    onSuccess: (result) => {
-      if (result && storeId) {
+  const { data: multipliers } = useQuery({
+    queryKey: ["pay_multipliers", storeId, fromDateISO, toDateISO],
+    enabled: ready,
+    queryFn: () =>
+      listPayMultipliers(storeId as string, fromDateISO, toDateISO),
+  });
+
+  const { data: slots } = useQuery({
+    queryKey: ["shift_slots", storeId],
+    enabled: ready && Boolean(shifts?.length),
+    queryFn: () => {
+      if (!shifts || shifts.length === 0) return [];
+      return listSlotsForShifts(shifts.map((s) => s.id));
+    },
+  });
+
+  const { data: pendingSwaps } = useQuery({
+    queryKey: ["shift_swaps", storeId],
+    enabled: ready && isManagerRole(role),
+    queryFn: () => listPendingSwaps(storeId as string),
+  });
+
+  const { data: members } = useQuery({
+    queryKey: ["members", storeId],
+    enabled: ready,
+    queryFn: async () => {
+      const supabase = getSupabase();
+      const { data, error } = await supabase
+        .from("memberships")
+        .select("user_id, user:profiles(display_name)")
+        .eq("store_id", storeId)
+        .eq("active", true);
+      if (error) throw error;
+      return (data ?? []).map((m: any) => ({
+        id: m.user_id,
+        name: m.user?.display_name || m.user_id.substring(0, 8),
+      }));
+    },
+  });
+
+  const memberNames: Record<string, string> = {};
+  if (members) {
+    members.forEach((m) => {
+      memberNames[m.id] = m.name;
+    });
+  }
+
+  const slotsByShift: Record<string, ShiftSlot[]> = {};
+  if (slots) {
+    slots.forEach((slot) => {
+      if (!slotsByShift[slot.shift_id]) {
+        slotsByShift[slot.shift_id] = [];
+      }
+      slotsByShift[slot.shift_id].push(slot);
+    });
+  }
+
+  const multiplierByDate: Record<
+    string,
+    { multiplier: number; reason: string | null }
+  > = {};
+  if (multipliers) {
+    multipliers.forEach((m) => {
+      const dateStr = m.date.split("T")[0];
+      multiplierByDate[dateStr] = {
+        multiplier: m.multiplier,
+        reason: m.reason,
+      };
+    });
+  }
+
+  const claimSlotMutation = useMutation({
+    mutationFn: (slotId: string) => claimSlot(slotId),
+    onSuccess: () => {
+      if (storeId) {
+        queryClient.invalidateQueries({ queryKey: ["shift_slots", storeId] });
+      }
+    },
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("not open")) {
+        // Toast or error handling can go here
+      }
+    },
+  });
+
+  const releaseSlotMutation = useMutation({
+    mutationFn: (slotId: string) => releaseSlot(slotId),
+    onSuccess: () => {
+      if (storeId) {
+        queryClient.invalidateQueries({ queryKey: ["shift_slots", storeId] });
+      }
+    },
+  });
+
+  const setShiftClaimOpenMutation = useMutation({
+    mutationFn: (params: { shiftId: string; open: boolean }) =>
+      setShiftClaimOpen(params.shiftId, params.open),
+    onSuccess: () => {
+      if (storeId) {
+        queryClient.invalidateQueries({ queryKey: ["shifts", storeId] });
+      }
+    },
+  });
+
+  const setStoreClaimOpenMutation = useMutation({
+    mutationFn: () => setStoreClaimOpen(storeId as string, true),
+    onSuccess: () => {
+      if (storeId) {
         queryClient.invalidateQueries({ queryKey: ["shifts", storeId] });
       }
     },
@@ -103,12 +228,6 @@ export function SchedulePage() {
     },
   });
 
-  const { data: pendingSwaps } = useQuery({
-    queryKey: ["shift_swaps", storeId],
-    enabled: ready && isManagerRole(role),
-    queryFn: () => listPendingSwaps(storeId as string),
-  });
-
   const createMutation = useMutation({
     mutationFn: () => {
       if (!storeId) throw new Error("no store");
@@ -127,10 +246,6 @@ export function SchedulePage() {
     },
   });
 
-  // Realtime subscription — proper effect so it runs once per storeId and
-  // gets torn down on unmount / storeId change. The prior render-body call
-  // created a fresh channel every re-render, whose second .subscribe() blew
-  // up with "cannot add postgres_changes callbacks after subscribe()".
   useEffect(() => {
     if (!storeId) return;
     const supabase = getSupabase();
@@ -173,14 +288,29 @@ export function SchedulePage() {
         <h1 className="text-2xl font-bold font-display text-brand-ink">
           {t("schedule.title")}
         </h1>
-        {isManager && (
-          <Button
-            onClick={() => setShowNewForm(!showNewForm)}
-            variant="primary"
-          >
-            {t("schedule.new_shift")}
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {isManager && (
+            <>
+              <Button onClick={() => setBulkModalOpen(true)} variant="primary">
+                {t("schedule.bulk_create")}
+              </Button>
+              <Button
+                onClick={() => setStoreClaimOpenMutation.mutate()}
+                variant="secondary"
+              >
+                {t("schedule.open_all_this_week")}
+              </Button>
+            </>
+          )}
+          {isManager && (
+            <Button
+              onClick={() => setShowNewForm(!showNewForm)}
+              variant="primary"
+            >
+              {t("schedule.new_shift")}
+            </Button>
+          )}
+        </div>
       </div>
 
       {isManager && pendingSwaps && pendingSwaps.length > 0 && (
@@ -223,14 +353,22 @@ export function SchedulePage() {
       {empty ? (
         <EmptyState>{t("common.empty")}</EmptyState>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {shifts.map((shift) => (
-            <ShiftRow
+            <ShiftCard
               key={shift.id}
               shift={shift}
-              onClaim={() => claimMutation.mutate(shift.id)}
+              shiftSlots={slotsByShift[shift.id] ?? []}
+              isManager={isManager}
+              memberNames={memberNames}
               currentUserId={user?.id}
-              onRequestSwap={() => setSwapDialogShiftId(shift.id)}
+              onClaimSlot={(slotId) => claimSlotMutation.mutate(slotId)}
+              onReleaseSlot={(slotId) => releaseSlotMutation.mutate(slotId)}
+              onSetClaimOpen={(open) =>
+                setShiftClaimOpenMutation.mutate({ shiftId: shift.id, open })
+              }
+              claimingSlotId={claimSlotMutation.variables}
+              multiplierByDate={multiplierByDate}
             />
           ))}
         </div>
@@ -250,53 +388,99 @@ export function SchedulePage() {
           isLoading={swapMutation.isPending}
         />
       )}
+
+      <BulkCreateModal
+        open={bulkModalOpen}
+        onClose={() => setBulkModalOpen(false)}
+        storeId={storeId}
+        onSuccess={() => {
+          if (storeId) {
+            queryClient.invalidateQueries({ queryKey: ["shifts", storeId] });
+          }
+        }}
+      />
     </div>
   );
 }
 
-function ShiftRow({
-  shift,
-  onClaim,
-  currentUserId,
-  onRequestSwap,
-}: {
+interface ShiftCardProps {
   shift: Shift;
-  onClaim: () => void;
+  shiftSlots: ShiftSlot[];
+  isManager: boolean;
+  memberNames: Record<string, string>;
   currentUserId?: string;
-  onRequestSwap: () => void;
-}) {
+  onClaimSlot: (slotId: string) => void;
+  onReleaseSlot: (slotId: string) => void;
+  onSetClaimOpen: (open: boolean) => void;
+  claimingSlotId?: string;
+  multiplierByDate: Record<
+    string,
+    { multiplier: number; reason: string | null }
+  >;
+}
+
+function ShiftCard({
+  shift,
+  shiftSlots,
+  isManager,
+  memberNames,
+  currentUserId,
+  onClaimSlot,
+  onReleaseSlot,
+  onSetClaimOpen,
+  claimingSlotId,
+  multiplierByDate,
+}: ShiftCardProps) {
   const t = useT();
-  const isClaimedByMe = shift.claimed_by === currentUserId;
 
   return (
-    <Card className="flex items-center justify-between">
-      <div className="flex-1">
-        <div className="text-sm font-semibold">
-          {formatDate(shift.starts_at)} – {formatDate(shift.ends_at)}
-        </div>
-        {shift.notes && (
-          <div className="text-xs text-slate-500">{shift.notes}</div>
-        )}
-        <div className="mt-1 text-xs text-slate-600">
-          {shift.status === "open"
-            ? t("schedule.open")
-            : shift.status === "claimed"
-              ? t("schedule.claimed_by", { name: "Someone" })
-              : "Cancelled"}
+    <Card className="p-4">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <div className="text-sm font-semibold">
+              {formatDate(shift.starts_at)} – {formatDate(shift.ends_at)}
+            </div>
+            {(() => {
+              const date = shift.starts_at.split("T")[0];
+              const m = multiplierByDate[date];
+              if (!m) return null;
+              return (
+                <span className="ml-2 rounded-full bg-brand-navy px-2 py-0.5 text-xs font-semibold text-brand-cream">
+                  {t("schedule.multiplier_badge", { multiplier: m.multiplier })}
+                </span>
+              );
+            })()}
+          </div>
+          {shift.notes && (
+            <div className="text-xs text-slate-500 mt-1">{shift.notes}</div>
+          )}
         </div>
       </div>
-      <div className="ml-4 flex gap-2">
-        {shift.status === "open" && (
-          <Button onClick={onClaim} variant="primary">
-            {t("schedule.claim")}
-          </Button>
-        )}
-        {isClaimedByMe && shift.status === "claimed" && (
-          <Button onClick={onRequestSwap} variant="secondary">
-            {t("swap.request_button")}
-          </Button>
-        )}
+
+      <div className="mb-3">
+        <SlotGrid
+          slots={shiftSlots}
+          shiftClaimOpen={shift.claim_open}
+          currentUserId={currentUserId || null}
+          memberNames={memberNames}
+          onClaim={onClaimSlot}
+          onRelease={onReleaseSlot}
+          claimingSlotId={claimingSlotId}
+        />
       </div>
+
+      {isManager && (
+        <div className="border-t border-slate-200 pt-3 flex items-center justify-between">
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={shift.claim_open}
+              onChange={(checked) => onSetClaimOpen(checked)}
+            />
+            <span>{t("schedule.claim_open_toggle")}</span>
+          </label>
+        </div>
+      )}
     </Card>
   );
 }

@@ -123,6 +123,8 @@ export interface Shift {
   claimed_at: string | null;
   created_by: string | null;
   created_at: string;
+  slot_count: number;
+  claim_open: boolean;
 }
 
 export interface ShiftClaim {
@@ -265,4 +267,13 @@ export interface PointBalance {
   store_id: string;
   user_id: string;
   balance: number;
+}
+
+export interface ShiftSlot {
+  id: string;
+  shift_id: string;
+  store_id: string;
+  claimed_by: string | null;
+  claimed_at: string | null;
+  created_at: string;
 }
