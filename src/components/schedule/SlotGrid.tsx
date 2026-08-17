@@ -26,15 +26,6 @@ export function SlotGrid({
   const filled = slots.filter((s) => s.claimed_by).length;
   const total = slots.length;
 
-  const isWithinReleaseWindow = (claimedAt: string | null): boolean => {
-    if (!claimedAt) return false;
-    const claimedTime = new Date(claimedAt);
-    const now = new Date();
-    const diffMs = now.getTime() - claimedTime.getTime();
-    const diffMinutes = diffMs / (1000 * 60);
-    return diffMinutes <= 5;
-  };
-
   return (
     <div className="space-y-2">
       <div className="text-sm text-slate-600">
@@ -43,8 +34,6 @@ export function SlotGrid({
       <div className="flex flex-wrap gap-2">
         {slots.map((slot) => {
           const isMine = slot.claimed_by === currentUserId;
-          const withinReleaseWindow =
-            isMine && isWithinReleaseWindow(slot.claimed_at);
 
           if (slot.claimed_by === null) {
             if (shiftClaimOpen) {
@@ -78,24 +67,14 @@ export function SlotGrid({
                 className="px-3 py-1 rounded bg-green-100 text-green-900 text-sm font-medium flex items-center gap-2"
               >
                 <span>{t("schedule.slot_mine")}</span>
-                {withinReleaseWindow && (
-                  <Button
-                    onClick={() => onRelease(slot.id)}
-                    disabled={claimingSlotId === slot.id}
-                    variant="secondary"
-                    className="px-2 py-0 text-xs h-auto"
-                  >
-                    {t("schedule.slot_release")}
-                  </Button>
-                )}
-                {!withinReleaseWindow && (
-                  <span
-                    title={t("schedule.slot_release_window_hint")}
-                    className="text-xs opacity-60"
-                  >
-                    {t("schedule.slot_release_expired")}
-                  </span>
-                )}
+                <Button
+                  onClick={() => onRelease(slot.id)}
+                  disabled={claimingSlotId === slot.id}
+                  variant="secondary"
+                  className="px-2 py-0 text-xs h-auto"
+                >
+                  {t("schedule.slot_release")}
+                </Button>
               </div>
             );
           }
