@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { errorMessage } from "../../lib/errorMessage";
 import { useT } from "../../lib/i18n";
 import {
   listPayMultipliers,
@@ -18,7 +19,7 @@ import { Input, Label } from "../ui/Input";
 interface Template {
   start: string;
   end: string;
-  slots: number;
+  slots: string; // string so the input can be temporarily empty while typing
   notes: string;
 }
 
@@ -45,9 +46,10 @@ function getSunday(fromDate: string): string {
   return sunday.toISOString().split("T")[0];
 }
 
-function errorMessage(err: unknown): string {
-  if (err instanceof Error) return err.message;
-  return String(err);
+function parseSlots(raw: string): number | null {
+  const n = Number.parseInt(raw, 10);
+  if (!Number.isFinite(n) || n < 1 || n > 20) return null;
+  return n;
 }
 
 export function BulkCreateModal({ open, onClose, storeId, onSuccess }: Props) {
@@ -67,65 +69,89 @@ export function BulkCreateModal({ open, onClose, storeId, onSuccess }: Props) {
     false,
   ]); // Sun, Mon, Tue, Wed, Thu, Fri, Sat
   const [templates, setTemplates] = useState<Template[]>([
-    { start: "08:00", end: "14:00", slots: 2, notes: "" },
+    { start: "08:00", end: "14:00", slots: "2", notes: "" },
   ]);
   const [error, setError] = useState<string | null>(null);
   const [applyMultiplier, setApplyMultiplier] = useState(false);
-  const [multiplierValue, setMultiplierValue] = useState(2);
+  const [multiplierValue, setMultiplierValue] = useState("2");
   const [multiplierReason, setMultiplierReason] = useState("");
+
+  const { selectedDatesInRange, previewShifts, previewSlots } = useMemo(() => {
+    const dates: string[] = [];
+    if (fromDate && toDate && new Date(fromDate) <= new Date(toDate)) {
+      const current = new Date(fromDate);
+      const end = new Date(toDate);
+      end.setDate(end.getDate() + 1);
+      while (current < end) {
+        if (dayFlags[current.getDay()]) {
+          dates.push(current.toISOString().split("T")[0]);
+        }
+        current.setDate(current.getDate() + 1);
+      }
+    }
+    const templatesSlotsSum = templates.reduce((sum, tpl) => {
+      const n = parseSlots(tpl.slots);
+      return sum + (n ?? 0);
+    }, 0);
+    return {
+      selectedDatesInRange: dates,
+      previewShifts: dates.length * templates.length,
+      previewSlots: dates.length * templatesSlotsSum,
+    };
+  }, [fromDate, toDate, dayFlags, templates]);
+
+  const templatesValid = templates.every((tpl) => {
+    if (parseSlots(tpl.slots) === null) return false;
+    if (!tpl.start || !tpl.end) return false;
+    if (tpl.start >= tpl.end) return false;
+    return true;
+  });
+  const multiplierValid = !applyMultiplier || Number.parseFloat(multiplierValue) > 0;
+  const canPublish =
+    templates.length > 0 &&
+    templatesValid &&
+    multiplierValid &&
+    previewShifts > 0;
 
   const mutation = useMutation({
     mutationFn: async () => {
       const shifts: BulkShiftInput[] = [];
-      const uniqueDates = new Set<string>();
-      const current = new Date(fromDate);
-      const end = new Date(toDate);
-      end.setDate(end.getDate() + 1);
-
-      while (current < end) {
-        const dayOfWeek = current.getDay();
-        if (dayFlags[dayOfWeek]) {
-          const dateStr = current.toISOString().split("T")[0];
-          uniqueDates.add(dateStr);
-          for (const template of templates) {
-            const startsAt = `${dateStr}T${template.start}:00+07:00`;
-            const endsAt = `${dateStr}T${template.end}:00+07:00`;
-            shifts.push({
-              starts_at: startsAt,
-              ends_at: endsAt,
-              notes: template.notes || undefined,
-              slot_count: template.slots,
-              claim_open: false,
-            });
-          }
+      for (const dateStr of selectedDatesInRange) {
+        for (const template of templates) {
+          const slotCount = parseSlots(template.slots);
+          if (slotCount === null) continue;
+          shifts.push({
+            starts_at: `${dateStr}T${template.start}:00+07:00`,
+            ends_at: `${dateStr}T${template.end}:00+07:00`,
+            notes: template.notes || undefined,
+            slot_count: slotCount,
+            claim_open: false,
+          });
         }
-        current.setDate(current.getDate() + 1);
       }
 
       await createShiftsBulk(storeId, shifts);
 
-      // Apply multipliers if checked
-      if (applyMultiplier && multiplierValue > 0) {
+      if (applyMultiplier && Number.parseFloat(multiplierValue) > 0) {
         try {
           const existingMultipliers = await listPayMultipliers(storeId);
           const existingDates = new Set(
             existingMultipliers.map((m) => m.date.split("T")[0]),
           );
-
-          const multiplierUpserts = Array.from(uniqueDates)
-            .filter((date) => !existingDates.has(date))
-            .map((date) =>
+          const targets = selectedDatesInRange.filter(
+            (d) => !existingDates.has(d),
+          );
+          await Promise.allSettled(
+            targets.map((date) =>
               upsertPayMultiplier({
                 storeId: storeId,
                 date: `${date}T00:00:00+07:00`,
-                multiplier: multiplierValue,
+                multiplier: Number.parseFloat(multiplierValue),
                 reason: multiplierReason || undefined,
               }),
-            );
-
-          await Promise.allSettled(multiplierUpserts);
+            ),
+          );
         } catch (multiplierErr) {
-          // Log but don't throw - shifts are already created
           console.error("Failed to apply multipliers:", multiplierErr);
         }
       }
@@ -135,19 +161,9 @@ export function BulkCreateModal({ open, onClose, storeId, onSuccess }: Props) {
       onClose();
     },
     onError: (err: unknown) => {
-      setError(errorMessage(err));
+      setError(errorMessage(err, t("common.error_generic")));
     },
   });
-
-  const daysInRange =
-    Math.floor(
-      (new Date(toDate).getTime() - new Date(fromDate).getTime()) /
-        (1000 * 60 * 60 * 24),
-    ) + 1;
-  const selectedDaysCount = dayFlags.filter(Boolean).length;
-  const shiftsCount = daysInRange * selectedDaysCount * templates.length;
-  const slotsCount =
-    shiftsCount * templates.reduce((sum, t) => sum + t.slots, 0);
 
   const dayLabels = [
     t("schedule.bulk_day_sun"),
@@ -166,15 +182,17 @@ export function BulkCreateModal({ open, onClose, storeId, onSuccess }: Props) {
       title={t("schedule.bulk_create_title")}
       footer={
         <div className="flex gap-2">
-          <Button
-            onClick={() => mutation.mutate()}
-            disabled={mutation.isPending || templates.length === 0}
-            variant="primary"
-          >
-            {t("schedule.bulk_publish")}
-          </Button>
           <Button onClick={onClose} variant="secondary">
             {t("common.cancel")}
+          </Button>
+          <Button
+            onClick={() => mutation.mutate()}
+            disabled={mutation.isPending || !canPublish}
+            variant="primary"
+          >
+            {mutation.isPending
+              ? t("common.loading")
+              : t("schedule.bulk_publish")}
           </Button>
         </div>
       }
@@ -207,7 +225,8 @@ export function BulkCreateModal({ open, onClose, storeId, onSuccess }: Props) {
           <Label>{t("schedule.bulk_days_of_week")}</Label>
           <div className="grid grid-cols-4 gap-2 mt-2">
             {dayLabels.map((label, idx) => (
-              <label key={idx} className="flex items-center gap-2">
+              // biome-ignore lint/a11y/noLabelWithoutControl: label wraps the input
+              <label key={label} className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   checked={dayFlags[idx]}
@@ -225,98 +244,117 @@ export function BulkCreateModal({ open, onClose, storeId, onSuccess }: Props) {
         </div>
 
         <div>
-          <Label>{t("schedule.bulk_templates")}</Label>
+          <Label>{t("schedule.bulk_templates_label")}</Label>
+          <p className="text-xs text-brand-muted mt-1 mb-2">
+            {t("schedule.bulk_templates_hint")}
+          </p>
           <div className="space-y-3 mt-2">
-            {templates.map((template, idx) => (
-              <div
-                key={idx}
-                className="border border-slate-200 rounded p-3 space-y-2"
-              >
-                <div className="grid grid-cols-4 gap-2">
-                  <div>
-                    <Label htmlFor={`start-${idx}`}>Start</Label>
-                    <Input
-                      id={`start-${idx}`}
-                      type="time"
-                      value={template.start}
-                      onChange={(e) => {
-                        const newTemplates = [...templates];
-                        newTemplates[idx].start = e.target.value;
-                        setTemplates(newTemplates);
-                      }}
-                    />
+            {templates.map((template, idx) => {
+              const slotsInvalid = parseSlots(template.slots) === null;
+              const timeInvalid =
+                !template.start ||
+                !template.end ||
+                template.start >= template.end;
+              return (
+                <div
+                  key={`tpl-${idx}`}
+                  className="border border-brand-hairline rounded p-3 space-y-2"
+                >
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <Label htmlFor={`start-${idx}`}>
+                        {t("schedule.bulk_template_start")}
+                      </Label>
+                      <Input
+                        id={`start-${idx}`}
+                        type="time"
+                        value={template.start}
+                        onChange={(e) => {
+                          const newTemplates = [...templates];
+                          newTemplates[idx].start = e.target.value;
+                          setTemplates(newTemplates);
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`end-${idx}`}>
+                        {t("schedule.bulk_template_end")}
+                      </Label>
+                      <Input
+                        id={`end-${idx}`}
+                        type="time"
+                        value={template.end}
+                        onChange={(e) => {
+                          const newTemplates = [...templates];
+                          newTemplates[idx].end = e.target.value;
+                          setTemplates(newTemplates);
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`slots-${idx}`}>
+                        {t("schedule.bulk_template_slots")}
+                      </Label>
+                      <Input
+                        id={`slots-${idx}`}
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={template.slots}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/[^0-9]/g, "");
+                          const newTemplates = [...templates];
+                          newTemplates[idx].slots = raw;
+                          setTemplates(newTemplates);
+                        }}
+                      />
+                    </div>
                   </div>
                   <div>
-                    <Label htmlFor={`end-${idx}`}>End</Label>
+                    <Label htmlFor={`notes-${idx}`}>
+                      {t("schedule.bulk_template_notes")}
+                    </Label>
                     <Input
-                      id={`end-${idx}`}
-                      type="time"
-                      value={template.end}
+                      id={`notes-${idx}`}
+                      type="text"
+                      value={template.notes}
                       onChange={(e) => {
                         const newTemplates = [...templates];
-                        newTemplates[idx].end = e.target.value;
+                        newTemplates[idx].notes = e.target.value;
                         setTemplates(newTemplates);
                       }}
+                      placeholder={t("common.optional")}
                     />
                   </div>
-                  <div>
-                    <Label htmlFor={`slots-${idx}`}>Slots</Label>
-                    <Input
-                      id={`slots-${idx}`}
-                      type="number"
-                      min="1"
-                      max="20"
-                      value={template.slots}
-                      onChange={(e) => {
-                        const newTemplates = [...templates];
-                        newTemplates[idx].slots = Math.max(
-                          1,
-                          Number.parseInt(e.target.value) || 1,
-                        );
-                        setTemplates(newTemplates);
-                      }}
-                    />
-                  </div>
-                  <div className="flex items-end">
-                    <Button
-                      onClick={() => {
-                        const newTemplates = templates.filter(
-                          (_, i) => i !== idx,
-                        );
-                        setTemplates(
-                          newTemplates.length > 0 ? newTemplates : templates,
-                        );
-                      }}
-                      disabled={templates.length === 1}
-                      variant="secondary"
-                      className="w-full text-xs"
-                    >
-                      {t("common.delete")}
-                    </Button>
-                  </div>
+                  {(slotsInvalid || timeInvalid) && (
+                    <p className="text-xs text-red-600">
+                      {slotsInvalid
+                        ? t("schedule.bulk_slots_invalid")
+                        : t("schedule.bulk_time_invalid")}
+                    </p>
+                  )}
+                  {templates.length > 1 && (
+                    <div className="flex justify-end">
+                      <Button
+                        onClick={() =>
+                          setTemplates(templates.filter((_, i) => i !== idx))
+                        }
+                        variant="ghost"
+                        className="text-xs"
+                      >
+                        {t("schedule.bulk_template_remove")}
+                      </Button>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <Label htmlFor={`notes-${idx}`}>Notes</Label>
-                  <Input
-                    id={`notes-${idx}`}
-                    type="text"
-                    value={template.notes}
-                    onChange={(e) => {
-                      const newTemplates = [...templates];
-                      newTemplates[idx].notes = e.target.value;
-                      setTemplates(newTemplates);
-                    }}
-                    placeholder={t("common.optional")}
-                  />
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <Button
             onClick={() =>
               setTemplates([
                 ...templates,
-                { start: "08:00", end: "14:00", slots: 2, notes: "" },
+                { start: "14:00", end: "22:00", slots: "2", notes: "" },
               ])
             }
             variant="secondary"
@@ -326,14 +364,15 @@ export function BulkCreateModal({ open, onClose, storeId, onSuccess }: Props) {
           </Button>
         </div>
 
-        <div className="bg-slate-100 p-3 rounded text-sm">
+        <div className="bg-brand-cream-light p-3 rounded text-sm text-brand-ink">
           {t("schedule.bulk_preview_count", {
-            shifts: shiftsCount,
-            slots: slotsCount,
+            shifts: previewShifts,
+            slots: previewSlots,
           })}
         </div>
 
         <div>
+          {/* biome-ignore lint/a11y/noLabelWithoutControl: label wraps Checkbox */}
           <label className="flex items-center gap-2">
             <Checkbox
               checked={applyMultiplier}
@@ -345,7 +384,7 @@ export function BulkCreateModal({ open, onClose, storeId, onSuccess }: Props) {
           </label>
 
           {applyMultiplier && (
-            <div className="mt-3 space-y-3 ml-6 p-3 bg-slate-50 rounded border border-slate-200">
+            <div className="mt-3 space-y-3 ml-6 p-3 bg-brand-cream-light rounded border border-brand-hairline">
               <div>
                 <Label htmlFor="multiplier-value">
                   {t("settings.multipliers.multiplier")}
@@ -357,11 +396,7 @@ export function BulkCreateModal({ open, onClose, storeId, onSuccess }: Props) {
                   max="5"
                   step="0.5"
                   value={multiplierValue}
-                  onChange={(e) =>
-                    setMultiplierValue(
-                      Math.max(0.5, Number.parseFloat(e.target.value) || 2),
-                    )
-                  }
+                  onChange={(e) => setMultiplierValue(e.target.value)}
                 />
               </div>
               <div>
