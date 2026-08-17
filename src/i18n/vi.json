@@ -286,12 +286,12 @@
   "schedule.bulk_day_fri": "T6",
   "schedule.bulk_day_sat": "T7",
   "schedule.bulk_day_sun": "CN",
-  "schedule.bulk_templates_label": "Mẫu ca",
+  "schedule.bulk_templates_label": "Ca trong ngày",
   "schedule.bulk_template_start": "Bắt đầu",
   "schedule.bulk_template_end": "Kết thúc",
   "schedule.bulk_template_slots": "Số nhân viên",
   "schedule.bulk_template_notes": "Ghi chú",
-  "schedule.bulk_template_add": "+ Thêm mẫu",
+  "schedule.bulk_template_add": "+ Thêm ca vào ngày",
   "schedule.bulk_preview_count": "Sẽ tạo {shifts} ca, tổng {slots} chỗ",
   "schedule.bulk_publish": "Xuất bản",
   "schedule.bulk_multiplier_check": "Áp dụng hệ số lương cho các ngày này",
@@ -324,8 +324,9 @@
   "schedule.open_all_this_week": "Mở tất cả ca tuần này",
   "settings.multipliers.overwrite_warning": "Ngày này đã có hệ số. Ghi đè?",
   "common.optional": "Tùy chọn",
-  "schedule.bulk_templates_hint": "Mỗi mẫu tạo một ca cho mỗi ngày đã chọn. Thêm mẫu nếu bạn muốn nhiều ca trong một ngày (vd. ca sáng + ca chiều).",
+  "schedule.bulk_templates_hint": "Mỗi dòng bên dưới = một ca sẽ được tạo cho mỗi ngày đã chọn. Thêm dòng nếu muốn nhiều ca trong một ngày (vd. ca sáng + ca chiều). Số nhân viên = số người cần cho mỗi ca đó.",
   "schedule.bulk_slots_invalid": "Số nhân viên phải từ 1 đến 20.",
   "schedule.bulk_time_invalid": "Giờ bắt đầu phải trước giờ kết thúc.",
-  "schedule.bulk_template_remove": "Xóa mẫu này"
+  "schedule.bulk_template_remove": "Xóa ca này",
+  "schedule.bulk_multiplier_moved_hint": "Cần ×2 hoặc ×3 lương cho một ngày cụ thể (lễ, Tết, Chủ nhật)? Thêm sau ở Cài đặt → Ngày lương đặc biệt."
 }

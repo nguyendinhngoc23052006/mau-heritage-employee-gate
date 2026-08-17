@@ -286,12 +286,12 @@
   "schedule.bulk_day_fri": "Fri",
   "schedule.bulk_day_sat": "Sat",
   "schedule.bulk_day_sun": "Sun",
-  "schedule.bulk_templates_label": "Shift templates",
+  "schedule.bulk_templates_label": "Shifts per day",
   "schedule.bulk_template_start": "Start",
   "schedule.bulk_template_end": "End",
   "schedule.bulk_template_slots": "Slots",
   "schedule.bulk_template_notes": "Notes",
-  "schedule.bulk_template_add": "+ Add template",
+  "schedule.bulk_template_add": "+ Add shift to each day",
   "schedule.bulk_preview_count": "Will create {shifts} shifts, {slots} slots total",
   "schedule.bulk_publish": "Publish",
   "schedule.bulk_multiplier_check": "Apply pay multiplier to these days",
@@ -324,8 +324,9 @@
   "schedule.open_all_this_week": "Open all shifts this week",
   "settings.multipliers.overwrite_warning": "This date already has a multiplier. Overwrite?",
   "common.optional": "Optional",
-  "schedule.bulk_templates_hint": "Each template creates one shift per selected day. Add more templates if you want multiple shifts per day (e.g. morning + evening).",
+  "schedule.bulk_templates_hint": "Each row below = one shift that will be created for every selected day. Add another row for multiple shifts per day (e.g. morning + evening). Slots = employees needed per shift.",
   "schedule.bulk_slots_invalid": "Slots must be between 1 and 20.",
   "schedule.bulk_time_invalid": "Start time must be before end time.",
-  "schedule.bulk_template_remove": "Remove this template"
+  "schedule.bulk_template_remove": "Remove this shift",
+  "schedule.bulk_multiplier_moved_hint": "Need ×2 or ×3 pay for a specific day (holiday, Tết, Sunday)? Add it later in Settings → Special pay days."
 }

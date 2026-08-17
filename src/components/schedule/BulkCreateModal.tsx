@@ -3,16 +3,11 @@ import { useMemo, useState } from "react";
 import { errorMessage } from "../../lib/errorMessage";
 import { useT } from "../../lib/i18n";
 import {
-  listPayMultipliers,
-  upsertPayMultiplier,
-} from "../../services/payMultipliers";
-import {
   type BulkShiftInput,
   createShiftsBulk,
 } from "../../services/shiftSlots";
 import { Alert } from "../ui/Alert";
 import { Button } from "../ui/Button";
-import { Checkbox } from "../ui/Checkbox";
 import { Dialog } from "../ui/Dialog";
 import { Input, Label } from "../ui/Input";
 
@@ -72,9 +67,6 @@ export function BulkCreateModal({ open, onClose, storeId, onSuccess }: Props) {
     { start: "08:00", end: "14:00", slots: "2", notes: "" },
   ]);
   const [error, setError] = useState<string | null>(null);
-  const [applyMultiplier, setApplyMultiplier] = useState(false);
-  const [multiplierValue, setMultiplierValue] = useState("2");
-  const [multiplierReason, setMultiplierReason] = useState("");
 
   const { selectedDatesInRange, previewShifts, previewSlots } = useMemo(() => {
     const dates: string[] = [];
@@ -106,12 +98,8 @@ export function BulkCreateModal({ open, onClose, storeId, onSuccess }: Props) {
     if (tpl.start >= tpl.end) return false;
     return true;
   });
-  const multiplierValid = !applyMultiplier || Number.parseFloat(multiplierValue) > 0;
   const canPublish =
-    templates.length > 0 &&
-    templatesValid &&
-    multiplierValid &&
-    previewShifts > 0;
+    templates.length > 0 && templatesValid && previewShifts > 0;
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -129,32 +117,7 @@ export function BulkCreateModal({ open, onClose, storeId, onSuccess }: Props) {
           });
         }
       }
-
       await createShiftsBulk(storeId, shifts);
-
-      if (applyMultiplier && Number.parseFloat(multiplierValue) > 0) {
-        try {
-          const existingMultipliers = await listPayMultipliers(storeId);
-          const existingDates = new Set(
-            existingMultipliers.map((m) => m.date.split("T")[0]),
-          );
-          const targets = selectedDatesInRange.filter(
-            (d) => !existingDates.has(d),
-          );
-          await Promise.allSettled(
-            targets.map((date) =>
-              upsertPayMultiplier({
-                storeId: storeId,
-                date: `${date}T00:00:00+07:00`,
-                multiplier: Number.parseFloat(multiplierValue),
-                reason: multiplierReason || undefined,
-              }),
-            ),
-          );
-        } catch (multiplierErr) {
-          console.error("Failed to apply multipliers:", multiplierErr);
-        }
-      }
     },
     onSuccess: () => {
       onSuccess();
@@ -371,49 +334,9 @@ export function BulkCreateModal({ open, onClose, storeId, onSuccess }: Props) {
           })}
         </div>
 
-        <div>
-          {/* biome-ignore lint/a11y/noLabelWithoutControl: label wraps Checkbox */}
-          <label className="flex items-center gap-2">
-            <Checkbox
-              checked={applyMultiplier}
-              onChange={(checked) => setApplyMultiplier(checked)}
-            />
-            <span className="text-sm">
-              {t("schedule.bulk_multiplier_check")}
-            </span>
-          </label>
-
-          {applyMultiplier && (
-            <div className="mt-3 space-y-3 ml-6 p-3 bg-brand-cream-light rounded border border-brand-hairline">
-              <div>
-                <Label htmlFor="multiplier-value">
-                  {t("settings.multipliers.multiplier")}
-                </Label>
-                <Input
-                  id="multiplier-value"
-                  type="number"
-                  min="0.5"
-                  max="5"
-                  step="0.5"
-                  value={multiplierValue}
-                  onChange={(e) => setMultiplierValue(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="multiplier-reason">
-                  {t("settings.multipliers.reason")}
-                </Label>
-                <Input
-                  id="multiplier-reason"
-                  type="text"
-                  value={multiplierReason}
-                  onChange={(e) => setMultiplierReason(e.target.value)}
-                  placeholder={t("settings.multipliers.reason_placeholder")}
-                />
-              </div>
-            </div>
-          )}
-        </div>
+        <p className="text-xs text-brand-muted">
+          {t("schedule.bulk_multiplier_moved_hint")}
+        </p>
       </div>
     </Dialog>
   );

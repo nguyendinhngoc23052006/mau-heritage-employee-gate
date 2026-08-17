@@ -14,7 +14,9 @@ create policy memberships_manager_update on public.memberships for update
       when public.has_role_on(store_id, array['manager']::public.role[]) then
         role in ('manager', 'employee')
       when user_id = auth.uid() then
-        role = (select role from public.memberships where id = memberships.id)
+        role = (select m.role from public.memberships m
+                 where m.user_id = memberships.user_id
+                   and m.store_id = memberships.store_id)
       else false
     end
   );
