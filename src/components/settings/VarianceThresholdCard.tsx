@@ -22,12 +22,12 @@ export function VarianceThresholdCard({ storeId }: { storeId: string }) {
     if (store) setPct(String(store.variance_threshold_pct ?? 5));
   }, [store]);
 
+  const parsed = Number.parseInt(pct, 10);
+  const valid =
+    pct !== "" && Number.isFinite(parsed) && parsed >= 0 && parsed <= 100;
+
   const save = useMutation({
-    mutationFn: () =>
-      setStoreVarianceThreshold({
-        storeId,
-        pct: Math.min(100, Math.max(0, Number(pct) || 0)),
-      }),
+    mutationFn: () => setStoreVarianceThreshold({ storeId, pct: parsed }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["store", storeId] });
       setSaved(true);
@@ -53,10 +53,18 @@ export function VarianceThresholdCard({ storeId }: { storeId: string }) {
             inputMode="numeric"
           />
         </div>
-        <Button onClick={() => save.mutate()} disabled={save.isPending}>
+        <Button
+          onClick={() => save.mutate()}
+          disabled={save.isPending || !valid}
+        >
           {save.isPending ? t("common.loading") : t("common.save")}
         </Button>
       </div>
+      {!valid && pct !== "" && (
+        <Alert variant="error" className="mt-2">
+          {t("settings.variance.invalid")}
+        </Alert>
+      )}
       {save.error && (
         <Alert variant="error" className="mt-2">
           {errorMessage(save.error)}

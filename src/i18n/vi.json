@@ -382,5 +382,10 @@
   "sales.status_disputed": "Bị tranh chấp",
   "sales.large_variance_title": "Duyệt dù chênh lệch lớn?",
   "sales.large_variance_body": "Chênh lệch {amount} vượt ngưỡng {pct}% của cửa hàng. Xác nhận duyệt?",
-  "sales.large_variance_confirm": "Vẫn duyệt"
+  "sales.large_variance_confirm": "Vẫn duyệt",
+  "settings.variance.invalid": "Ngưỡng phải là số từ 0 đến 100.",
+  "settings.geofence.invalid_coords": "Vĩ độ hoặc kinh độ không hợp lệ.",
+  "settings.geofence.overwrite_title": "Ghi đè vị trí cửa hàng?",
+  "settings.geofence.overwrite_body": "Vị trí cửa hàng đang được lưu sẽ bị thay bằng vị trí mới. Việc này ảnh hưởng tới chấm công của mọi người ngay lập tức. Xác nhận?",
+  "settings.geofence.overwrite_confirm": "Ghi đè"
 }

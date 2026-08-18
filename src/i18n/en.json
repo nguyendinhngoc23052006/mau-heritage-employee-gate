@@ -382,5 +382,10 @@
   "sales.status_disputed": "Disputed",
   "sales.large_variance_title": "Approve despite large variance?",
   "sales.large_variance_body": "Variance of {amount} exceeds this store's {pct}% threshold. Confirm approval?",
-  "sales.large_variance_confirm": "Approve anyway"
+  "sales.large_variance_confirm": "Approve anyway",
+  "settings.variance.invalid": "Threshold must be a number between 0 and 100.",
+  "settings.geofence.invalid_coords": "Latitude or longitude is not a valid number.",
+  "settings.geofence.overwrite_title": "Overwrite store location?",
+  "settings.geofence.overwrite_body": "The stored store location will be replaced with the new one. This affects everyone's clock-in immediately. Continue?",
+  "settings.geofence.overwrite_confirm": "Overwrite"
 }

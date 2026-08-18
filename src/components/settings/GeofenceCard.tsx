@@ -7,7 +7,16 @@ import { getStore, setStoreGeofence } from "../../services/stores";
 import { Alert } from "../ui/Alert";
 import { Button } from "../ui/Button";
 import { Card, CardTitle } from "../ui/Card";
+import { Dialog } from "../ui/Dialog";
 import { Input, Label } from "../ui/Input";
+
+function parseCoord(input: string, min: number, max: number): number | null {
+  if (input === "") return null;
+  const n = Number(input.replace(",", "."));
+  if (!Number.isFinite(n)) return null;
+  if (n < min || n > max) return null;
+  return n;
+}
 
 export function GeofenceCard({ storeId }: { storeId: string }) {
   const t = useT();
@@ -23,6 +32,7 @@ export function GeofenceCard({ storeId }: { storeId: string }) {
   const [require, setRequire] = useState(false);
   const [locErr, setLocErr] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (!store) return;
@@ -31,6 +41,11 @@ export function GeofenceCard({ storeId }: { storeId: string }) {
     setRadius(String(store.geofence_radius_m ?? 150));
     setRequire(Boolean(store.require_geofence));
   }, [store]);
+
+  const parsedLat = parseCoord(lat, -90, 90);
+  const parsedLng = parseCoord(lng, -180, 180);
+  const invalidCoords =
+    (lat !== "" && parsedLat === null) || (lng !== "" && parsedLng === null);
 
   const useMyLocation = async () => {
     setLocErr(null);
@@ -54,24 +69,34 @@ export function GeofenceCard({ storeId }: { storeId: string }) {
     mutationFn: () =>
       setStoreGeofence({
         storeId,
-        lat: lat === "" ? null : Number(lat),
-        lng: lng === "" ? null : Number(lng),
+        lat: parsedLat,
+        lng: parsedLng,
         radiusM: radius === "" ? null : Math.max(1, Number(radius)),
         require,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["store", storeId] });
       setSaved(true);
+      setConfirmOpen(false);
       setTimeout(() => setSaved(false), 2000);
     },
   });
 
-  const parsedLat = lat === "" ? null : Number(lat);
-  const parsedLng = lng === "" ? null : Number(lng);
   const clear = () => {
     setLat("");
     setLng("");
     setRequire(false);
+  };
+
+  const canSave =
+    !save.isPending &&
+    !invalidCoords &&
+    !(require && (parsedLat === null || parsedLng === null));
+
+  const isOverwrite = store?.lat != null || store?.lng != null;
+  const requestSave = () => {
+    if (isOverwrite) setConfirmOpen(true);
+    else save.mutate();
   };
 
   return (
@@ -118,12 +143,15 @@ export function GeofenceCard({ storeId }: { storeId: string }) {
             type="checkbox"
             checked={require}
             onChange={(e) => setRequire(e.target.checked)}
-            disabled={parsedLat == null || parsedLng == null}
+            disabled={parsedLat === null || parsedLng === null}
           />
           <label htmlFor="gf-require" className="text-sm">
             {t("settings.geofence.require_toggle")}
           </label>
         </div>
+        {invalidCoords && (
+          <Alert variant="error">{t("settings.geofence.invalid_coords")}</Alert>
+        )}
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={useMyLocation} type="button">
             {t("settings.geofence.use_my_location")}
@@ -131,13 +159,7 @@ export function GeofenceCard({ storeId }: { storeId: string }) {
           <Button variant="secondary" onClick={clear} type="button">
             {t("settings.geofence.clear")}
           </Button>
-          <Button
-            onClick={() => save.mutate()}
-            disabled={
-              save.isPending ||
-              (require && (parsedLat == null || parsedLng == null))
-            }
-          >
+          <Button onClick={requestSave} disabled={!canSave}>
             {save.isPending ? t("common.loading") : t("common.save")}
           </Button>
         </div>
@@ -147,6 +169,27 @@ export function GeofenceCard({ storeId }: { storeId: string }) {
         )}
         {saved && <Alert variant="success">{t("profile.saved")}</Alert>}
       </div>
+      <Dialog
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        title={t("settings.geofence.overwrite_title")}
+        footer={
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={() => setConfirmOpen(false)}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => save.mutate()}
+              disabled={save.isPending}
+            >
+              {t("settings.geofence.overwrite_confirm")}
+            </Button>
+          </div>
+        }
+      >
+        <p>{t("settings.geofence.overwrite_body")}</p>
+      </Dialog>
     </Card>
   );
 }

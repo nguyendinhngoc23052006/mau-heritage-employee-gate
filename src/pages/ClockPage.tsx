@@ -225,13 +225,13 @@ export function ClockPage() {
                       )}
                     </td>
                     <td className="px-4 py-2 text-slate-600">
-                      {event.location_verified === false
-                        ? t("clock.history_loc_miss", {
-                            m: Math.round(event.distance_m ?? 0),
-                          })
-                        : event.location_verified === true
-                          ? t("clock.history_loc_ok")
-                          : "—"}
+                      {event.distance_m == null
+                        ? "—"
+                        : event.location_verified === false
+                          ? t("clock.history_loc_miss", {
+                              m: Math.round(event.distance_m),
+                            })
+                          : t("clock.history_loc_ok")}
                     </td>
                   </tr>
                 ))}
