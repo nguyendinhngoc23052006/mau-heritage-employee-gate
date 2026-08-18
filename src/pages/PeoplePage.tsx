@@ -12,7 +12,11 @@ import {
 } from "../components/ui/EmptyState";
 import { Input, Label, Textarea } from "../components/ui/Input";
 import { Select } from "../components/ui/Select";
-import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
+import {
+  isManagerRole,
+  useMemberships,
+  useRoleOn,
+} from "../hooks/useMemberships";
 import { useSession } from "../hooks/useSession";
 import { errorMessage } from "../lib/errorMessage";
 import { useT } from "../lib/i18n";
@@ -45,6 +49,7 @@ export function PeoplePage(): JSX.Element {
   const queryClient = useQueryClient();
   const role = useRoleOn(storeId);
   const canManage = isManagerRole(role);
+  const { isLoading: membershipsLoading } = useMemberships();
 
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -223,6 +228,7 @@ export function PeoplePage(): JSX.Element {
   });
 
   if (
+    membershipsLoading ||
     membersQuery.isLoading ||
     invitesQuery.isLoading ||
     applicationsQuery.isLoading ||
@@ -249,20 +255,20 @@ export function PeoplePage(): JSX.Element {
     (m) => m.role === "owner" && m.active,
   ).length;
 
+  const APP_FORM_DEFAULT = {
+    role: "employee" as Role,
+    employment_type: "hourly" as EmploymentType,
+    hourly_rate_input: "0",
+    declineDialogOpen: false,
+    declineReason: "",
+  };
+
   function getAppFormState(appId: string) {
-    if (!appFormState[appId]) {
-      setAppFormState((prev) => ({
-        ...prev,
-        [appId]: {
-          role: "employee" as Role,
-          employment_type: "hourly" as EmploymentType,
-          hourly_rate_input: "0",
-          declineDialogOpen: false,
-          declineReason: "",
-        },
-      }));
-    }
-    return appFormState[appId];
+    // Render-safe: return the default inline. Do NOT call setState during render —
+    // it schedules an update but the current render still sees undefined, which
+    // then throws when downstream code reads `.role`. The default is used until
+    // an event handler writes real state via `setAppFormState`.
+    return appFormState[appId] ?? APP_FORM_DEFAULT;
   }
 
   function handleApproveApplication(appId: string) {
