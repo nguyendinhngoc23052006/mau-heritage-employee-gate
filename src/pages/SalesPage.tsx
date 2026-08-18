@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
+import { MySalesHistoryCard } from "../components/sales/MySalesHistoryCard";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
+import { Dialog } from "../components/ui/Dialog";
 import {
   EmptyState,
   ErrorState,
@@ -19,6 +21,7 @@ import {
   listPendingSales,
   submitSales,
 } from "../services/sales";
+import { getStore } from "../services/stores";
 import type { SalesReport } from "../types/database";
 
 export function SalesPage() {
@@ -43,10 +46,8 @@ export function SalesPage() {
       </h1>
 
       <div className="space-y-6">
-        {/* Employee form */}
+        <MySalesHistoryCard userId={user.id} storeId={storeId} />
         <SubmitSalesForm userId={user.id} storeId={storeId} />
-
-        {/* Manager reviews (if applicable) */}
         {isManager && <PendingReviews storeId={storeId} />}
       </div>
     </div>
@@ -185,9 +186,15 @@ function PendingReviews({ storeId }: { storeId: string }) {
     queryKey: ["sales", "pending", storeId],
     queryFn: () => listPendingSales(storeId),
   });
+  const { data: store } = useQuery({
+    queryKey: ["store", storeId],
+    queryFn: () => getStore(storeId),
+  });
+  const thresholdPct = store?.variance_threshold_pct ?? 5;
 
   const [disputeId, setDisputeId] = useState<string | null>(null);
   const [disputeReason, setDisputeReason] = useState("");
+  const [confirmId, setConfirmId] = useState<string | null>(null);
 
   const approveMutation = useMutation({
     mutationFn: (id: string) => approveSales(id),
@@ -195,6 +202,7 @@ function PendingReviews({ storeId }: { storeId: string }) {
       queryClient.invalidateQueries({
         queryKey: ["sales", "pending", storeId],
       });
+      setConfirmId(null);
     },
   });
 
@@ -223,6 +231,18 @@ function PendingReviews({ storeId }: { storeId: string }) {
       </Card>
     );
 
+  const requestApprove = (report: SalesReport) => {
+    const total = report.cash_cents + report.card_cents + report.qr_cents;
+    const ratio = total > 0 ? Math.abs(report.variance_cents) / total : 0;
+    if (ratio * 100 >= thresholdPct) {
+      setConfirmId(report.id);
+    } else {
+      approveMutation.mutate(report.id);
+    }
+  };
+
+  const confirmReport = pending.find((r) => r.id === confirmId) ?? null;
+
   return (
     <Card>
       <CardTitle>{t("sales.pending_queue")}</CardTitle>
@@ -234,7 +254,7 @@ function PendingReviews({ storeId }: { storeId: string }) {
           >
             <PendingSalesRow
               report={report}
-              onApprove={() => approveMutation.mutate(report.id)}
+              onApprove={() => requestApprove(report)}
               onDispute={() => setDisputeId(report.id)}
               isApproving={approveMutation.isPending}
             />
@@ -250,6 +270,36 @@ function PendingReviews({ storeId }: { storeId: string }) {
           </div>
         ))}
       </div>
+      <Dialog
+        open={confirmReport !== null}
+        onClose={() => setConfirmId(null)}
+        title={t("sales.large_variance_title")}
+        footer={
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={() => setConfirmId(null)}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() =>
+                confirmReport && approveMutation.mutate(confirmReport.id)
+              }
+              disabled={approveMutation.isPending}
+            >
+              {t("sales.large_variance_confirm")}
+            </Button>
+          </div>
+        }
+      >
+        {confirmReport && (
+          <p>
+            {t("sales.large_variance_body", {
+              amount: formatVnd(confirmReport.variance_cents),
+              pct: thresholdPct,
+            })}
+          </p>
+        )}
+      </Dialog>
     </Card>
   );
 }

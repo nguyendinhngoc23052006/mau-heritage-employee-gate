@@ -6,7 +6,9 @@ export async function getCurrentClockState(
   storeId: string,
 ): Promise<ClockKind | null> {
   const supabase = getSupabase();
-  const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Ho_Chi_Minh" });
+  const today = new Date().toLocaleDateString("sv-SE", {
+    timeZone: "Asia/Ho_Chi_Minh",
+  });
   const { data, error } = await supabase
     .from("clock_events")
     .select("kind")
@@ -21,54 +23,38 @@ export async function getCurrentClockState(
   return (data?.kind ?? null) as ClockKind | null;
 }
 
-export async function clockIn(
+export interface ClockLocation {
+  lat?: number;
+  lng?: number;
+  accuracyM?: number;
+}
+
+export async function clockInAt(
   storeId: string,
-  shiftId?: string,
+  loc: ClockLocation = {},
 ): Promise<ClockEvent> {
   const supabase = getSupabase();
-  const now = new Date().toISOString();
-  const idempotencyKey = `${now.slice(0, 16)}`;
-
-  const { data, error } = await supabase
-    .from("clock_events")
-    .insert([
-      {
-        store_id: storeId,
-        shift_id: shiftId || null,
-        kind: "in",
-        at: now,
-        source: "app",
-        idempotency_key: idempotencyKey,
-      },
-    ])
-    .select()
-    .single();
+  const { data, error } = await supabase.rpc("clock_in_at", {
+    p_store_id: storeId,
+    p_lat: loc.lat ?? null,
+    p_lng: loc.lng ?? null,
+    p_accuracy_m: loc.accuracyM ?? null,
+  });
   if (error) throw error;
   return data as ClockEvent;
 }
 
-export async function clockOut(
+export async function clockOutAt(
   storeId: string,
-  shiftId?: string,
+  loc: ClockLocation = {},
 ): Promise<ClockEvent> {
   const supabase = getSupabase();
-  const now = new Date().toISOString();
-  const idempotencyKey = `${now.slice(0, 16)}`;
-
-  const { data, error } = await supabase
-    .from("clock_events")
-    .insert([
-      {
-        store_id: storeId,
-        shift_id: shiftId || null,
-        kind: "out",
-        at: now,
-        source: "app",
-        idempotency_key: idempotencyKey,
-      },
-    ])
-    .select()
-    .single();
+  const { data, error } = await supabase.rpc("clock_out_at", {
+    p_store_id: storeId,
+    p_lat: loc.lat ?? null,
+    p_lng: loc.lng ?? null,
+    p_accuracy_m: loc.accuracyM ?? null,
+  });
   if (error) throw error;
   return data as ClockEvent;
 }

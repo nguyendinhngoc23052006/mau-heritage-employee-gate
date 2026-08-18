@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
+import { AttendanceFlagsCard } from "../components/dashboard/AttendanceFlagsCard";
 import { Alert } from "../components/ui/Alert";
 import { Card, CardTitle } from "../components/ui/Card";
 import {
@@ -7,6 +8,7 @@ import {
   ErrorState,
   LoadingState,
 } from "../components/ui/EmptyState";
+import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
 import { useSession } from "../hooks/useSession";
 import { useT } from "../lib/i18n";
 import { getSupabase } from "../lib/supabaseClient";
@@ -21,6 +23,8 @@ export function DashboardPage() {
   const { user } = useSession();
   const userId = user?.id;
   const ready = Boolean(storeId && userId);
+  const role = useRoleOn(storeId);
+  const isManager = isManagerRole(role);
 
   // Announcements
   const { data: announcements, isLoading: announcementsLoading } = useQuery({
@@ -152,6 +156,8 @@ export function DashboardPage() {
           </div>
         </Card>
       </div>
+
+      {isManager && storeId && <AttendanceFlagsCard storeId={storeId} />}
 
       {/* Latest Announcements */}
       <Card>
