@@ -80,6 +80,11 @@ export function GeofenceCard({ storeId }: { storeId: string }) {
       setConfirmOpen(false);
       setTimeout(() => setSaved(false), 2000);
     },
+    onError: () => {
+      // Close the overwrite dialog so the error alert below the card is visible;
+      // otherwise the fixed-viewport Dialog hides it and the user only sees a stuck spinner.
+      setConfirmOpen(false);
+    },
   });
 
   const clear = () => {
