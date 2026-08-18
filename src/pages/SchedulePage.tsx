@@ -586,7 +586,16 @@ export function SchedulePage() {
                   })
                 }
                 onRequestSwap={() => setSwapDialogShiftId(shift.id)}
-                claimingSlotId={claimSlotMutation.variables}
+                claimingSlotId={
+                  claimSlotMutation.isPending
+                    ? claimSlotMutation.variables
+                    : undefined
+                }
+                releasingSlotId={
+                  releaseSlotMutation.isPending
+                    ? releaseSlotMutation.variables
+                    : undefined
+                }
               />
             ))}
           </div>
@@ -634,6 +643,7 @@ interface ShiftCardProps {
   onSetClaimOpen: (open: boolean) => void;
   onRequestSwap: () => void;
   claimingSlotId?: string;
+  releasingSlotId?: string;
 }
 
 function ShiftCard({
@@ -647,6 +657,7 @@ function ShiftCard({
   onSetClaimOpen,
   onRequestSwap,
   claimingSlotId,
+  releasingSlotId,
 }: ShiftCardProps) {
   const t = useT();
   const filled = shiftSlots.filter((s) => s.claimed_by).length;
@@ -689,6 +700,7 @@ function ShiftCard({
           onClaim={onClaimSlot}
           onRelease={onReleaseSlot}
           claimingSlotId={claimingSlotId}
+          releasingSlotId={releasingSlotId}
           shiftStartsAt={shift.starts_at}
         />
       </div>
