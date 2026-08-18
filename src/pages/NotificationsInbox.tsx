@@ -70,7 +70,7 @@ export function NotificationsInbox() {
           >
             {markAllReadMutation.isPending
               ? t("common.loading")
-              : "Mark all read"}
+              : t("notifications.mark_all_read")}
           </Button>
         )}
       </div>

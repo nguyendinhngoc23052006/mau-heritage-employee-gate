@@ -10,6 +10,7 @@ import {
 } from "../components/ui/EmptyState";
 import { Input, Label } from "../components/ui/Input";
 import { Select } from "../components/ui/Select";
+import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
 import { errorMessage } from "../lib/errorMessage";
 import { useT } from "../lib/i18n";
 import { listMembers } from "../services/members";
@@ -22,6 +23,8 @@ interface ApplyRulePageProps {
 export function ApplyRulePage({ storeId }: ApplyRulePageProps) {
   const t = useT();
   const queryClient = useQueryClient();
+  const role = useRoleOn(storeId);
+  const isManager = isManagerRole(role);
   const [selectedRuleId, setSelectedRuleId] = useState<string>("");
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [reason, setReason] = useState("");
@@ -78,6 +81,10 @@ export function ApplyRulePage({ storeId }: ApplyRulePageProps) {
 
   const isLoading = rulesLoading || membersLoading;
   const error = rulesError || membersError;
+
+  if (!isManager) {
+    return <ErrorState message={t("analytics.access_denied")} />;
+  }
 
   if (isLoading) {
     return <LoadingState>{t("common.loading")}</LoadingState>;

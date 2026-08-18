@@ -187,13 +187,6 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
               </thead>
               <tbody>
                 {payroll.map((row) => {
-                  const maxMultiplier =
-                    row.daily_breakdown.length > 0
-                      ? Math.max(
-                          ...row.daily_breakdown.map((d) => d.multiplier),
-                        )
-                      : 1.0;
-
                   return (
                     <tr
                       key={row.user_id}
@@ -206,7 +199,9 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
                         {(row.minutes_worked / 60).toFixed(1)}
                       </td>
                       <td className="text-right px-4 py-2">
-                        ×{maxMultiplier.toFixed(1)}
+                        {row.daily_breakdown.length === 0
+                          ? "×1"
+                          : `×${Math.max(1, ...row.daily_breakdown.map((d) => d.multiplier)).toFixed(1)}`}
                       </td>
                       <td className="text-right px-4 py-2">
                         {row.hourly_rate_cents

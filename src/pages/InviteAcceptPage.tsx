@@ -88,31 +88,7 @@ export function InviteAcceptPage() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-brand-cream flex items-center justify-center px-4">
-        <Card className="w-full max-w-sm">
-          <LogoMark className="h-12 mx-auto text-brand-navy mb-3" />
-          <CardTitle className="font-display">
-            {t("invite.accept.title")}
-          </CardTitle>
-          <div className="space-y-4">
-            <Alert variant="error">{error}</Alert>
-            <Button
-              onClick={() => {
-                setError(null);
-              }}
-              className="w-full"
-            >
-              {t("common.retry")}
-            </Button>
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
-  // Not signed in yet — show sign-up (default) or sign-in form.
+  // Not signed in yet — show sign-up (default) or sign-in form. Also show form if there's an error so user can retry.
   return (
     <div className="min-h-screen bg-brand-cream flex items-center justify-center px-4">
       <Card className="w-full max-w-sm">
@@ -125,6 +101,16 @@ export function InviteAcceptPage() {
             ? t("invite.accept.signup_prompt")
             : t("invite.accept.signin_prompt")}
         </p>
+        {error && (
+          <Alert variant="error" className="mb-4">
+            {error}
+            {error.includes("email does not match") && (
+              <div className="mt-2 text-xs">
+                {t("invite.accept.email_mismatch_hint")}
+              </div>
+            )}
+          </Alert>
+        )}
         <form onSubmit={handleAuth} className="space-y-4">
           <div>
             <Label htmlFor="invite-email">{t("auth.email_label")}</Label>

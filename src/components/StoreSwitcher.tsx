@@ -15,7 +15,7 @@ export function StoreSwitcher() {
     return (
       <span className="text-sm text-slate-500">{t("common.loading")}</span>
     );
-  if (!data || data.length === 0) return null;
+  if (isLoading || !data || data.length < 2) return null;
 
   const onChange = (value: string) => {
     if (value === ADD_SENTINEL) {

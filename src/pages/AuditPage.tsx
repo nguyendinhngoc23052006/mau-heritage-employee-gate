@@ -71,6 +71,10 @@ export function AuditPage() {
     return <ErrorState message="Store not found" />;
   }
 
+  if (!isManager) {
+    return <ErrorState message={t("analytics.access_denied")} />;
+  }
+
   if (isLoading && allItems.length === 0) {
     return <LoadingState>{t("common.loading")}</LoadingState>;
   }
