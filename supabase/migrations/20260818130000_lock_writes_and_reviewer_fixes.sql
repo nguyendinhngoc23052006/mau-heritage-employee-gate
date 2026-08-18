@@ -22,9 +22,13 @@ set check_function_bodies = off;
 drop policy if exists sales_reports_self_insert on public.sales_reports;
 drop policy if exists clock_events_self_insert on public.clock_events;
 
--- 2. pick_active_shift: revoke from authenticated (definer RPCs still call it fine
---    because they run as the function owner). This closes the cross-tenant probe.
-revoke execute on function public.pick_active_shift(uuid, uuid, timestamptz) from authenticated;
+-- 2. pick_active_shift: revoke from authenticated, anon, and public. The definer
+--    RPCs (clock_in_at/out_at, submit_sales) still call it fine because they run
+--    as the function owner. Supabase's baseline default privileges grant execute
+--    to both anon and authenticated on every function, and since this function
+--    lacks the `auth.uid() is null` guard the other definer RPCs carry, anon must
+--    be revoked too to close the cross-tenant probe fully.
+revoke execute on function public.pick_active_shift(uuid, uuid, timestamptz) from authenticated, anon, public;
 
 -- 3. attendance_flags: tighten SELECT to owner/manager only.
 drop policy if exists attendance_flags_visible on public.attendance_flags;
@@ -261,5 +265,5 @@ returns uuid language sql stable security definer set search_path = public as $$
     abs(extract(epoch from (p_at - s.starts_at))) asc
   limit 1
 $$;
--- Re-establish revoke (a CREATE OR REPLACE resets grants on some Postgres builds).
-revoke execute on function public.pick_active_shift(uuid, uuid, timestamptz) from authenticated;
+-- Re-establish revoke on all three roles after CREATE OR REPLACE (belt-and-braces).
+revoke execute on function public.pick_active_shift(uuid, uuid, timestamptz) from authenticated, anon, public;
