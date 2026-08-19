@@ -377,7 +377,7 @@ export function PeoplePage(): JSX.Element {
                     <div className="space-y-3">
                       <div>
                         <div className="text-sm font-medium text-slate-900">
-                          {app.user_id.substring(0, 8)}
+                          {app.user_id?.substring(0, 8) ?? "—"}
                         </div>
                         <div className="text-xs text-slate-600">
                           {t("people.applications.submitted", {
@@ -592,7 +592,8 @@ export function PeoplePage(): JSX.Element {
                   <div className="flex-1">
                     <div className="font-medium text-sm text-slate-900">
                       {member.profile?.display_name ||
-                        member.user_id.substring(0, 8)}
+                        member.user_id?.substring(0, 8) ||
+                        "—"}
                     </div>
                     <div className="text-xs text-slate-500">
                       {t(`people.role_${member.role}`)}
@@ -658,7 +659,8 @@ export function PeoplePage(): JSX.Element {
                             setDeactivateUserId(member.user_id);
                             setDeactivateMemberName(
                               member.profile?.display_name ||
-                                member.user_id.substring(0, 8),
+                                member.user_id?.substring(0, 8) ||
+                                "—",
                             );
                             setDeactivateDialogOpen(true);
                           }}

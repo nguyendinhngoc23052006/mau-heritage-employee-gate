@@ -5,6 +5,7 @@ import {
 } from "react-router-dom";
 import { AuthGate } from "../components/AuthGate";
 import { Layout } from "../components/Layout";
+import { RouteErrorFallback } from "../components/RouteErrorFallback";
 import { AnalyticsPage } from "../pages/AnalyticsPage";
 import { DeactivatedPage } from "../pages/DeactivatedPage";
 import { ResetPasswordPage } from "../pages/ResetPasswordPage";
@@ -55,6 +56,10 @@ export const router = createBrowserRouter([
         <Layout />
       </AuthGate>
     ),
-    children: storeChildren,
+    errorElement: <RouteErrorFallback />,
+    children: storeChildren.map((r) => ({
+      ...r,
+      errorElement: r.errorElement ?? <RouteErrorFallback />,
+    })),
   },
 ]);
