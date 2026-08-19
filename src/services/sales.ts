@@ -11,22 +11,15 @@ export async function submitSales(input: {
   note?: string;
 }): Promise<SalesReport> {
   const supabase = getSupabase();
-  const { data, error } = await supabase
-    .from("sales_reports")
-    .insert([
-      {
-        store_id: input.store_id,
-        shift_id: input.shift_id || null,
-        cash_cents: input.cash_cents,
-        card_cents: input.card_cents,
-        qr_cents: input.qr_cents,
-        expected_cents: input.expected_cents || null,
-        note: input.note || null,
-        status: "pending",
-      },
-    ])
-    .select()
-    .single();
+  const { data, error } = await supabase.rpc("submit_sales", {
+    p_store_id: input.store_id,
+    p_cash: input.cash_cents,
+    p_card: input.card_cents,
+    p_qr: input.qr_cents,
+    p_expected: input.expected_cents ?? null,
+    p_note: input.note ?? null,
+    p_shift_id: input.shift_id ?? null,
+  });
   if (error) throw error;
   return data as SalesReport;
 }

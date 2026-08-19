@@ -40,6 +40,11 @@ export interface Store {
   join_code: string | null;
   created_at: string;
   created_by: string | null;
+  lat: number | null;
+  lng: number | null;
+  geofence_radius_m: number;
+  require_geofence: boolean;
+  variance_threshold_pct: number;
 }
 
 export interface StoreApplication {
@@ -157,6 +162,26 @@ export interface ClockEvent {
   idempotency_key: string | null;
   created_by: string | null;
   created_at: string;
+  lat: number | null;
+  lng: number | null;
+  accuracy_m: number | null;
+  distance_m: number | null;
+  location_verified: boolean | null;
+}
+
+export type AttendanceFlagKind = "auto_clockout" | "geofence_miss";
+
+export interface AttendanceFlag {
+  id: string;
+  store_id: string;
+  user_id: string;
+  clock_event_id: string | null;
+  kind: AttendanceFlagKind;
+  detail: Record<string, unknown>;
+  created_at: string;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  resolution_note: string | null;
 }
 
 export interface SalesReport {
