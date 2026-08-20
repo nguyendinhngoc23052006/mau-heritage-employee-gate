@@ -190,7 +190,12 @@ function pairClockEventsByDate(
     if (event.kind === "in") {
       inTime = event.at;
     } else if (event.kind === "out" && inTime) {
-      const date = inTime.split("T")[0];
+      // Bucket by Asia/Ho_Chi_Minh calendar date, not UTC. A shift that
+      // starts at 05:00 VN (22:00 UTC previous day) must attribute wages —
+      // and any per-date pay multiplier — to today's VN date.
+      const date = new Date(inTime).toLocaleDateString("sv-SE", {
+        timeZone: "Asia/Ho_Chi_Minh",
+      });
       const minutes = minutesBetween(inTime, event.at);
 
       if (!dailyByDate.has(date)) {
