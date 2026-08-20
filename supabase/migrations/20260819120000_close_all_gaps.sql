@@ -19,26 +19,30 @@
 
 set check_function_bodies = off;
 
--- 1. memberships_manager_update: constrain `active` on the self-branch.
---    A user can update ONLY their own employment_type via self-branch; they
---    can never flip active or role. Only owner/manager can flip those, and
---    only via the manager-branch (which is unchanged).
+-- 1. memberships_manager_update: constrain `active` on the self-branch AND
+--    preserve the OWNER-vs-MANAGER role ceiling from the aug-14 hardening
+--    (a manager can only assign 'manager' or 'employee'; only an owner can
+--    make another owner). Reviewer 1 caught that the naive replacement
+--    accidentally let managers promote anyone — including themselves — to
+--    owner.
 drop policy if exists memberships_manager_update on public.memberships;
 create policy memberships_manager_update on public.memberships for update
   using (
-    exists (
-      select 1 from public.memberships m
-      where m.user_id = auth.uid() and m.store_id = memberships.store_id
-        and m.active and m.role in ('owner','manager')
-    )
+    public.has_role_on(memberships.store_id, array['owner','manager']::public.role[])
     or user_id = auth.uid()
   )
   with check (
-    -- Manager branch: any change allowed if you're a manager of this store.
-    exists (
-      select 1 from public.memberships m
-      where m.user_id = auth.uid() and m.store_id = memberships.store_id
-        and m.active and m.role in ('owner','manager')
+    -- Manager branch: role ceiling — owners may assign any role, managers
+    -- may not create owners.
+    (
+      public.has_role_on(memberships.store_id, array['owner','manager']::public.role[])
+      and (
+        case
+          when public.has_role_on(memberships.store_id, array['owner']::public.role[]) then true
+          when public.has_role_on(memberships.store_id, array['manager']::public.role[]) then role in ('manager','employee')
+          else false
+        end
+      )
     )
     -- Self branch: only employment_type may drift; active/role stay pinned.
     or (
@@ -48,10 +52,12 @@ create policy memberships_manager_update on public.memberships for update
     )
   );
 
--- 2. store_applications: applicant may DELETE their own row (dismiss declined).
+-- 2. store_applications: applicant may DELETE their own DECLINED/WITHDRAWN row
+--    only. Never pending (use withdraw_application) and never approved (would
+--    destroy audit trail of how membership was granted).
 drop policy if exists store_applications_self_delete on public.store_applications;
 create policy store_applications_self_delete on public.store_applications for delete
-  using (user_id = auth.uid());
+  using (user_id = auth.uid() and status in ('declined','withdrawn'));
 grant delete on public.store_applications to authenticated;
 
 -- 3. claim_slot: RAISE on lost race. Returns the winning row on success.
@@ -212,6 +218,8 @@ end $$;
 
 -- 6a. Close one specific stale event by id (manager-only). Useful when the
 --     batch window somehow missed it or a manager wants to force-close early.
+--     Guards against corrupting a later same-day shift's minutes AND resolves
+--     the attendance_flag that triggered the click instead of stacking new ones.
 create or replace function public.close_stale_clock_event(p_event_id uuid, p_at timestamptz default null)
 returns public.clock_events language plpgsql security definer set search_path = public as $$
 declare
@@ -232,6 +240,15 @@ begin
   ) then
     raise exception 'not a manager of this store' using errcode = '42501';
   end if;
+  -- Refuse if a matching out already exists — closing again would insert an
+  -- auto-out that corrupts a later same-day shift's paired minutes.
+  if exists (
+    select 1 from public.clock_events oe
+    where oe.user_id = v_in.user_id and oe.store_id = v_in.store_id
+      and oe.kind = 'out' and oe.at > v_in.at
+  ) then
+    raise exception 'this in-event is already paired with an out' using errcode = '22023';
+  end if;
   v_key := 'auto:' || p_event_id::text;
   insert into public.clock_events(store_id, user_id, shift_id, kind, at, source, idempotency_key)
   values (v_in.store_id, v_in.user_id, v_in.shift_id, 'out', v_out_at, 'auto', v_key)
@@ -240,9 +257,23 @@ begin
   if v_out.id is null then
     select * into v_out from public.clock_events where user_id = v_in.user_id and idempotency_key = v_key;
   end if;
-  insert into public.attendance_flags(store_id, user_id, kind, detail)
-  values (v_in.store_id, v_in.user_id, 'auto_clockout',
-    jsonb_build_object('in_event_id', v_in.id, 'in_at', v_in.at, 'out_at', v_out_at, 'shift_ends_at', null));
+  -- Resolve any existing unresolved auto_clockout flag for this in-event
+  -- instead of stacking a duplicate on every click.
+  update public.attendance_flags
+     set resolved_at = now(), resolved_by = v_uid,
+         resolution_note = coalesce(resolution_note, 'closed via close_stale_clock_event')
+   where store_id = v_in.store_id
+     and kind = 'auto_clockout'
+     and resolved_at is null
+     and (detail->>'in_event_id') = v_in.id::text;
+  if not found then
+    -- No flag existed yet (edge: force-close outside the sweep path). File one
+    -- already-resolved so history is complete without being noisy in the queue.
+    insert into public.attendance_flags(store_id, user_id, kind, detail, resolved_at, resolved_by, resolution_note)
+    values (v_in.store_id, v_in.user_id, 'auto_clockout',
+      jsonb_build_object('in_event_id', v_in.id, 'in_at', v_in.at, 'out_at', v_out_at, 'shift_ends_at', null),
+      now(), v_uid, 'closed via close_stale_clock_event');
+  end if;
   return v_out;
 end $$;
 grant execute on function public.close_stale_clock_event(uuid, timestamptz) to authenticated;
@@ -318,7 +349,9 @@ begin
     insert into public.notifications(user_id, store_id, title, body, url)
     values (new.user_id, new.store_id,
       case when new.status = 'approved' then 'Doanh thu đã được duyệt' else 'Doanh thu bị tranh chấp' end,
-      new.dispute_reason,
+      case when new.status = 'disputed' then new.dispute_reason
+           else 'Báo cáo doanh thu ngày ' || to_char(new.submitted_at at time zone 'Asia/Ho_Chi_Minh', 'DD/MM/YYYY') || ' đã được duyệt.'
+      end,
       '/store/' || new.store_id::text || '/sales');
   end if;
   return new;
