@@ -38,7 +38,7 @@ export function ApplyRulePage({ storeId }: ApplyRulePageProps) {
     queryKey: ["rules", storeId, "active"],
     queryFn: async () => {
       const allRules = await listRules(storeId);
-      return allRules.filter((r) => r.active);
+      return allRules.filter((r) => r.active && r.kind === "manual");
     },
   });
 

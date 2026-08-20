@@ -22,6 +22,13 @@ interface RulesPageProps {
 
 type RuleKind = "auto" | "manual";
 
+const UNIMPLEMENTED_AUTO_TRIGGERS = new Set<RuleTrigger>([
+  "missed_shift",
+  "late_arrival",
+  "till_variance",
+  "points_threshold",
+]);
+
 export function RulesPage({ storeId }: RulesPageProps) {
   const t = useT();
   const queryClient = useQueryClient();
@@ -272,7 +279,14 @@ export function RulesPage({ storeId }: RulesPageProps) {
                   className="border-b hover:bg-brand-cream-light"
                 >
                   <td className="px-4 py-2">{rule.name}</td>
-                  <td className="px-4 py-2">{rule.trigger_type}</td>
+                  <td className="px-4 py-2">
+                    {rule.trigger_type}
+                    {UNIMPLEMENTED_AUTO_TRIGGERS.has(rule.trigger_type) && (
+                      <span className="ml-2 rounded bg-brand-cream-light px-1.5 py-0.5 text-[10px] font-medium text-brand-muted">
+                        {t("rules.auto_not_implemented")}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-2">{rule.points_delta}</td>
                   <td className="px-4 py-2">{formatVnd(rule.amount_cents)}</td>
                   <td className="px-4 py-2">{rule.active ? "✓" : "✗"}</td>

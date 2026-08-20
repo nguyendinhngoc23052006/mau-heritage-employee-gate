@@ -68,7 +68,7 @@ export function AuditPage() {
   };
 
   if (!storeId) {
-    return <ErrorState message="Store not found" />;
+    return <ErrorState message={t("audit.store_not_found")} />;
   }
 
   if (!isManager) {
@@ -83,7 +83,7 @@ export function AuditPage() {
     return (
       <ErrorState
         message={
-          error instanceof Error ? error.message : "Error loading audit log"
+          error instanceof Error ? error.message : t("audit.error_loading")
         }
       />
     );
@@ -102,14 +102,14 @@ export function AuditPage() {
             htmlFor="entity-filter"
             className="block text-sm font-medium text-slate-700"
           >
-            Filter
+            {t("audit.filter_label")}
           </label>
           <div className="flex gap-2">
             <Input
               id="entity-filter"
               value={filterEntityType}
               onChange={(e) => handleFilterChange(e.target.value)}
-              placeholder="Filter by entity type..."
+              placeholder={t("audit.filter_placeholder")}
               list="entity-types"
               className="flex-1"
             />
@@ -123,7 +123,7 @@ export function AuditPage() {
                 variant="secondary"
                 onClick={() => handleFilterChange("")}
               >
-                Clear
+                {t("common.clear")}
               </Button>
             )}
           </div>
@@ -200,7 +200,7 @@ export function AuditPage() {
           {hasMore && (
             <div className="flex justify-center">
               <Button onClick={handleLoadMore} variant="secondary">
-                Load more
+                {t("audit.load_more")}
               </Button>
             </div>
           )}

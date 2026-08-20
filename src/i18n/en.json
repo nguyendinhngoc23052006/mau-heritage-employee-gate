@@ -407,5 +407,6 @@
   "deeplink.not_a_member_title": "You're not a member of this store",
   "deeplink.not_a_member_body": "Ask a manager to invite you, or use the join code on the sign-up page.",
   "deeplink.go_home": "Go home",
-  "attendance_flags.close_this": "Close now"
+  "attendance_flags.close_this": "Close now",
+  "rules.auto_not_implemented": "Not auto-triggered yet"
 }

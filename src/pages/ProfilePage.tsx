@@ -6,11 +6,11 @@ import { Card, CardTitle } from "../components/ui/Card";
 import { ErrorState, LoadingState } from "../components/ui/EmptyState";
 import { Input, Label } from "../components/ui/Input";
 import { Select } from "../components/ui/Select";
-import { useT } from "../lib/i18n";
+import { useI18n } from "../lib/i18n";
 import { getMyProfile, updateMyProfile } from "../services/profiles";
 
 export function ProfilePage() {
-  const t = useT();
+  const { t, locale: appLocale, setLocale: setAppLocale } = useI18n();
   const queryClient = useQueryClient();
   const [displayName, setDisplayName] = useState("");
   const [phone, setPhone] = useState("");
@@ -29,21 +29,29 @@ export function ProfilePage() {
   const updateMutation = useMutation({
     mutationFn: (updates: Parameters<typeof updateMyProfile>[0]) =>
       updateMyProfile(updates),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["profile", "me"] });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+      if (variables.locale) {
+        setAppLocale(variables.locale);
+      }
     },
   });
 
   // Populate form once when the profile first loads. useEffect avoids the
   // prior "setState during render" bug that caused an inconsistent tree.
+  // Also adopts the persisted locale live so a login from a fresh device
+  // picks up the saved preference instead of staying on the browser default.
   // biome-ignore lint/correctness/useExhaustiveDependencies: only sync when profile first loads; don't re-sync on user typing
   useEffect(() => {
     if (profile && displayName === "") {
       setDisplayName(profile.display_name ?? "");
       setPhone(profile.phone ?? "");
       setLocale(profile.locale);
+      if (profile.locale !== appLocale) {
+        setAppLocale(profile.locale);
+      }
     }
   }, [profile]);
 

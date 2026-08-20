@@ -90,7 +90,7 @@ export function DashboardPage() {
   });
 
   if (!ready) {
-    return <ErrorState message="Store or user not found" />;
+    return <ErrorState message={t("dashboard.store_or_user_not_found")} />;
   }
 
   const isLoading =

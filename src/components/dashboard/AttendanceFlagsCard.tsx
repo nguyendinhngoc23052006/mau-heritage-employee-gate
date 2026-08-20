@@ -70,6 +70,11 @@ export function AttendanceFlagsCard({ storeId }: { storeId: string }) {
           {errorMessage(sweep.error)}
         </Alert>
       )}
+      {closeStale.error && (
+        <Alert variant="error" className="mb-2">
+          {errorMessage(closeStale.error)}
+        </Alert>
+      )}
       {isLoading ? (
         <p className="text-sm text-slate-500">{t("common.loading")}</p>
       ) : !flags || flags.length === 0 ? (
