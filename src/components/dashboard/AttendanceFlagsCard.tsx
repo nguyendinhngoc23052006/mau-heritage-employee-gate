@@ -4,6 +4,7 @@ import { errorMessage } from "../../lib/errorMessage";
 import { useT } from "../../lib/i18n";
 import {
   autoClockoutStale,
+  closeStaleClockEvent,
   listAttendanceFlags,
   resolveAttendanceFlag,
 } from "../../services/attendance";
@@ -29,6 +30,12 @@ export function AttendanceFlagsCard({ storeId }: { storeId: string }) {
 
   const resolve = useMutation({
     mutationFn: (id: string) => resolveAttendanceFlag(id),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["attendance_flags", storeId] }),
+  });
+
+  const closeStale = useMutation({
+    mutationFn: (eventId: string) => closeStaleClockEvent(eventId),
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: ["attendance_flags", storeId] }),
   });
@@ -96,7 +103,7 @@ export function AttendanceFlagsCard({ storeId }: { storeId: string }) {
                         r: Number(detail.radius_m) || 0,
                       })}
                 </div>
-                <div className="mt-1">
+                <div className="mt-1 flex gap-2">
                   <Button
                     variant="secondary"
                     className="text-xs"
@@ -105,6 +112,19 @@ export function AttendanceFlagsCard({ storeId }: { storeId: string }) {
                   >
                     {t("attendance_flags.resolve")}
                   </Button>
+                  {f.kind === "auto_clockout" &&
+                    typeof detail.in_event_id === "string" && (
+                      <Button
+                        variant="secondary"
+                        className="text-xs"
+                        onClick={() =>
+                          closeStale.mutate(detail.in_event_id as string)
+                        }
+                        disabled={closeStale.isPending}
+                      >
+                        {t("attendance_flags.close_this")}
+                      </Button>
+                    )}
                 </div>
               </li>
             );

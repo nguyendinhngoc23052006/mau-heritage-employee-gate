@@ -3,6 +3,7 @@ import { LogoMark } from "../components/Brand/LogoMark";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
 import { useT } from "../lib/i18n";
+import { clearAllQueries } from "../lib/query";
 import { getSupabase } from "../lib/supabaseClient";
 
 export function DeactivatedPage() {
@@ -11,6 +12,7 @@ export function DeactivatedPage() {
 
   async function signOut() {
     await getSupabase().auth.signOut();
+    clearAllQueries();
     navigate("/login", { replace: true });
   }
 

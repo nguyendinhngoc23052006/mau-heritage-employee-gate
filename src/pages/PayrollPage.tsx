@@ -142,13 +142,13 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-4">
             <Button onClick={handlePrevMonth} variant="secondary">
-              ← Previous
+              {t("payroll.prev_period")}
             </Button>
             <div className="text-lg font-semibold text-center flex-1">
               {monthYear}
             </div>
             <Button onClick={handleNextMonth} variant="secondary">
-              Next →
+              {t("payroll.next_period")}
             </Button>
           </div>
 
@@ -171,12 +171,16 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
             <table className="w-full text-sm">
               <thead className="border-b bg-brand-cream-light">
                 <tr>
-                  <th className="text-left px-4 py-2">Name</th>
+                  <th className="text-left px-4 py-2">
+                    {t("payroll.name_col")}
+                  </th>
                   <th className="text-right px-4 py-2">{t("payroll.hours")}</th>
                   <th className="text-right px-4 py-2">
                     {t("payroll.multiplier_col")}
                   </th>
-                  <th className="text-right px-4 py-2">Rate (VND/hr)</th>
+                  <th className="text-right px-4 py-2">
+                    {t("payroll.rate_col")}
+                  </th>
                   <th className="text-right px-4 py-2">{t("payroll.wages")}</th>
                   <th className="text-right px-4 py-2">
                     {t("payroll.prizes")}
@@ -227,7 +231,7 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
               <tfoot className="border-t font-semibold bg-brand-cream-light">
                 <tr>
                   <td colSpan={3} className="px-4 py-2">
-                    Total
+                    {t("payroll.total_col")}
                   </td>
                   <td className="px-4 py-2" />
                   <td className="text-right px-4 py-2">

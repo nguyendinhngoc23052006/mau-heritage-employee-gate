@@ -240,6 +240,7 @@ export function SchedulePage() {
       queryClient.invalidateQueries({
         queryKey: ["shift_slots", storeId, weekStart, weekEnd],
       }),
+    onError: () => alert(t("schedule.slot_lost_race")),
   });
 
   const releaseSlotMutation = useMutation({

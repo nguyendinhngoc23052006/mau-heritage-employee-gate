@@ -3,7 +3,8 @@
 ## Demo posture (from PR #1 scope + user overrides on Aug 12)
 - main-only, Cloudflare Pages Git integration, Supabase Free (no Branching)
 - Every Pages preview URL hits prod DB — treat preview writes as prod writes
-- Simple magic-link login (no captcha) — user chose spam-risk for simplicity
+- Simple email + password login (no captcha) — user chose spam-risk for simplicity
+- Auth: password (signInWithPassword). CLAUDE.md scope block updated 20260819 to match shipped code.
 
 ## Naming decisions (mega-PR)
 - `store_id` throughout (not `tenant_id`) — matches boss's vocabulary

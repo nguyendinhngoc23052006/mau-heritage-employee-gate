@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useSession } from "../hooks/useSession";
 import { useT } from "../lib/i18n";
+import { StoreMemberGate } from "./StoreMemberGate";
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const { user, loading } = useSession();
@@ -14,5 +15,5 @@ export function AuthGate({ children }: { children: ReactNode }) {
     );
   if (!user)
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
-  return <>{children}</>;
+  return <StoreMemberGate>{children}</StoreMemberGate>;
 }

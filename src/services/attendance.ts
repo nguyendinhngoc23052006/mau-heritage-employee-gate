@@ -1,5 +1,5 @@
 import { getSupabase } from "../lib/supabaseClient";
-import type { AttendanceFlag } from "../types/database";
+import type { AttendanceFlag, ClockEvent } from "../types/database";
 
 export async function listAttendanceFlags(
   storeId: string,
@@ -56,4 +56,17 @@ export async function autoClockoutStale(storeId: string): Promise<number> {
   });
   if (error) throw error;
   return (data as number) ?? 0;
+}
+
+export async function closeStaleClockEvent(
+  eventId: string,
+  at?: string,
+): Promise<ClockEvent> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc("close_stale_clock_event", {
+    p_event_id: eventId,
+    p_at: at ?? null,
+  });
+  if (error) throw error;
+  return data as ClockEvent;
 }

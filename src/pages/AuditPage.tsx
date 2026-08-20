@@ -152,18 +152,20 @@ export function AuditPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-200">
-                    <th className="px-4 py-2 text-left text-slate-600">Time</th>
                     <th className="px-4 py-2 text-left text-slate-600">
-                      Actor
+                      {t("audit.time_col")}
                     </th>
                     <th className="px-4 py-2 text-left text-slate-600">
-                      Entity Type
+                      {t("audit.actor")}
                     </th>
                     <th className="px-4 py-2 text-left text-slate-600">
-                      Entity ID
+                      {t("audit.entity_type_col")}
                     </th>
                     <th className="px-4 py-2 text-left text-slate-600">
-                      Action
+                      {t("audit.entity_id_col")}
+                    </th>
+                    <th className="px-4 py-2 text-left text-slate-600">
+                      {t("audit.action")}
                     </th>
                   </tr>
                 </thead>
@@ -208,7 +210,7 @@ export function AuditPage() {
       {/* Attendance Heatmap - Manager only */}
       {isManager && (
         <Card>
-          <CardTitle>Attendance Heatmap</CardTitle>
+          <CardTitle>{t("audit.heatmap_title")}</CardTitle>
           <div className="mt-4">
             <AttendanceHeatmap
               storeId={storeId}

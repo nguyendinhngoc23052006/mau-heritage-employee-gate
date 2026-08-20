@@ -27,28 +27,35 @@ export async function submitSales(input: {
 export async function listMySales(
   userId: string,
   storeId: string,
+  opts?: { limit?: number; offset?: number },
 ): Promise<SalesReport[]> {
   const supabase = getSupabase();
+  const limit = opts?.limit ?? 50;
+  const offset = opts?.offset ?? 0;
   const { data, error } = await supabase
     .from("sales_reports")
     .select("*")
     .eq("user_id", userId)
     .eq("store_id", storeId)
-    .order("submitted_at", { ascending: false });
+    .order("submitted_at", { ascending: false })
+    .range(offset, offset + limit - 1);
   if (error) throw error;
   return (data ?? []) as SalesReport[];
 }
 
 export async function listPendingSales(
   storeId: string,
+  opts?: { limit?: number },
 ): Promise<(SalesReport & { submitter_display_name: string | null })[]> {
   const supabase = getSupabase();
+  const limit = opts?.limit ?? 100;
   const { data: reports, error: reportsError } = await supabase
     .from("sales_reports")
     .select("*")
     .eq("store_id", storeId)
     .eq("status", "pending")
-    .order("submitted_at", { ascending: false });
+    .order("submitted_at", { ascending: false })
+    .range(0, limit - 1);
   if (reportsError) throw reportsError;
 
   const rows = (reports ?? []) as SalesReport[];

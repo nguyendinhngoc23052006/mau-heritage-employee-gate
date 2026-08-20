@@ -122,7 +122,9 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         {/* Points Balance */}
         <Card className="text-center">
-          <div className="text-sm text-slate-600">Points Balance</div>
+          <div className="text-sm text-slate-600">
+            {t("dashboard.points_balance")}
+          </div>
           <div className="mt-2 text-3xl font-semibold text-slate-900">
             {pointBalance?.balance ?? 0}
           </div>
@@ -140,7 +142,9 @@ export function DashboardPage() {
 
         {/* Upcoming Shifts */}
         <Card className="text-center">
-          <div className="text-sm text-slate-600">Upcoming Shifts</div>
+          <div className="text-sm text-slate-600">
+            {t("dashboard.upcoming_shifts_stat")}
+          </div>
           <div className="mt-2 text-3xl font-semibold text-slate-900">
             {upcomingShiftsCount ?? 0}
           </div>

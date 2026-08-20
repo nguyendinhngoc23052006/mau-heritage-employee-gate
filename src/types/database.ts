@@ -193,7 +193,7 @@ export interface SalesReport {
   card_cents: number;
   qr_cents: number;
   expected_cents: number | null;
-  variance_cents: number;
+  variance_cents: number | null;
   note: string | null;
   status: SalesStatus;
   submitted_at: string;
