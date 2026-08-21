@@ -15,7 +15,7 @@ export function StoreSwitcher() {
     return (
       <span className="text-sm text-slate-500">{t("common.loading")}</span>
     );
-  if (isLoading || !data || data.length < 2) return null;
+  if (!data) return null;
 
   const onChange = (value: string) => {
     if (value === ADD_SENTINEL) {
@@ -24,6 +24,18 @@ export function StoreSwitcher() {
       navigate(`/store/${value}`);
     }
   };
+
+  if (data.length < 2) {
+    return (
+      <button
+        type="button"
+        onClick={() => navigate("/onboarding?add=1")}
+        className="text-sm font-medium text-brand-ink hover:underline"
+      >
+        {t("store.switcher.add")}
+      </button>
+    );
+  }
 
   const options = [
     ...data.map((m) => ({
