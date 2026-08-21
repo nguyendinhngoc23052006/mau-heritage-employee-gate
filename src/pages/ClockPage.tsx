@@ -10,7 +10,11 @@ import {
   ErrorState,
   LoadingState,
 } from "../components/ui/EmptyState";
-import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
+import {
+  isManagerRole,
+  useMemberships,
+  useRoleOn,
+} from "../hooks/useMemberships";
 import { useSession } from "../hooks/useSession";
 import { errorMessage } from "../lib/errorMessage";
 import { type GeolocationError, getCurrentCoords } from "../lib/geolocation";
@@ -58,6 +62,7 @@ export function ClockPage() {
   const [locError, setLocError] = useState<string | null>(null);
   const role = useRoleOn(storeId);
   const isManager = isManagerRole(role);
+  const { isLoading: membershipsLoading } = useMemberships();
 
   const { data: store, isLoading: storeLoading } = useQuery({
     queryKey: ["store", storeId],
@@ -141,7 +146,7 @@ export function ClockPage() {
       />
     );
 
-  if (stateLoading || eventsLoading || storeLoading)
+  if (stateLoading || eventsLoading || storeLoading || membershipsLoading)
     return <LoadingState>{t("common.loading")}</LoadingState>;
 
   const isClockedIn = clockState === "in";
