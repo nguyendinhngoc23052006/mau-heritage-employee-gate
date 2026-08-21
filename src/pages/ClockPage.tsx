@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
@@ -10,6 +10,11 @@ import {
   ErrorState,
   LoadingState,
 } from "../components/ui/EmptyState";
+import {
+  isManagerRole,
+  useMemberships,
+  useRoleOn,
+} from "../hooks/useMemberships";
 import { useSession } from "../hooks/useSession";
 import { errorMessage } from "../lib/errorMessage";
 import { type GeolocationError, getCurrentCoords } from "../lib/geolocation";
@@ -55,8 +60,11 @@ export function ClockPage() {
   const userId = user?.id;
   const ready = Boolean(storeId && userId);
   const [locError, setLocError] = useState<string | null>(null);
+  const role = useRoleOn(storeId);
+  const isManager = isManagerRole(role);
+  const { isLoading: membershipsLoading } = useMemberships();
 
-  const { data: store } = useQuery({
+  const { data: store, isLoading: storeLoading } = useQuery({
     queryKey: ["store", storeId],
     enabled: ready,
     queryFn: () => getStore(storeId as string),
@@ -84,7 +92,8 @@ export function ClockPage() {
     op: (loc: { lat?: number; lng?: number; accuracyM?: number }) => Promise<T>,
   ): Promise<T> {
     setLocError(null);
-    const geofenceActive = Boolean(store?.lat && store?.lng);
+    const geofenceActive =
+      store != null && store.lat != null && store.lng != null;
     if (!geofenceActive) return op({});
     try {
       const c = await getCurrentCoords();
@@ -137,12 +146,12 @@ export function ClockPage() {
       />
     );
 
-  if (stateLoading || eventsLoading)
+  if (stateLoading || eventsLoading || storeLoading || membershipsLoading)
     return <LoadingState>{t("common.loading")}</LoadingState>;
 
   const isClockedIn = clockState === "in";
   const lastInEvent = events?.find((e) => e.kind === "in");
-  const geofenceOn = Boolean(store?.lat && store?.lng);
+  const geofenceOn = store != null && store.lat != null && store.lng != null;
   const enforced = Boolean(store?.require_geofence);
   const mutError = clockInMutation.error ?? clockOutMutation.error;
 
@@ -152,11 +161,24 @@ export function ClockPage() {
         {t("clock.title")}
       </h1>
 
-      {geofenceOn && (
-        <div className="mb-4 text-xs text-slate-600">
-          {enforced ? t("geofence.enforced_on") : t("geofence.stamped_only")}
-        </div>
-      )}
+      <div className="mb-4 text-xs text-slate-600">
+        {geofenceOn ? (
+          enforced ? (
+            t("geofence.enforced_on")
+          ) : (
+            t("geofence.stamped_only")
+          )
+        ) : isManager ? (
+          <span>
+            {t("geofence.not_configured")}{" "}
+            <Link to={`/store/${storeId}/settings`} className="underline">
+              {t("geofence.go_to_settings")}
+            </Link>
+          </span>
+        ) : (
+          <span>{t("geofence.not_configured_employee")}</span>
+        )}
+      </div>
 
       {locError && (
         <Alert variant="error" className="mb-4">
