@@ -358,6 +358,7 @@
   "geofence.enforced_on": "This store requires you to be on-site when clocking.",
   "geofence.stamped_only": "Your location will be recorded but isn't enforced yet.",
   "geofence.not_configured": "Location verification: not configured — enable in Settings",
+  "geofence.not_configured_employee": "Location verification: not configured — ask your store's manager.",
   "geofence.go_to_settings": "Go to Settings",
   "clock.location_col": "Location",
   "clock.history_auto": "(auto clock-out)",

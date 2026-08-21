@@ -10,6 +10,7 @@ import {
   ErrorState,
   LoadingState,
 } from "../components/ui/EmptyState";
+import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
 import { useSession } from "../hooks/useSession";
 import { errorMessage } from "../lib/errorMessage";
 import { type GeolocationError, getCurrentCoords } from "../lib/geolocation";
@@ -55,6 +56,8 @@ export function ClockPage() {
   const userId = user?.id;
   const ready = Boolean(storeId && userId);
   const [locError, setLocError] = useState<string | null>(null);
+  const role = useRoleOn(storeId);
+  const isManager = isManagerRole(role);
 
   const { data: store, isLoading: storeLoading } = useQuery({
     queryKey: ["store", storeId],
@@ -160,13 +163,15 @@ export function ClockPage() {
           ) : (
             t("geofence.stamped_only")
           )
-        ) : (
+        ) : isManager ? (
           <span>
             {t("geofence.not_configured")}{" "}
             <Link to={`/store/${storeId}/settings`} className="underline">
               {t("geofence.go_to_settings")}
             </Link>
           </span>
+        ) : (
+          <span>{t("geofence.not_configured_employee")}</span>
         )}
       </div>
 
