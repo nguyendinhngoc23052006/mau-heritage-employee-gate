@@ -14,7 +14,7 @@
     "demo lifespan (a few months) — prefer simplicity over defense-in-depth",
     "solo developer for the entire demo phase",
     "multi-tenant per store (design consideration)",
-    "supabase magic-link auth",
+    "supabase email + password auth (signInWithPassword)",
     "supabase free tier (no Branching, no PITR add-on)",
     "cloudflare pages git integration (no wrangler, no per-PR preview DBs)"
   ],
@@ -24,7 +24,7 @@
     "q3_team_size": "solo",
     "q4_environments": "one (main only)",
     "q5_repo_state": "empty (README + LICENSE only)",
-    "q6_constraints": "demo for several months until real budget; multi-tenant per store; magic-link auth; Cloudflare Pages; Supabase Free"
+    "q6_constraints": "demo for several months until real budget; multi-tenant per store; email + password auth; Cloudflare Pages; Supabase Free"
   },
   "deviations": [
     {

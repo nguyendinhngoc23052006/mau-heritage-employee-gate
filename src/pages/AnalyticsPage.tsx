@@ -148,16 +148,27 @@ function WeeklyTillVariance({ storeId }: { storeId: string }) {
   );
 }
 
+function ComingSoonNotice() {
+  const t = useT();
+
+  return (
+    <EmptyState>
+      <span className="inline-block rounded px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-800">
+        {t("analytics.coming_soon_badge")}
+      </span>
+      <p className="mt-2">{t("analytics.coming_soon_body")}</p>
+    </EmptyState>
+  );
+}
+
 function MissedShiftsSection() {
   const t = useT();
 
   return (
     <Card>
       <CardTitle>{t("analytics.missed_shifts")}</CardTitle>
-      <EmptyState>
-        {t("analytics.section_not_available")}
-        {/* TODO: implement missed-shifts aggregate */}
-      </EmptyState>
+      {/* TODO: implement missed-shifts aggregate */}
+      <ComingSoonNotice />
     </Card>
   );
 }
@@ -168,10 +179,8 @@ function LateArrivalRateSection() {
   return (
     <Card>
       <CardTitle>{t("analytics.late_rate")}</CardTitle>
-      <EmptyState>
-        {t("analytics.section_not_available")}
-        {/* TODO: implement late-arrival-rate aggregate */}
-      </EmptyState>
+      {/* TODO: implement late-arrival-rate aggregate */}
+      <ComingSoonNotice />
     </Card>
   );
 }

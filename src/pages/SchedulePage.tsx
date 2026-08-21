@@ -12,6 +12,7 @@ import { Input, Label, Textarea } from "../components/ui/Input";
 import { Select } from "../components/ui/Select";
 import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
 import { useSession } from "../hooks/useSession";
+import { errorMessage } from "../lib/errorMessage";
 import { useT } from "../lib/i18n";
 import { getSupabase } from "../lib/supabaseClient";
 import { listPayMultipliers } from "../services/payMultipliers";
@@ -240,6 +241,16 @@ export function SchedulePage() {
       queryClient.invalidateQueries({
         queryKey: ["shift_slots", storeId, weekStart, weekEnd],
       }),
+    onError: (err) => {
+      const message = errorMessage(err);
+      if (message.includes("slot already claimed")) {
+        alert(t("schedule.slot_lost_race"));
+      } else if (message.includes("not open for claim")) {
+        alert(t("schedule.slot_not_open"));
+      } else {
+        alert(t("common.error", { message }));
+      }
+    },
   });
 
   const releaseSlotMutation = useMutation({

@@ -8,7 +8,7 @@ You are the senior engineer and **orchestrator** of four tools as one system: Gi
 - **Deploy**: Cloudflare Pages Git integration (production = `main` push; previews = PR pushes). No wrangler, no GitHub Actions deploy workflows.
 - **DB**: Supabase Free (no Branching, no per-PR preview DBs — every preview URL hits the same production DB; treat preview data as production data)
 - **Team**: solo now, scaling to 1 boss + 3-5 managers + 30-50 employees per store; multi-tenant per store
-- **Auth**: Supabase magic-link
+- **Auth**: Supabase email + password (signInWithPassword)
 - **Lifespan**: demo for ~several months until a rebuild budget arrives
 
 Regenerate via `/refresh` (guide-value drift) or `/reset-scope` (scope change). Never hand-edit this block.
@@ -65,7 +65,7 @@ Regenerate via `/refresh` (guide-value drift) or `/reset-scope` (scope change). 
 - Never hand-write `config.toml` — run `npx supabase init` (npx fetches the CLI; needs current Node LTS (20+); never a global `-g` install). Then edit only known keys: `[db.seed]`, plus any declared functions/buckets. Leave the top-level `project_id` at its `supabase init` default. The parser is strict.
 - Edge Functions read secrets from `Deno.env`; never commit a secret.
 - `seed.sql` is idempotent and safe to run multiple times; on Free tier without Branching it isn't auto-applied, but keep it truthful so a future Pro upgrade Just Works. A loginable seeded user needs an `auth.users` row (crypt password, pgcrypto) with GoTrue text token columns written as `''` (never NULL) — at minimum `confirmation_token`, `recovery_token`, `email_change`, `email_change_token_new` — plus a matching `auth.identities` row (provider `'email'`, with a `provider_id`). Make the seed self-healing: after insert, `UPDATE` those columns from NULL to `''` for the seeded email.
-- Auth is **magic-link** (email OTP): use `supabase.auth.signInWithOtp({ email })` and rely on the emailed link for confirmation; no password flow.
+- Auth is **email + password** (`signInWithPassword` / `signUp` / `resetPasswordForEmail`); no magic-link OTP flow. If you ever add magic-link back, both sides of this contract must move in one PR.
 
 ## Memory (three tiers, self-pruning)
 - `CLAUDE.md` is your **constitution — read-only**; flag rule gaps to me, never self-edit. Learning goes to memory only.

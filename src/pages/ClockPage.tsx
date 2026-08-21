@@ -29,6 +29,24 @@ function formatTime(iso: string): string {
   });
 }
 
+const GEOFENCE_ERROR_RE =
+  /outside store geofence \(distance (\d+)m > radius (\d+)m\)/;
+
+function clockErrorMessage(
+  err: unknown,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): string {
+  const raw = errorMessage(err);
+  const match = raw.match(GEOFENCE_ERROR_RE);
+  if (match) {
+    return t("geofence.outside_radius", {
+      distance: match[1],
+      radius: match[2],
+    });
+  }
+  return raw;
+}
+
 export function ClockPage() {
   const t = useT();
   const { storeId } = useParams<{ storeId: string }>();
@@ -147,7 +165,7 @@ export function ClockPage() {
       )}
       {mutError && !locError && (
         <Alert variant="error" className="mb-4">
-          {errorMessage(mutError)}
+          {clockErrorMessage(mutError, t)}
         </Alert>
       )}
 

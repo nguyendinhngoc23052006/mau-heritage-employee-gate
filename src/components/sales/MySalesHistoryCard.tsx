@@ -52,7 +52,7 @@ export function MySalesHistoryCard({
                   >
                     {t(`sales.status_${r.status}`)}
                   </span>
-                  {r.variance_cents !== 0 && (
+                  {r.variance_cents !== null && r.variance_cents !== 0 && (
                     <span className="text-xs text-yellow-700">
                       {t("sales.variance", {
                         amount: formatVnd(r.variance_cents),

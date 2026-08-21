@@ -232,6 +232,10 @@ function PendingReviews({ storeId }: { storeId: string }) {
     );
 
   const requestApprove = (report: SalesReport) => {
+    if (report.variance_cents === null) {
+      approveMutation.mutate(report.id);
+      return;
+    }
     const total = report.cash_cents + report.card_cents + report.qr_cents;
     const variance = Math.abs(report.variance_cents);
     // Confirm when variance ratio hits threshold, OR when total is zero with any
@@ -297,7 +301,7 @@ function PendingReviews({ storeId }: { storeId: string }) {
         {confirmReport && (
           <p>
             {t("sales.large_variance_body", {
-              amount: formatVnd(confirmReport.variance_cents),
+              amount: formatVnd(confirmReport.variance_cents ?? 0),
               pct: thresholdPct,
             })}
           </p>
@@ -339,7 +343,7 @@ function PendingSalesRow({
         {formatVnd(report.card_cents)} | {t("sales.qr")}:{" "}
         {formatVnd(report.qr_cents)}
       </div>
-      {report.variance_cents !== 0 && (
+      {report.variance_cents !== null && report.variance_cents !== 0 && (
         <div className="text-xs font-semibold text-yellow-700">
           {t("sales.variance", { amount: formatVnd(report.variance_cents) })}
         </div>

@@ -59,7 +59,7 @@ export function AnnouncementsPage() {
   });
 
   if (!storeId) {
-    return <ErrorState message="Store not found" />;
+    return <ErrorState message={t("announcements.store_not_found")} />;
   }
 
   if (isLoading) {
@@ -70,7 +70,9 @@ export function AnnouncementsPage() {
     return (
       <ErrorState
         message={
-          error instanceof Error ? error.message : "Error loading announcements"
+          error instanceof Error
+            ? error.message
+            : t("announcements.error_loading")
         }
       />
     );
@@ -123,7 +125,7 @@ export function AnnouncementsPage() {
               message={
                 createMutation.error instanceof Error
                   ? createMutation.error.message
-                  : "Failed to create announcement"
+                  : t("announcements.create_failed")
               }
             />
           )}

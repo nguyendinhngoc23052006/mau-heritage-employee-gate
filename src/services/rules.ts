@@ -1,10 +1,5 @@
 import { getSupabase } from "../lib/supabaseClient";
-import type {
-  PointEvent,
-  PrizeFineEvent,
-  Rule,
-  RuleEvent,
-} from "../types/database";
+import type { Rule, RuleEvent } from "../types/database";
 
 export async function listRules(storeId: string): Promise<Rule[]> {
   const supabase = getSupabase();
@@ -70,74 +65,15 @@ export async function applyManualRule(params: {
   rule: Rule;
   target_user_id: string;
   reason?: string;
-}): Promise<{
-  ruleEvent: RuleEvent;
-  pointEvent?: PointEvent;
-  prizeFineEvent?: PrizeFineEvent;
-}> {
+  dedupe_key?: string;
+}): Promise<RuleEvent> {
   const supabase = getSupabase();
-  const uid = (await supabase.auth.getUser()).data.user?.id;
-
-  const ruleEventData = {
-    rule_id: params.rule.id,
-    store_id: params.rule.store_id,
-    target_user_id: params.target_user_id,
-    applied_by: uid,
-    applied_at: new Date().toISOString(),
-    snapshot_name: params.rule.name,
-    snapshot_trigger: params.rule.trigger_type,
-    snapshot_params: params.rule.trigger_params,
-    snapshot_points_delta: params.rule.points_delta,
-    snapshot_amount_cents: params.rule.amount_cents,
-    reason: params.reason ?? null,
-  };
-
-  const { data: ruleEventResult, error: ruleEventError } = await supabase
-    .from("rule_events")
-    .insert(ruleEventData)
-    .select()
-    .single();
-
-  if (ruleEventError) throw ruleEventError;
-  const ruleEvent = ruleEventResult as RuleEvent;
-
-  let pointEvent: PointEvent | undefined;
-  if (params.rule.points_delta !== 0) {
-    const { data: pointEventResult, error: pointEventError } = await supabase
-      .from("point_events")
-      .insert({
-        store_id: params.rule.store_id,
-        user_id: params.target_user_id,
-        delta: params.rule.points_delta,
-        reason: params.reason ?? null,
-        rule_event_id: ruleEvent.id,
-      })
-      .select()
-      .single();
-
-    if (pointEventError) throw pointEventError;
-    pointEvent = pointEventResult as PointEvent;
-  }
-
-  let prizeFineEvent: PrizeFineEvent | undefined;
-  if (params.rule.amount_cents !== 0) {
-    const { data: prizeFineEventResult, error: prizeFineEventError } =
-      await supabase
-        .from("prize_fine_events")
-        .insert({
-          store_id: params.rule.store_id,
-          user_id: params.target_user_id,
-          kind: params.rule.amount_cents >= 0 ? "prize" : "fine",
-          amount_cents: Math.abs(params.rule.amount_cents),
-          reason: params.reason ?? null,
-          rule_event_id: ruleEvent.id,
-        })
-        .select()
-        .single();
-
-    if (prizeFineEventError) throw prizeFineEventError;
-    prizeFineEvent = prizeFineEventResult as PrizeFineEvent;
-  }
-
-  return { ruleEvent, pointEvent, prizeFineEvent };
+  const { data, error } = await supabase.rpc("apply_manual_rule", {
+    p_rule_id: params.rule.id,
+    p_target_user_id: params.target_user_id,
+    p_reason: params.reason ?? null,
+    p_dedupe_key: params.dedupe_key ?? null,
+  });
+  if (error) throw error;
+  return data as RuleEvent;
 }
