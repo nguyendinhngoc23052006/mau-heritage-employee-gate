@@ -37,10 +37,16 @@ export function Dialog(props: DialogProps): JSX.Element | null {
     <div
       className="fixed inset-0 bg-brand-navy-dark/60 flex items-center justify-center z-50"
       onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") onClose();
+      }}
+      role="presentation"
     >
       <div
         className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+        role="presentation"
       >
         <h2 className="text-lg font-semibold text-brand-ink font-display">
           {title}

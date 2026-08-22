@@ -99,13 +99,14 @@ export function Select<T extends string = string>(
         e.preventDefault();
         setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : 0));
         break;
-      case "Enter":
+      case "Enter": {
         e.preventDefault();
         const selected = filteredOptions[highlightedIndex];
         if (selected && !selected.disabled) {
           handleSelect(selected.value);
         }
         break;
+      }
       case "Escape":
         e.preventDefault();
         handleClose();
@@ -132,6 +133,7 @@ export function Select<T extends string = string>(
     }
   }, [open]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: handleClose closes over stable refs (setOpen, setSearchQuery) and re-registering listeners on every render would churn document/window state.
   useEffect(() => {
     if (!open) return;
 
@@ -176,7 +178,6 @@ export function Select<T extends string = string>(
     ? createPortal(
         <ul
           ref={panelRef}
-          role="listbox"
           style={{
             position: "fixed",
             top: `${panelPosition.top}px`,
@@ -201,11 +202,16 @@ export function Select<T extends string = string>(
           {filteredOptions.map((option, idx) => (
             <li
               key={option.value}
-              role="option"
               aria-selected={option.value === value}
               title={option.title}
               onClick={() => {
                 if (!option.disabled) handleSelect(option.value);
+              }}
+              onKeyDown={(e) => {
+                if ((e.key === "Enter" || e.key === " ") && !option.disabled) {
+                  e.preventDefault();
+                  handleSelect(option.value);
+                }
               }}
               className={`cursor-pointer px-3 py-2 text-sm ${
                 idx === highlightedIndex ? "bg-brand-cream-light" : ""

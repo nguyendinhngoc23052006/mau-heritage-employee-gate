@@ -151,7 +151,9 @@ export function AnnouncementsPage() {
                   <h3 className="mb-2 font-semibold text-slate-900">
                     {announcement.title}
                   </h3>
-                  <p className="mb-2 text-sm text-slate-600">{announcement.body}</p>
+                  <p className="mb-2 text-sm text-slate-600">
+                    {announcement.body}
+                  </p>
                   <p className="text-xs text-slate-400">
                     {new Date(announcement.created_at).toLocaleString()}
                   </p>
@@ -195,7 +197,9 @@ export function AnnouncementsPage() {
             </Button>
             <Button
               variant="danger"
-              onClick={() => deactivateMutation.mutate(deactivateAnnouncementId)}
+              onClick={() =>
+                deactivateMutation.mutate(deactivateAnnouncementId)
+              }
               disabled={deactivateMutation.isPending}
             >
               {deactivateMutation.isPending

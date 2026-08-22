@@ -240,7 +240,8 @@ function PendingReviews({ storeId }: { storeId: string }) {
     const variance = Math.abs(report.variance_cents);
     // Confirm when variance ratio hits threshold, OR when total is zero with any
     // variance (a zero-total report with an expected > 0 must not bypass review).
-    const hits = total > 0 ? (variance / total) * 100 >= thresholdPct : variance > 0;
+    const hits =
+      total > 0 ? (variance / total) * 100 >= thresholdPct : variance > 0;
     if (hits) {
       setConfirmId(report.id);
     } else {

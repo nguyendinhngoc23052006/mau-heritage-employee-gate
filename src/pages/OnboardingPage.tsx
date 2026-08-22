@@ -260,7 +260,7 @@ export function OnboardingPage() {
           const anyErr = err as { code?: string; message?: string };
           if (
             anyErr.code === "42501" ||
-            (anyErr.message && anyErr.message.includes("join code"))
+            anyErr.message?.includes("join code")
           ) {
             if (previewedRef.current) {
               setPreviewError(t("onboarding.code_stale_hint"));
