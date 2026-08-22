@@ -37,6 +37,7 @@ export function Layout() {
   const t = useT();
   const { locale, setLocale } = useI18n();
   const navigate = useNavigate();
+  const { storeId } = useParams<{ storeId: string }>();
 
   async function signOut() {
     await getSupabase().auth.signOut();
@@ -49,27 +50,31 @@ export function Layout() {
     // horizontal-scroll strip, an over-long header row, etc.) from
     // pushing the whole viewport wider than the screen on mobile.
     <div className="min-h-screen w-full overflow-x-hidden bg-brand-cream-light">
-      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-brand-hairline bg-white px-4 py-3">
-        <div className="flex min-w-0 flex-wrap items-center gap-3">
+      <header className="border-b border-brand-hairline bg-white">
+        <div className="flex items-center justify-between gap-2 px-4 py-2">
           <Wordmark className="text-base" />
-          <StoreSwitcher />
-          <StoreIdentity />
+          <div className="flex items-center gap-2">
+            <Select
+              value={locale}
+              onChange={setLocale}
+              options={[
+                { value: "vi", label: "Tiếng Việt" },
+                { value: "en", label: "English" },
+              ]}
+              ariaLabel={t("profile.locale")}
+              className="w-32"
+            />
+            <Button variant="ghost" onClick={signOut}>
+              {t("nav.signout")}
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Select
-            value={locale}
-            onChange={setLocale}
-            options={[
-              { value: "vi", label: "Tiếng Việt" },
-              { value: "en", label: "English" },
-            ]}
-            ariaLabel={t("profile.locale")}
-            className="w-32"
-          />
-          <Button variant="ghost" onClick={signOut}>
-            {t("nav.signout")}
-          </Button>
-        </div>
+        {storeId && (
+          <div className="flex flex-wrap items-center gap-2 px-4 pb-2">
+            <StoreSwitcher />
+            <StoreIdentity />
+          </div>
+        )}
       </header>
       <Nav />
       <main className="mx-auto w-full max-w-6xl px-4 py-6">

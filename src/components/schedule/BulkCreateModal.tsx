@@ -188,7 +188,6 @@ export function BulkCreateModal({ open, onClose, storeId, onSuccess }: Props) {
           <Label>{t("schedule.bulk_days_of_week")}</Label>
           <div className="grid grid-cols-4 gap-2 mt-2">
             {dayLabels.map((label, idx) => (
-              // biome-ignore lint/a11y/noLabelWithoutControl: label wraps the input
               <label key={label} className="flex items-center gap-2">
                 <input
                   type="checkbox"
@@ -220,6 +219,7 @@ export function BulkCreateModal({ open, onClose, storeId, onSuccess }: Props) {
                 template.start >= template.end;
               return (
                 <div
+                  // biome-ignore lint/suspicious/noArrayIndexKey: templates are order-defined ephemeral rows with no stable id
                   key={`tpl-${idx}`}
                   className="border border-brand-hairline rounded p-3 space-y-2"
                 >

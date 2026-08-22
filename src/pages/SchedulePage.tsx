@@ -259,6 +259,9 @@ export function SchedulePage() {
       queryClient.invalidateQueries({
         queryKey: ["shift_slots", storeId, weekStart, weekEnd],
       }),
+    onError: (err) => {
+      alert(t("common.error", { message: errorMessage(err) }));
+    },
   });
 
   const setShiftClaimOpenMutation = useMutation({
@@ -636,6 +639,9 @@ export function SchedulePage() {
         onSuccess={() => {
           queryClient.invalidateQueries({
             queryKey: ["shifts", storeId, weekStart, weekEnd],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["shift_slots", storeId, weekStart, weekEnd],
           });
         }}
       />

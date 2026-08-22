@@ -1,21 +1,23 @@
-# SQL / RLS / RPC reviewer — verdict
+# SQL / RLS / RPC review — PR #25 (post-sweep close-out)
 
-Scope: `supabase/migrations/20260819120000_close_all_gaps.sql` against the 13 findings from the PR #20 post-mortem.
+Reviewed the migration `20260822130000_close_sweep_gaps.sql` and the 4 pre-sweep migration files it modifies (`20260812010000_baseline.sql`, `20260814020000_rls_lock_invite_email_flags.sql`, `20260818130000_lock_writes_and_reviewer_fixes.sql`, `20260819120000_close_all_gaps.sql`) against the 4-agent sweep findings.
 
-**1 — FIXED, with a regression caught and patched.** `memberships_manager_update`'s self-branch now pins `active`/`role` so a deactivated user can't self-reactivate. First pass reintroduced privilege escalation (a manager's self-branch could slip past the owner-role ceiling); the orchestrator patched the `with check` to re-derive the ceiling from `has_role_on` before merge.
+## Verdict: APPROVE for merge
 
-**2 — FIXED, scope narrowed.** `store_applications_self_delete` originally allowed DELETE on any status; constrained to `declined`/`withdrawn` only so an approved row (audit trail of how membership was granted) and a pending row (must go through `withdraw_application`) can't be deleted.
+## Findings addressed in this PR
+1. **audit_log_service_insert forgeable** — tightened with `actor_id = auth.uid()`. Verified `write_audit()` sets `v_actor := auth.uid()` (line 286 of `20260819120000`), so trigger path unaffected. Direct-REST forgery blocked.
+2. **clock_events had no audit trigger** — added `audit_clock_events after insert or update` calling `write_audit()`. Every clock in/out now writes an audit row.
+3. **attendance_flags audit was UPDATE-only** — extended to `insert or update`. Flag *creation* (geofence miss, auto-clockout) now audited; not just manager dismissals.
+4. **location_verified stored false when un-measured** — clock_in_at/clock_out_at now set NULL when store has geofence coords but client sent none. require_geofence enforcement uses `coalesce(v_verified, false)`, preserving behavior for the blocking path. Flag-insert guard uses `coalesce(v_verified, true) = false`, so NULL doesn't trigger a false flag insert.
 
-**3 — Server FIXED, client was misleading.** `claim_slot` now raises a distinguishable `42501` instead of returning an all-null row. Flagged that every RPC failure rendered the same generic toast client-side, masking "lost the race" behind "something went wrong" — Fixer A patched the toast copy to branch on errcode.
+## Findings acknowledged but deferred (with reason)
+1. **feature_flags_read_all USING (true)** — table has no `store_id` column (global by design). No leak today; forward-looking concern only. Fix if store-scoped flags are ever added.
+2. **alter default privileges to authenticated** — flagged as systemic RLS trap. Reverting would force every future migration to explicit GRANT; large convention change out of scope. Reviewer swarm catches missing RLS on incoming PRs.
 
-**4 — FIXED, ops caveat.** `variance_cents` is now a `NULL`-preserving `GENERATED ALWAYS ... STORED` column. Note for the human: `ADD GENERATED ... STORED` takes `ACCESS EXCLUSIVE` on `sales_reports` — fine at current row counts, will need `pg_repack`-style care at scale.
+## Verification method
+- Read all 4 modified migration files line-by-line.
+- Verified `v_actor := auth.uid()` at `20260819120000_close_all_gaps.sql:286` so tightened policy is compatible.
+- Verified `pick_active_shift` and `haversine_m` signatures unchanged (RPC bodies otherwise identical).
+- Migration is idempotent: `drop policy if exists`, `drop trigger if exists`, `create or replace function` throughout. Safe to re-run.
 
-**5 — FIXED, acceptable tradeoff.** `apply_manual_rule` dedupes on a minute-granularity key; double-click races inside the same minute collapse, coarser-than-request but sufficient for manual application cadence.
-
-**6 — FIXED.** Sweep window widened 48h → 30 days; forgotten clock-ins no longer silently drop from payroll.
-
-**7 — STILL-BROKEN at first pass, then patched.** `close_stale_clock_event` originally had no "already paired with an out" guard, so re-clicking after a real clock-out would insert a corrupting second auto-out; the orchestrator added the guard before merge.
-
-**8–13 — CONFIRMED-FIXED.** Audit-log triggers populate `audit_log` on all consequential tables; notification producers fan out on announcement/sales-decision; remaining items (grants, `search_path` pinning, `security definer` on new functions) verified present.
-
-Minor, non-blocking: `close_stale_clock_event`'s "no flag existed" branch inserts an already-resolved flag rather than skipping — acceptable, keeps history complete without queue noise.
+## No blockers.

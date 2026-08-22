@@ -97,6 +97,7 @@ describe("clock service", () => {
       order: vi.fn(),
       gte: vi.fn(),
       lte: vi.fn(),
+      // biome-ignore lint/suspicious/noThenProperty: intentional thenable to mimic supabase-js PostgrestBuilder chain
       then: (resolve: (v: unknown) => void) =>
         resolve({ data: [], error: null }),
     };

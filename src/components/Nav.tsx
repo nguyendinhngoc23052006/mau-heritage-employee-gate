@@ -24,8 +24,6 @@ const ITEMS: Item[] = [
   { to: "settings", labelKey: "nav.settings", managerOnly: true },
 ];
 
-const ADD_STORE_TO = "/onboarding?add=1";
-
 export function Nav() {
   const { storeId } = useParams();
   const { data } = useMemberships();
@@ -58,12 +56,6 @@ export function Nav() {
             {t(i.labelKey)}
           </NavLink>
         ))}
-        <NavLink
-          to={ADD_STORE_TO}
-          className="shrink-0 rounded-md px-3 py-1.5 text-sm font-medium text-brand-ink transition hover:bg-brand-cream-light"
-        >
-          {t("nav.add_store")}
-        </NavLink>
       </div>
     </nav>
   );

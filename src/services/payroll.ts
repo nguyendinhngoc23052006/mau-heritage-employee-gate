@@ -1,4 +1,4 @@
-import { minutesBetween, wagesCents } from "../lib/money";
+import { minutesBetween } from "../lib/money";
 import { getSupabase } from "../lib/supabaseClient";
 import type { PrizeFineEvent } from "../types/database";
 
@@ -72,24 +72,25 @@ export async function computePayroll(
   if (pfError) throw pfError;
   if (multError) throw multError;
 
-  // Build multiplier lookup by date
   const multiplierByDate = new Map<string, number>();
-  (multipliers ?? []).forEach((m: any) => {
+  (
+    (multipliers ?? []) as Array<{ date: string; multiplier: number | string }>
+  ).forEach((m) => {
     multiplierByDate.set(m.date, Number(m.multiplier));
   });
 
-  // Fetch profiles for display names
   const userIds = members?.map((m) => m.user_id) ?? [];
-  const { data: profiles, error: profilesError } = await supabase
-    .from("profiles")
-    .select("id, display_name")
-    .in("id", userIds);
-
-  if (profilesError) throw profilesError;
-
-  const profileMap = new Map(
-    (profiles ?? []).map((p) => [p.id, p.display_name]),
-  );
+  const profileMap = new Map<string, string | null>();
+  if (userIds.length > 0) {
+    const { data: profiles, error: profilesError } = await supabase
+      .from("profiles")
+      .select("id, display_name")
+      .in("id", userIds);
+    if (profilesError) throw profilesError;
+    for (const p of profiles ?? []) {
+      profileMap.set(p.id, p.display_name);
+    }
+  }
 
   // Group clock events by user
   const clockByUser = new Map<
@@ -198,11 +199,9 @@ function pairClockEventsByDate(
       });
       const minutes = minutesBetween(inTime, event.at);
 
-      if (!dailyByDate.has(date)) {
-        dailyByDate.set(date, { minutes: 0, multiplier: 1.0 });
-      }
-      const daily = dailyByDate.get(date)!;
-      daily.minutes += minutes;
+      const existing = dailyByDate.get(date) ?? { minutes: 0, multiplier: 1.0 };
+      existing.minutes += minutes;
+      dailyByDate.set(date, existing);
 
       inTime = null;
     }
@@ -213,9 +212,13 @@ function pairClockEventsByDate(
   const sortedDates = Array.from(dailyByDate.keys()).sort();
 
   for (const date of sortedDates) {
-    const daily = dailyByDate.get(date)!;
+    const daily = dailyByDate.get(date);
+    if (!daily) continue;
     const multiplier = multiplierByDate.get(date) ?? 1.0;
-    const wages = wagesCents(daily.minutes, hourlyRate * multiplier);
+    // Integer-safe: (minutes × rateCents × mulBps) / (60 × 100). Multiplier
+    // is numeric(4,2) in Postgres, so 2 decimal places is exact.
+    const mulBps = Math.round(multiplier * 100);
+    const wages = Math.floor((daily.minutes * hourlyRate * mulBps) / 6000);
 
     breakdown.push({
       date,

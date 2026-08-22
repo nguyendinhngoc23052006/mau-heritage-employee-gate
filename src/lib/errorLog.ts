@@ -17,8 +17,8 @@ export async function logClientError(
       stack,
       ua: navigator.userAgent,
     });
-  } catch {
-    // silent — never error-loop the error logger
+  } catch (logErr) {
+    console.error("[errorLog] failed to log client error", logErr, err);
   }
 }
 
