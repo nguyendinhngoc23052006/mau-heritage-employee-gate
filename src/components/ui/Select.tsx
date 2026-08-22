@@ -1,11 +1,13 @@
 import { ChevronDown } from "lucide-react";
 import { type JSX, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useT } from "../../lib/i18n";
 
 export interface SelectOption<T extends string = string> {
   value: T;
   label: string;
   disabled?: boolean;
+  title?: string;
 }
 
 export interface SelectProps<T extends string = string> {
@@ -35,6 +37,7 @@ export function Select<T extends string = string>(
     searchable = false,
   } = props;
 
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
@@ -50,7 +53,7 @@ export function Select<T extends string = string>(
   const selectedLabel =
     options.find((opt) => opt.value === value)?.label ||
     placeholder ||
-    "Select…";
+    t("common.select_placeholder");
 
   const filteredOptions = searchable
     ? options.filter((opt) =>
@@ -188,7 +191,7 @@ export function Select<T extends string = string>(
               <input
                 ref={searchInputRef}
                 type="text"
-                placeholder="Search…"
+                placeholder={t("common.search_placeholder")}
                 value={searchTerm}
                 onChange={handleSearchChange}
                 className="block w-full rounded-md border border-brand-hairline px-3 py-2 text-sm shadow-sm focus:border-brand-navy focus:outline-none focus:ring-1 focus:ring-brand-navy"
@@ -200,6 +203,7 @@ export function Select<T extends string = string>(
               key={option.value}
               role="option"
               aria-selected={option.value === value}
+              title={option.title}
               onClick={() => {
                 if (!option.disabled) handleSelect(option.value);
               }}

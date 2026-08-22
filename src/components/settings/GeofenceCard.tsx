@@ -31,6 +31,7 @@ export function GeofenceCard({ storeId }: { storeId: string }) {
   const [radius, setRadius] = useState("150");
   const [require, setRequire] = useState(false);
   const [locErr, setLocErr] = useState<string | null>(null);
+  const [locErrDenied, setLocErrDenied] = useState(false);
   const [saved, setSaved] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -49,12 +50,17 @@ export function GeofenceCard({ storeId }: { storeId: string }) {
 
   const useMyLocation = async () => {
     setLocErr(null);
+    setLocErrDenied(false);
     try {
-      const c = await getCurrentCoords();
+      const c = await getCurrentCoords({
+        enableHighAccuracy: false,
+        timeoutMs: 12000,
+      });
       setLat(c.lat.toFixed(6));
       setLng(c.lng.toFixed(6));
     } catch (e) {
       const gerr = e as GeolocationError;
+      setLocErrDenied(gerr.kind === "denied");
       setLocErr(
         gerr.kind === "denied"
           ? t("geofence.denied")
@@ -133,6 +139,17 @@ export function GeofenceCard({ storeId }: { storeId: string }) {
             />
           </div>
         </div>
+        <p className="text-xs text-slate-500">
+          {t("settings.geofence.manual_hint")}{" "}
+          <a
+            href="https://www.google.com/maps"
+            target="_blank"
+            rel="noreferrer"
+            className="text-brand-navy underline"
+          >
+            Google Maps
+          </a>
+        </p>
         <div>
           <Label htmlFor="gf-radius">{t("settings.geofence.radius_m")}</Label>
           <Input
@@ -168,7 +185,16 @@ export function GeofenceCard({ storeId }: { storeId: string }) {
             {save.isPending ? t("common.loading") : t("common.save")}
           </Button>
         </div>
-        {locErr && <Alert variant="error">{locErr}</Alert>}
+        {locErr && (
+          <>
+            <Alert variant="error">{locErr}</Alert>
+            {locErrDenied && (
+              <p className="text-xs text-slate-500">
+                {t("geofence.denied_hint")}
+              </p>
+            )}
+          </>
+        )}
         {save.error && (
           <Alert variant="error">{errorMessage(save.error)}</Alert>
         )}

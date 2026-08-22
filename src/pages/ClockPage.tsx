@@ -60,6 +60,7 @@ export function ClockPage() {
   const userId = user?.id;
   const ready = Boolean(storeId && userId);
   const [locError, setLocError] = useState<string | null>(null);
+  const [locErrorDenied, setLocErrorDenied] = useState(false);
   const role = useRoleOn(storeId);
   const isManager = isManagerRole(role);
   const { isLoading: membershipsLoading } = useMemberships();
@@ -92,6 +93,7 @@ export function ClockPage() {
     op: (loc: { lat?: number; lng?: number; accuracyM?: number }) => Promise<T>,
   ): Promise<T> {
     setLocError(null);
+    setLocErrorDenied(false);
     const geofenceActive =
       store != null && store.lat != null && store.lng != null;
     if (!geofenceActive) return op({});
@@ -101,6 +103,7 @@ export function ClockPage() {
     } catch (e) {
       const gerr = e as GeolocationError;
       if (store?.require_geofence) {
+        setLocErrorDenied(gerr.kind === "denied");
         setLocError(
           gerr.kind === "denied"
             ? t("geofence.denied")
@@ -181,9 +184,14 @@ export function ClockPage() {
       </div>
 
       {locError && (
-        <Alert variant="error" className="mb-4">
-          {locError}
-        </Alert>
+        <div className="mb-4">
+          <Alert variant="error">{locError}</Alert>
+          {locErrorDenied && (
+            <p className="mt-1 text-xs text-slate-500">
+              {t("geofence.denied_hint")}
+            </p>
+          )}
+        </div>
       )}
       {mutError && !locError && (
         <Alert variant="error" className="mb-4">
