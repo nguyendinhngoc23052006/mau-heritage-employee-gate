@@ -43,7 +43,11 @@ export function StoreSwitcher() {
       value: m.store_id,
       label: m.store.name,
     })),
-    { value: ADD_SENTINEL, label: t("store.switcher.add") },
+    {
+      value: ADD_SENTINEL,
+      label: t("store.switcher.add"),
+      title: t("store.switcher.add_full"),
+    },
   ];
 
   const searchable = data.length >= 6;
