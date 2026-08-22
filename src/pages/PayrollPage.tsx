@@ -8,6 +8,7 @@ import {
   ErrorState,
   LoadingState,
 } from "../components/ui/EmptyState";
+import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
 import { downloadCsv, toCsv } from "../lib/csv";
 import { useT } from "../lib/i18n";
 import { formatVnd } from "../lib/money";
@@ -19,12 +20,17 @@ interface PayrollPageProps {
 
 export function PayrollPage({ storeId }: PayrollPageProps) {
   const t = useT();
+  const role = useRoleOn(storeId);
+  const isManager = isManagerRole(role);
   const [date, setDate] = useState(() => new Date());
 
   const startDate = startOfMonth(date);
   const endDate = endOfMonth(date);
-  const fromIso = startDate.toISOString();
-  const toIso = endDate.toISOString();
+  // Payroll is bucketed by Asia/Ho_Chi_Minh calendar dates; anchor the range
+  // to +07:00 boundaries so a browser in another timezone doesn't clip/leak
+  // hours at month edges.
+  const fromIso = `${format(startDate, "yyyy-MM-dd")}T00:00:00+07:00`;
+  const toIso = `${format(endDate, "yyyy-MM-dd")}T23:59:59.999+07:00`;
 
   const {
     data: payroll,
@@ -33,6 +39,7 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
   } = useQuery({
     queryKey: ["payroll", storeId, fromIso, toIso],
     queryFn: () => computePayroll(storeId, fromIso, toIso),
+    enabled: isManager,
   });
 
   const handleDownloadCsv = () => {
@@ -114,6 +121,10 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
     () => payroll?.reduce((sum, row) => sum + row.total_cents, 0) ?? 0,
     [payroll],
   );
+
+  if (!isManager) {
+    return <ErrorState message={t("analytics.access_denied")} />;
+  }
 
   if (isLoading) {
     return <LoadingState>{t("common.loading")}</LoadingState>;

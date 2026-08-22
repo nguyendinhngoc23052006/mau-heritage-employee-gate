@@ -1,4 +1,4 @@
-import { minutesBetween, wagesCents } from "../lib/money";
+import { minutesBetween } from "../lib/money";
 import { getSupabase } from "../lib/supabaseClient";
 import type { PrizeFineEvent } from "../types/database";
 
@@ -79,18 +79,18 @@ export async function computePayroll(
     multiplierByDate.set(m.date, Number(m.multiplier));
   });
 
-  // Fetch profiles for display names
   const userIds = members?.map((m) => m.user_id) ?? [];
-  const { data: profiles, error: profilesError } = await supabase
-    .from("profiles")
-    .select("id, display_name")
-    .in("id", userIds);
-
-  if (profilesError) throw profilesError;
-
-  const profileMap = new Map(
-    (profiles ?? []).map((p) => [p.id, p.display_name]),
-  );
+  const profileMap = new Map<string, string | null>();
+  if (userIds.length > 0) {
+    const { data: profiles, error: profilesError } = await supabase
+      .from("profiles")
+      .select("id, display_name")
+      .in("id", userIds);
+    if (profilesError) throw profilesError;
+    for (const p of profiles ?? []) {
+      profileMap.set(p.id, p.display_name);
+    }
+  }
 
   // Group clock events by user
   const clockByUser = new Map<
@@ -215,7 +215,10 @@ function pairClockEventsByDate(
     const daily = dailyByDate.get(date);
     if (!daily) continue;
     const multiplier = multiplierByDate.get(date) ?? 1.0;
-    const wages = wagesCents(daily.minutes, hourlyRate * multiplier);
+    // Integer-safe: (minutes × rateCents × mulBps) / (60 × 100). Multiplier
+    // is numeric(4,2) in Postgres, so 2 decimal places is exact.
+    const mulBps = Math.round(multiplier * 100);
+    const wages = Math.floor((daily.minutes * hourlyRate * mulBps) / 6000);
 
     breakdown.push({
       date,

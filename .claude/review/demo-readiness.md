@@ -1,21 +1,30 @@
-# Demo-readiness — verdict for header-cleanup-and-geoguard-ia4u9p
+# Demo-readiness review — PR #25 (post-sweep close-out)
 
-**Two user-reported bugs closed:**
+Reviewed against the "demo-posture tradeoff" in CLAUDE.md: preview URLs share the prod DB, so every write in a preview is a prod write.
 
-1. **Geoguard blocks EVERY user with "browser not allowed"** — root cause was `public/_headers` shipping `Permissions-Policy: geolocation=()` from the first commit (before the geofence feature existed). Chromium/Safari refused to even prompt. One-character fix (`geolocation=(self)`) unblocks the entire feature. This is the single most impactful line in the diff.
+## Verdict: APPROVE for merge; safe for demo rollout.
 
-2. **Mobile header stacked 5 rows deep with a duplicate add-store affordance** — screenshot from user showed the ugly result. Removed Nav's `+ Cửa hàng khác` (dup of StoreSwitcher's button), split header into two clean rows, shortened the StoreSwitcher label from 32 chars to 15 chars with full copy preserved as a tooltip.
+## Destructive-write audit for this PR
+- **No new destructive writes.** Everything is either a policy tighten (deny stricter than before), a trigger add (write more audit rows), or a client-side gate/UX fix (no new writes). The migration is idempotent and safe to re-run.
+- **audit_log tighten:** existing rows unaffected; only future INSERTs are stricter. Trigger path unchanged (uses `auth.uid()`).
+- **clock_events audit trigger:** additive — writes to `audit_log`, no schema change to `clock_events` itself.
+- **attendance_flags audit trigger:** additive — extends existing trigger from UPDATE to INSERT+UPDATE.
+- **Clock RPC location_verified NULL semantics:** existing rows with `location_verified = false` unchanged (data migration not attempted; new rows going forward correctly use NULL when un-measured).
 
-**Manager flow after this PR — traced end-to-end:**
-Settings → Store location → "Use my current location" → browser NOW prompts for permission (previously silently rejected) → tap Allow → lat/lng populate → Save → toggle Require → back to Clock page → Clock In from within radius succeeds, from outside fails with a Vietnamese message showing the actual distance.
+## User-visible changes on preview
+1. Fonts now render (previously fell back to system fonts).
+2. Payroll page requires manager role — employees see access_denied instead of the table.
+3. StoreSwitcher shows the store name + add option for single-store users (not just an add button).
+4. Bulk-create shifts refreshes slot counts immediately.
+5. Release slot failures now surface as alerts (were silent).
 
-**Employee flow:**
-Clock page shows the correct not-configured message with a "ask your manager" hint (no dead-end link for non-managers). Once configured, geofence enforcement fires server-side and surfaces a Vietnamese distance-based error.
+## Rollback path
+- **CSP + client fixes:** Cloudflare Pages → Deployments → Rollback to the prior deployment. Instant.
+- **Migration:** reversing SQL is documented in `.claude/pr-body.md → How to roll it back`.
 
-**Non-blockers noted but not fixed here:**
-- Denied-hint copy assumes desktop Chrome menu labels; mobile Chrome/Safari path differs (through the address-bar lock icon). Understandable enough not to fail a demo, but polish later.
-- Dead-code `storeId &&` guard in Layout (Layout only mounts under `/store/:storeId`).
+## Gaps still open (documented, not blocking demo)
+- GPS layer-2 anti-spoof (rotating store QR / IP allowlist / manager-approval flow). Layer-1 defense in place: RLS + SECURITY DEFINER + haversine re-check + audit trail. A rooted phone with fake-location can still cheat.
+- Auto-triggered rule evaluators (missed_shift, late_arrival, till_variance, points_threshold) not wired to pg_cron. Manual review only for now.
+- Analytics "missed shifts" + "late arrivals" sections are placeholder "coming soon".
 
-**Production readiness for a Mau Heritage store today:** YES for the geoguard flow specifically — this PR is what makes the anti-cheat feature actually usable in practice. The header fix removes a visible embarrassment. Everything from prior PRs (auth, invites, RLS lockdown, audit triggers, notification producers, variance/dedupe/pagination hardening) already sits behind this in `main`.
-
-Sign-off: PASS. Recommend merge after preview verification.
+None of these are regressions from PR #25. Merge does not make the demo less safe.

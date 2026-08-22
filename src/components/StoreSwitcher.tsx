@@ -25,18 +25,7 @@ export function StoreSwitcher() {
     }
   };
 
-  if (data.length < 2) {
-    return (
-      <button
-        type="button"
-        onClick={() => navigate("/onboarding?add=1")}
-        title={t("store.switcher.add_full")}
-        className="text-sm font-medium text-brand-ink hover:underline"
-      >
-        {t("store.switcher.add")}
-      </button>
-    );
-  }
+  if (data.length === 0) return null;
 
   const options = [
     ...data.map((m) => ({
