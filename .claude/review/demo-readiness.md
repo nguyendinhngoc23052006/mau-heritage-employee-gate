@@ -1,31 +1,21 @@
-# Anti-cheat + demo readiness reviewer — verdict
+# Demo-readiness — verdict for header-cleanup-and-geoguard-ia4u9p
 
-## Section 1 — the 22 items from the PR #20 post-mortem
+**Two user-reported bugs closed:**
 
-**1–4 — FIXED.** Geofence enforcement, distance re-check, shift auto-linking, and idempotent clock writes all confirmed working.
+1. **Geoguard blocks EVERY user with "browser not allowed"** — root cause was `public/_headers` shipping `Permissions-Policy: geolocation=()` from the first commit (before the geofence feature existed). Chromium/Safari refused to even prompt. One-character fix (`geolocation=(self)`) unblocks the entire feature. This is the single most impactful line in the diff.
 
-**5 — STILL-BROKEN.** Auto rule-detection (the pg_cron/scheduled tick that should fire rules automatically) never actually runs anything — schema is ready but no trigger or scheduled job invokes it. Subsequently badged as "not implemented" in the UI by Fixer A rather than silently presented as live.
+2. **Mobile header stacked 5 rows deep with a duplicate add-store affordance** — screenshot from user showed the ugly result. Removed Nav's `+ Cửa hàng khác` (dup of StoreSwitcher's button), split header into two clean rows, shortened the StoreSwitcher label from 32 chars to 15 chars with full copy preserved as a tooltip.
 
-**6 — STILL-BROKEN.** Analytics cards are stubs with placeholder numbers, not wired to real aggregates. Subsequently marked "coming soon" by Fixer B so the demo doesn't misrepresent data.
+**Manager flow after this PR — traced end-to-end:**
+Settings → Store location → "Use my current location" → browser NOW prompts for permission (previously silently rejected) → tap Allow → lat/lng populate → Save → toggle Require → back to Clock page → Clock In from within radius succeeds, from outside fails with a Vietnamese message showing the actual distance.
 
-**7–11 — FIXED.** Sales approval variance guard, attendance-flags queue, notification fan-out, audit log population, and manual rule apply dedupe all confirmed.
+**Employee flow:**
+Clock page shows the correct not-configured message with a "ask your manager" hint (no dead-end link for non-managers). Once configured, geofence enforcement fires server-side and surfaces a Vietnamese distance-based error.
 
-**12 — PARTIAL, deferred.** Five list views (audit log, notifications, rule events, point events, prize/fine events) remain unbounded — no pagination/limit yet. Non-blocking at current row counts for a demo; flagged as tech debt for the scale rule.
+**Non-blockers noted but not fixed here:**
+- Denied-hint copy assumes desktop Chrome menu labels; mobile Chrome/Safari path differs (through the address-bar lock icon). Understandable enough not to fail a demo, but polish later.
+- Dead-code `storeId &&` guard in Layout (Layout only mounts under `/store/:storeId`).
 
-**13–14 — FIXED.** Confirmed.
+**Production readiness for a Mau Heritage store today:** YES for the geoguard flow specifically — this PR is what makes the anti-cheat feature actually usable in practice. The header fix removes a visible embarrassment. Everything from prior PRs (auth, invites, RLS lockdown, audit triggers, notification producers, variance/dedupe/pagination hardening) already sits behind this in `main`.
 
-**15 — PARTIAL, then patched.** Several hardcoded-English strings remained outside the i18n table; Fixer B patched the holdouts into the translation set.
-
-**16 — STILL-BROKEN, then patched.** The profile locale-switch button was dead (no handler wired). Fixer A wired it.
-
-**17–21 — FIXED.** Confirmed.
-
-**22 — PARTIAL, deferred.** 58% of `src/services/` remains untested by line count. Acceptable for demo posture; not a merge blocker, tracked as debt.
-
-## Section 2 — new gaps found in this review pass
-
-Stale `.claude/pr-body.md` (still described merged PR #20), empty `.claude/review/`, `ApplyRulePage` not filtering rules by store/active state, `notify_sales_decision`'s dispute-status branch inserting a `null` body when `dispute_reason` is unset, and an `actions/checkout` version mismatch between `apply-migrations.yml` (v4) and `ci.yml` (v7). All five subsequently patched: this PR rewrites `pr-body.md`, populates `.claude/review/`, and pins `apply-migrations.yml` to v7; the `ApplyRulePage` filter and the null-body guard were closed in the orchestrator's follow-up fixer pass.
-
-## Section 3 — production-readiness call
-
-**Yes, after the fixer swarm closes items 5, 6, 15, 16, and the `ApplyRulePage` filter — all now closed.** Remaining open items (12, 22) are logged debt, not blockers, for a demo running on Supabase Free with a single production DB shared by every preview.
+Sign-off: PASS. Recommend merge after preview verification.
