@@ -1,0 +1,60 @@
+{
+  "employee_detail": {
+    "title": "Employee Details",
+    "not_found": "Employee not found",
+    "access_denied": "Only managers can view employee details",
+    "back_to_people": "← Back to People",
+    "current_rate": "Current Rate",
+    "recent_clock_events": "Recent Clock Events (Last 30 Days)",
+    "recent_shifts": "Recent Shifts (Last 30 Days)",
+    "no_clock_events": "No clock events in the last 30 days",
+    "no_shifts": "No shifts in the last 30 days",
+    "clock_in": "Clock in",
+    "clock_out": "Clock out",
+    "time": "Time",
+    "location": "Location",
+    "shift": "Shift",
+    "starts": "Starts",
+    "ends": "Ends",
+    "prize_fine_history": "Prize/Fine History",
+    "no_prize_fine": "No prizes or fines recorded",
+    "rate_history": "Rate History",
+    "no_rate_history": "No rate history",
+    "effective_from": "Effective From",
+    "effective_to": "Effective To",
+    "rate": "Rate",
+    "changed_by": "Changed By",
+    "attendance_flags": "Attendance Flags",
+    "no_flags": "No attendance flags"
+  },
+  "danger_zone": {
+    "title": "Danger Zone",
+    "transfer_ownership": "Transfer Ownership",
+    "delete_store": "Delete Store",
+    "owner_only": "Owner only"
+  },
+  "transfer_ownership": {
+    "title": "Transfer Ownership",
+    "description": "Select an active manager to transfer ownership to. You will become a manager.",
+    "select_manager": "Select Manager",
+    "no_managers": "Promote someone to manager first",
+    "warning": "You will become a manager. This cannot be undone via the app.",
+    "confirm": "Transfer Ownership",
+    "cancel": "Cancel",
+    "transferring": "Transferring..."
+  },
+  "delete_store": {
+    "title": "Delete Store",
+    "description": "Type the store name exactly to confirm deletion. This cannot be undone.",
+    "store_name": "Store Name",
+    "confirm": "Delete Store",
+    "cancel": "Cancel",
+    "deleting": "Deleting...",
+    "warning": "This deletes the store, all members, all shifts, all history. Cannot be undone."
+  },
+  "people": {
+    "resend_invite": "Resend Invite",
+    "resending": "Sending...",
+    "invite_sent": "Invite sent!"
+  }
+}

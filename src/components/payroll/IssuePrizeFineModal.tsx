@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { errorMessage } from "../../lib/errorMessage";
 import { useT } from "../../lib/i18n";
 import { parseVndToCents } from "../../lib/money";
@@ -33,6 +33,10 @@ export function IssuePrizeFineModal({
   const [amountVnd, setAmountVnd] = useState("");
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (preselectedUserId) setSelectedUserId(preselectedUserId);
+  }, [preselectedUserId]);
 
   const membersQuery = useQuery({
     queryKey: ["members", storeId],
