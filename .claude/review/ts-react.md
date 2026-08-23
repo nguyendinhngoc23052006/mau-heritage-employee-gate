@@ -1,35 +1,26 @@
-# TS / React reviewer — verdict
+# TypeScript / React review — PR #25 (post-sweep close-out)
 
-Scope: client-side changes shipped against the PR #20 post-mortem (items A–P).
+Reviewed all client-side diffs against the 4-agent sweep findings.
 
-**A — FIXED, UX caveat.** Race-loss on slot claim now surfaces to the user; still routes through a native `alert()` rather than the app's toast system — cosmetic, not blocking.
+## Verdict: APPROVE for merge
 
-**B — FIXED.** Dedupe-key regex matches the server's `YYYY-MM-DDTHH:MI` format exactly; no false-splits on minute boundaries.
+## Findings addressed in this PR
+1. **PayrollPage.tsx** — added `isManagerRole(useRoleOn(storeId))` gate matching the pattern in `RulesPage.tsx:101`, `AuditPage.tsx:74`, `AnalyticsPage.tsx:28`. Non-managers see `access_denied` ErrorState. Query is `enabled: isManager`, so no wasteful fetch.
+2. **PayrollPage.tsx date range** — was `.toISOString()` on `startOfMonth(date)` (browser local TZ). Now `${format(startDate, "yyyy-MM-dd")}T00:00:00+07:00`, matching `SchedulePage.tsx:131-132`.
+3. **payroll.ts empty .in() guard** — `profiles.select(...).in("id", userIds)` now short-circuits when `userIds.length === 0`. Zero-member store no longer throws.
+4. **payroll.ts float multiplier** — was `wagesCents(minutes, hourlyRate * multiplier)` (float baked in before Math.floor). Now `Math.floor((minutes × rateCents × mulBps) / 6000)` with `mulBps = Math.round(multiplier × 100)`. Integer-safe. Removed unused `wagesCents` import.
+5. **StoreSwitcher.tsx** — removed `data.length < 2` soft-lock. Threshold now `data.length === 0 → null`; Select renders for 1 or N stores.
+6. **SchedulePage.tsx** — added `onError` on `releaseSlotMutation` matching claim pattern. `BulkCreateModal.onSuccess` now invalidates `["shift_slots", …]` too.
+7. **errorLog.ts** — empty catch now `console.error("[errorLog] failed to log client error", logErr, err)`. Broken logging pipeline visible in devtools.
+8. **public/_headers CSP** — added `https://fonts.googleapis.com` to `style-src` and `https://fonts.gstatic.com` to `font-src`. Barlow + Inter now render (were silently falling back to system fonts).
+9. **i18n** — removed 2 orphan keys (`schedule.slot_release_window_hint`, `schedule.slot_release_expired`) from vi.json and en.json. Both files 426/426 parity.
 
-**C — FIXED.** Attendance-flags card renders without a loading-to-empty flash on first paint.
+## Findings acknowledged but deferred
+1. **11 untested services** (`applications`, `attendance`, `audit`, `invites`, `members`, `notifications`, `payMultipliers`, `points`, `profiles`, `heatmap`, half of `shiftSlots`) — tech debt; separate PR.
+2. **Existing tests use `as any` for supabase mocks** (`biome.json` disables `noExplicitAny` for `*.test.ts`) — schema drift won't fail typecheck. Retyping to generated row types is a separate mechanical PR.
+3. **payroll.test.ts covers money.ts helpers only** — `computePayroll`/`markPrizeFinePaid` untested; separate PR.
 
-**D — FIXED.** Geofence-required check has no false-negative path — a store with `require_geofence=true` and a denied browser permission now blocks rather than silently allowing.
-
-**E — STILL-BROKEN, then patched by the orchestrator.** The manual "close stale clock event" RPC call created a *new* attendance flag on every click and never resolved the original, so the queue only grew. Orchestrator changed the RPC to resolve the source flag and refuse if the in-event is already paired — client now reflects a shrinking queue.
-
-**F — FIXED.** Variance display short-circuits on `null` (no `expected_cents`) instead of coercing to a false "0% variance."
-
-**G — FIXED.** No further issues found in the diff at this item.
-
-**H — FIXED.** Sequential awaits on clock-in/clock-out; no race between the geolocation read and the RPC call.
-
-**I — Discrepancy noted, not a functional bug.** The 3-way gate (loading/error/ready) collapses to 2 live branches in practice — one state is currently unreachable given current props. Flagged for cleanup, not blocking.
-
-**J — FIXED.** 409-status and duplicate-key error paths now use the same identifying key client and server side — no parity gap.
-
-**K — STILL-BROKEN, then patched by Fixer A.** Locale was read from two different sources (a stale context value and a fresh profile fetch) that could disagree after a profile update; Fixer A collapsed to the single profile-fetched source.
-
-**L — FIXED.** Single paint on the attendance-flags list; no double-render flash.
-
-**M — FIXED.** Both the geofence-enforced and geofence-optional branches produce correct enable/disable state.
-
-**N — Tests are meaningful** — assert on behavior (error toast shown, RPC called with right args), not implementation details.
-
-**O — No hook regressions** found in the affected components.
-
-**P — i18n translations read as natural Vietnamese**, not machine-literal.
+## Gates
+- `npm run lint` → 0 errors (biome check .)
+- `npm run typecheck` → 0 errors (tsc --noEmit)
+- `npm test` → 36/36 passing across 10 test files

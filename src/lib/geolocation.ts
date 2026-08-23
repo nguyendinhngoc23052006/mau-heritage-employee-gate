@@ -18,7 +18,13 @@ export class GeolocationError extends Error {
   }
 }
 
-export function getCurrentCoords(timeoutMs = 8000): Promise<Coords> {
+export interface GetCoordsOptions {
+  enableHighAccuracy?: boolean;
+  timeoutMs?: number;
+  maximumAgeMs?: number;
+}
+
+export function getCurrentCoords(opts: GetCoordsOptions = {}): Promise<Coords> {
   return new Promise((resolve, reject) => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
       reject(new GeolocationError("unsupported", "Geolocation not supported"));
@@ -40,7 +46,11 @@ export function getCurrentCoords(timeoutMs = 8000): Promise<Coords> {
               : "timeout";
         reject(new GeolocationError(kind, err.message));
       },
-      { enableHighAccuracy: true, timeout: timeoutMs, maximumAge: 30_000 },
+      {
+        enableHighAccuracy: opts.enableHighAccuracy ?? true,
+        timeout: opts.timeoutMs ?? 8000,
+        maximumAge: opts.maximumAgeMs ?? 30_000,
+      },
     );
   });
 }

@@ -44,6 +44,7 @@ export function SlotGrid({
               return (
                 <button
                   key={slot.id}
+                  type="button"
                   onClick={() => onClaim(slot.id)}
                   disabled={claimingSlotId === slot.id}
                   className="px-3 py-1 rounded bg-brand-navy text-white text-sm font-medium hover:bg-brand-navy/90 disabled:opacity-50"
@@ -51,17 +52,16 @@ export function SlotGrid({
                   {t("schedule.slot_open")}
                 </button>
               );
-            } else {
-              return (
-                <div
-                  key={slot.id}
-                  title={t("schedule.slot_closed_hint")}
-                  className="px-3 py-1 rounded bg-slate-200 text-slate-600 text-sm font-medium"
-                >
-                  {t("schedule.slot_closed")}
-                </div>
-              );
             }
+            return (
+              <div
+                key={slot.id}
+                title={t("schedule.slot_closed_hint")}
+                className="px-3 py-1 rounded bg-slate-200 text-slate-600 text-sm font-medium"
+              >
+                {t("schedule.slot_closed")}
+              </div>
+            );
           }
 
           if (isMine) {
