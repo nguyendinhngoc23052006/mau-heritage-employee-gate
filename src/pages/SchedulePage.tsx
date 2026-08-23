@@ -781,11 +781,7 @@ function ShiftCard({
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {mineHere && !isManager && (
-            <Button
-              onClick={onRequestSwap}
-              variant="ghost"
-              className="text-xs"
-            >
+            <Button onClick={onRequestSwap} variant="ghost" className="text-xs">
               {t("swap.request_button")}
             </Button>
           )}

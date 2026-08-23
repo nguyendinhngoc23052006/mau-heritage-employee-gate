@@ -12,8 +12,8 @@ import {
 } from "../components/ui/EmptyState";
 import { Select } from "../components/ui/Select";
 import { useSession } from "../hooks/useSession";
-import { formatVnd } from "../lib/money";
 import { useT } from "../lib/i18n";
+import { formatVnd } from "../lib/money";
 import { listMyPrizeFine } from "../services/points";
 
 type StatusFilter = "all" | "pending" | "paid" | "cancelled" | "disputed";
@@ -75,7 +75,10 @@ export function MyFinesPage() {
         <CardTitle>{t("my_fines.filter_title")}</CardTitle>
         <div className="flex items-end gap-4">
           <div className="flex-1">
-            <label htmlFor="status-filter" className="block text-sm font-medium">
+            <label
+              htmlFor="status-filter"
+              className="block text-sm font-medium"
+            >
               {t("my_fines.status_label")}
             </label>
             <Select
@@ -136,9 +139,7 @@ export function MyFinesPage() {
                     </td>
                     <td
                       className={`text-right px-4 py-2 ${
-                        pf.kind === "prize"
-                          ? "text-green-600"
-                          : "text-red-600"
+                        pf.kind === "prize" ? "text-green-600" : "text-red-600"
                       }`}
                     >
                       {pf.kind === "prize" ? "+" : "-"}

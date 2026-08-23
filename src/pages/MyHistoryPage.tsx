@@ -170,9 +170,7 @@ export function MyHistoryPage() {
                         ? new Date(flag.resolved_at).toLocaleDateString("sv-SE")
                         : t("common.pending")}
                     </td>
-                    <td className="px-4 py-2">
-                      {flag.resolution_note || "—"}
-                    </td>
+                    <td className="px-4 py-2">{flag.resolution_note || "—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -215,7 +213,9 @@ export function MyHistoryPage() {
                     className="border-b hover:bg-brand-cream-light"
                   >
                     <td className="px-4 py-2">
-                      {new Date(report.submitted_at).toLocaleDateString("sv-SE")}
+                      {new Date(report.submitted_at).toLocaleDateString(
+                        "sv-SE",
+                      )}
                     </td>
                     <td className="text-right px-4 py-2">
                       {formatVnd(report.cash_cents)}
@@ -228,9 +228,7 @@ export function MyHistoryPage() {
                     </td>
                     <td className="text-right px-4 py-2 font-semibold">
                       {formatVnd(
-                        report.cash_cents +
-                          report.card_cents +
-                          report.qr_cents,
+                        report.cash_cents + report.card_cents + report.qr_cents,
                       )}
                     </td>
                     <td className="px-4 py-2">

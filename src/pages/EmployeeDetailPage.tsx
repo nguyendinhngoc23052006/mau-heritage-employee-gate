@@ -12,15 +12,12 @@ import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
 import { errorMessage } from "../lib/errorMessage";
 import { useT } from "../lib/i18n";
 import { formatVnd } from "../lib/money";
+import { getSupabase } from "../lib/supabaseClient";
 import { listAttendanceFlags } from "../services/attendance";
 import { listMyClockEvents } from "../services/clock";
 import { listMembers } from "../services/members";
 import { listStorePrizeFine } from "../services/points";
-import type {
-  RateHistory,
-  Shift,
-} from "../types/database";
-import { getSupabase } from "../lib/supabaseClient";
+import type { RateHistory, Shift } from "../types/database";
 
 export function EmployeeDetailPage(): JSX.Element {
   const t = useT();
@@ -64,7 +61,7 @@ export function EmployeeDetailPage(): JSX.Element {
       if (claimError) throw claimError;
 
       if (!claims || claims.length === 0) return [];
-      const shiftIds = claims.map((c) => (c.shift_id as string));
+      const shiftIds = claims.map((c) => c.shift_id as string);
 
       const { data: shifts, error: shiftError } = await supabase
         .from("shifts")
@@ -80,7 +77,8 @@ export function EmployeeDetailPage(): JSX.Element {
 
   const prizeFineQuery = useQuery({
     queryKey: ["prize_fine", storeId],
-    queryFn: () => (storeId ? listStorePrizeFine(storeId) : Promise.resolve([])),
+    queryFn: () =>
+      storeId ? listStorePrizeFine(storeId) : Promise.resolve([]),
     enabled: !!storeId && canView,
   });
 
@@ -103,15 +101,14 @@ export function EmployeeDetailPage(): JSX.Element {
 
   const attendanceQuery = useQuery({
     queryKey: ["attendance_flags", storeId],
-    queryFn: () => (storeId ? listAttendanceFlags(storeId) : Promise.resolve([])),
+    queryFn: () =>
+      storeId ? listAttendanceFlags(storeId) : Promise.resolve([]),
     enabled: !!storeId && canView,
   });
 
   // Gate: access denied for non-managers
   if (!canView) {
-    return (
-      <ErrorState message={t("employee_detail.access_denied")} />
-    );
+    return <ErrorState message={t("employee_detail.access_denied")} />;
   }
 
   if (
@@ -267,7 +264,9 @@ export function EmployeeDetailPage(): JSX.Element {
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="font-semibold">{formatVnd(pf.amount_cents * 100)}</div>
+                  <div className="font-semibold">
+                    {formatVnd(pf.amount_cents * 100)}
+                  </div>
                   <div className="text-xs text-slate-500">
                     {new Date(pf.created_at).toLocaleDateString()}
                   </div>
@@ -307,7 +306,8 @@ export function EmployeeDetailPage(): JSX.Element {
                   )}
                   {rh.changed_by && (
                     <div className="text-xs text-slate-500">
-                      {t("employee_detail.changed_by")}: {rh.changed_by.substring(0, 8)}
+                      {t("employee_detail.changed_by")}:{" "}
+                      {rh.changed_by.substring(0, 8)}
                     </div>
                   )}
                 </div>
@@ -331,11 +331,13 @@ export function EmployeeDetailPage(): JSX.Element {
               >
                 <div className="font-medium text-slate-900">{flag.kind}</div>
                 <div className="text-xs text-slate-600 mt-1">
-                  {t("common.created")}: {new Date(flag.created_at).toLocaleString()}
+                  {t("common.created")}:{" "}
+                  {new Date(flag.created_at).toLocaleString()}
                 </div>
                 {flag.resolved_at && (
                   <div className="text-xs text-slate-600">
-                    {t("common.resolved")}: {new Date(flag.resolved_at).toLocaleString()}
+                    {t("common.resolved")}:{" "}
+                    {new Date(flag.resolved_at).toLocaleString()}
                   </div>
                 )}
               </div>

@@ -32,15 +32,17 @@ export function DeleteStoreDialog({
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () => deleteStore(storeId!),
+    mutationFn: () =>
+      storeId
+        ? deleteStore(storeId)
+        : Promise.reject(new Error("Store ID required")),
     onSuccess: () => {
       navigate("/onboarding");
     },
   });
 
   const store = storeQuery.data;
-  const isConfirmed =
-    store && confirmInput === store.name;
+  const isConfirmed = store && confirmInput === store.name;
 
   const handleConfirm = () => {
     if (isConfirmed) {
@@ -85,9 +87,7 @@ export function DeleteStoreDialog({
           <Label htmlFor="confirm-store-name">
             {t("delete_store.store_name")}
           </Label>
-          <p className="text-sm text-slate-600 mb-2">
-            {store?.name || "—"}
-          </p>
+          <p className="text-sm text-slate-600 mb-2">{store?.name || "—"}</p>
           <Input
             id="confirm-store-name"
             value={confirmInput}
@@ -99,10 +99,7 @@ export function DeleteStoreDialog({
 
         {deleteMutation.error && (
           <Alert variant="error">
-            {errorMessage(
-              deleteMutation.error,
-              t("common.error"),
-            )}
+            {errorMessage(deleteMutation.error, t("common.error"))}
           </Alert>
         )}
       </div>

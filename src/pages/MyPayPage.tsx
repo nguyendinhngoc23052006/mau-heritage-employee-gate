@@ -91,8 +91,7 @@ export function MyPayPage() {
     return { prizes, fines };
   }, [myPrizeFine, startDate, endDate]);
 
-  const isLoading =
-    payrollLoading || prizeFineLoading || rateHistoryLoading;
+  const isLoading = payrollLoading || prizeFineLoading || rateHistoryLoading;
 
   if (!ready) {
     return <ErrorState message={t("common.error_generic")} />;
@@ -264,9 +263,7 @@ export function MyPayPage() {
                     </td>
                     <td
                       className={`text-right px-4 py-2 ${
-                        pf.kind === "prize"
-                          ? "text-green-600"
-                          : "text-red-600"
+                        pf.kind === "prize" ? "text-green-600" : "text-red-600"
                       }`}
                     >
                       {pf.kind === "prize" ? "+" : "-"}
@@ -318,7 +315,10 @@ export function MyPayPage() {
               </thead>
               <tbody>
                 {rateHistory.map((rate) => (
-                  <tr key={rate.id} className="border-b hover:bg-brand-cream-light">
+                  <tr
+                    key={rate.id}
+                    className="border-b hover:bg-brand-cream-light"
+                  >
                     <td className="px-4 py-2">
                       {new Date(rate.effective_from).toLocaleDateString(
                         "sv-SE",
@@ -326,7 +326,9 @@ export function MyPayPage() {
                     </td>
                     <td className="px-4 py-2">
                       {rate.effective_to
-                        ? new Date(rate.effective_to).toLocaleDateString("sv-SE")
+                        ? new Date(rate.effective_to).toLocaleDateString(
+                            "sv-SE",
+                          )
                         : t("my_pay.current")}
                     </td>
                     <td className="text-right px-4 py-2">

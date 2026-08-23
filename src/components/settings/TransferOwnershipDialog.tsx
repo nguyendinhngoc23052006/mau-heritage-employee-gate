@@ -37,7 +37,7 @@ export function TransferOwnershipDialog({
     mutationFn: () =>
       transferOwnership({
         toUserId: selectedUserId,
-        storeId: storeId!,
+        storeId: storeId || "",
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["memberships", "mine"] });
@@ -113,10 +113,7 @@ export function TransferOwnershipDialog({
 
         {transferMutation.error && (
           <Alert variant="error">
-            {errorMessage(
-              transferMutation.error,
-              t("common.error"),
-            )}
+            {errorMessage(transferMutation.error, t("common.error"))}
           </Alert>
         )}
       </div>

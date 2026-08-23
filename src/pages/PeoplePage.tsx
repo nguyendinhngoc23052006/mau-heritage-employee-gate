@@ -602,7 +602,11 @@ export function PeoplePage(): JSX.Element {
                 >
                   <div className="flex-1">
                     <Link
-                      to={storeId ? `/store/${storeId}/people/${member.user_id}` : "#"}
+                      to={
+                        storeId
+                          ? `/store/${storeId}/people/${member.user_id}`
+                          : "#"
+                      }
                       className="font-medium text-sm text-slate-900 hover:text-blue-600"
                     >
                       {member.profile?.display_name ||

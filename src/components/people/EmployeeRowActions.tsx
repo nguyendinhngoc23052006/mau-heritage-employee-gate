@@ -24,9 +24,7 @@ export function EmployeeRowActions({
   isSelf = false,
 }: EmployeeRowActionsProps): JSX.Element {
   const displayName =
-    member.profile?.display_name ||
-    member.user_id?.substring(0, 8) ||
-    "—";
+    member.profile?.display_name || member.user_id?.substring(0, 8) || "—";
 
   return (
     <div className="flex gap-2">
@@ -47,9 +45,7 @@ export function EmployeeRowActions({
         <Button
           variant="danger"
           onClick={() => onDeactivate(member.user_id, displayName)}
-          disabled={
-            isDeactivateLoading || isLastOwner || isSelf
-          }
+          disabled={isDeactivateLoading || isLastOwner || isSelf}
           className="text-xs"
         >
           Deactivate

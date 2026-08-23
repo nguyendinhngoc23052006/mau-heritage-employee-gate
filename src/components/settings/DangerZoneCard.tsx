@@ -1,10 +1,7 @@
 import type { JSX } from "react";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import {
-  isOwnerRole,
-  useRoleOn,
-} from "../../hooks/useMemberships";
+import { isOwnerRole, useRoleOn } from "../../hooks/useMemberships";
 import { useT } from "../../lib/i18n";
 import { Button } from "../ui/Button";
 import { Card, CardTitle } from "../ui/Card";
@@ -28,9 +25,7 @@ export function DangerZoneCard(): JSX.Element | null {
   return (
     <>
       <Card className="border-red-200 bg-red-50">
-        <CardTitle className="text-red-900">
-          {t("danger_zone.title")}
-        </CardTitle>
+        <CardTitle className="text-red-900">{t("danger_zone.title")}</CardTitle>
         <p className="text-sm text-red-700 mb-4">
           {t("danger_zone.owner_only")}
         </p>
