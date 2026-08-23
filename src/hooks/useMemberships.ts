@@ -13,6 +13,11 @@ interface UseMembershipsResult {
 
 // 30s poll so a role demotion/promotion done by another manager reaches this
 // session without a hard refresh. Also refetches on window focus.
+//
+// Sort by last_active_at happens client-side (not in the DB query) so that a
+// database missing the last_active_at column (e.g. the mega-role-dashboards
+// migration hasn't applied yet) doesn't fail the select and softlock the user
+// into /deactivated. Rows without last_active_at fall to the end.
 export function useMemberships(): UseMembershipsResult {
   const query = useQuery<MembershipWithStore[]>({
     queryKey: ["memberships", "mine"],
@@ -21,10 +26,18 @@ export function useMemberships(): UseMembershipsResult {
       const { data, error } = await supabase
         .from("memberships")
         .select("*, store:stores(*)")
-        .eq("active", true)
-        .order("last_active_at", { ascending: false, nullsFirst: false });
+        .eq("active", true);
       if (error) throw error;
-      return (data ?? []) as MembershipWithStore[];
+      const rows = (data ?? []) as MembershipWithStore[];
+      rows.sort((a, b) => {
+        const aAt = a.last_active_at ?? "";
+        const bAt = b.last_active_at ?? "";
+        if (aAt === bAt) return 0;
+        if (aAt === "") return 1;
+        if (bAt === "") return -1;
+        return bAt.localeCompare(aAt);
+      });
+      return rows;
     },
     refetchInterval: 30_000,
     refetchOnWindowFocus: true,
