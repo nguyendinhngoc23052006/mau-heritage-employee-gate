@@ -91,7 +91,11 @@ export function WeekCoverageCard({
 
     const coveragePercent = total > 0 ? Math.round((filled / total) * 100) : 0;
     const badge =
-      coveragePercent >= 100 ? "green" : coveragePercent >= 50 ? "amber" : "red";
+      coveragePercent >= 100
+        ? "green"
+        : coveragePercent >= 50
+          ? "amber"
+          : "red";
 
     return {
       dateStr,

@@ -47,9 +47,7 @@ export function EditShiftDialog({
 }: EditShiftDialogProps) {
   const t = useT();
   const queryClient = useQueryClient();
-  const [startsAt, setStartsAt] = useState(
-    localDatetimeValue(shift.starts_at),
-  );
+  const [startsAt, setStartsAt] = useState(localDatetimeValue(shift.starts_at));
   const [endsAt, setEndsAt] = useState(localDatetimeValue(shift.ends_at));
   const [notes, setNotes] = useState(shift.notes || "");
   const [slotCount, setSlotCount] = useState(String(shift.slot_count));
@@ -76,8 +74,7 @@ export function EditShiftDialog({
         startsAt: startsAtISO !== shift.starts_at ? startsAtISO : undefined,
         endsAt: endsAtISO !== shift.ends_at ? endsAtISO : undefined,
         notes: notes !== (shift.notes || "") ? notes || undefined : undefined,
-        slotCount:
-          slotCountNum !== shift.slot_count ? slotCountNum : undefined,
+        slotCount: slotCountNum !== shift.slot_count ? slotCountNum : undefined,
       });
     },
     onSuccess: () => {

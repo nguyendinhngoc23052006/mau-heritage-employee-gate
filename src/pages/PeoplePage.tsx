@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type JSX, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { IssuePrizeFineModal } from "../components/payroll/IssuePrizeFineModal";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
@@ -39,7 +40,6 @@ import {
   updateMemberRole,
 } from "../services/members";
 import { applyManualRule, listRules } from "../services/rules";
-import { IssuePrizeFineModal } from "../components/payroll/IssuePrizeFineModal";
 import type { EmploymentType, Role, Rule } from "../types/database";
 
 export function PeoplePage(): JSX.Element {
@@ -1048,7 +1048,6 @@ export function PeoplePage(): JSX.Element {
           </Alert>
         )}
       </Dialog>
-    </div>
 
       <IssuePrizeFineModal
         open={issuePrizeFineOpen}
@@ -1059,5 +1058,6 @@ export function PeoplePage(): JSX.Element {
           queryClient.invalidateQueries({ queryKey: ["members", storeId] });
         }}
       />
+    </div>
   );
 }

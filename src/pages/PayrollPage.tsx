@@ -1,6 +1,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { endOfMonth, format, startOfMonth } from "date-fns";
 import { useMemo, useState } from "react";
+import { IssuePrizeFineModal } from "../components/payroll/IssuePrizeFineModal";
+import { StorePrizeFineTable } from "../components/payroll/StorePrizeFineTable";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
 import {
@@ -14,8 +16,6 @@ import { useT } from "../lib/i18n";
 import { formatVnd } from "../lib/money";
 import { computePayroll } from "../services/payroll";
 import { listStorePrizeFine } from "../services/points";
-import { IssuePrizeFineModal } from "../components/payroll/IssuePrizeFineModal";
-import { StorePrizeFineTable } from "../components/payroll/StorePrizeFineTable";
 
 interface PayrollPageProps {
   storeId: string;
@@ -117,8 +117,7 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
           Hours: "",
           "Hourly rate (VND)": "",
           "Wages (VND)": "",
-          "Prizes (VND)":
-            pf.kind === "prize" ? pf.amount_cents.toString() : "",
+          "Prizes (VND)": pf.kind === "prize" ? pf.amount_cents.toString() : "",
           "Fines (VND)": pf.kind === "fine" ? pf.amount_cents.toString() : "",
           "Total (VND)": "",
           Status: pf.status,
