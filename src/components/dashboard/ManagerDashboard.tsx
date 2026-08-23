@@ -1,14 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import { AttendanceFlagsCard } from "./AttendanceFlagsCard";
-import { CoverageGapsCard } from "./CoverageGapsCard";
-import { PendingSwapsCard } from "./PendingSwapsCard";
-import { PendingApplicationsCard } from "./PendingApplicationsCard";
-import { UnpaidPrizeFineCard } from "./UnpaidPrizeFineCard";
 import { useT } from "../../lib/i18n";
 import { listAnnouncements } from "../../services/announcements";
+import type { Announcement } from "../../types/database";
 import { Card, CardTitle } from "../ui/Card";
 import { EmptyState } from "../ui/EmptyState";
-import type { Announcement } from "../../types/database";
+import { AttendanceFlagsCard } from "./AttendanceFlagsCard";
+import { CoverageGapsCard } from "./CoverageGapsCard";
+import { PendingApplicationsCard } from "./PendingApplicationsCard";
+import { PendingSwapsCard } from "./PendingSwapsCard";
+import { UnpaidPrizeFineCard } from "./UnpaidPrizeFineCard";
 
 interface ManagerDashboardProps {
   storeId: string;

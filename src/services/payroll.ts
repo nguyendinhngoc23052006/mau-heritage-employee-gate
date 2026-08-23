@@ -84,7 +84,9 @@ export async function computePayroll(
 
   const rateByUser = new Map<
     string,
-    Array<Pick<RateHistory, "hourly_rate_cents" | "effective_from" | "effective_to">>
+    Array<
+      Pick<RateHistory, "hourly_rate_cents" | "effective_from" | "effective_to">
+    >
   >();
   for (const rh of (rateHistory ?? []) as RateHistory[]) {
     if (!rateByUser.has(rh.user_id)) rateByUser.set(rh.user_id, []);
@@ -102,7 +104,10 @@ export async function computePayroll(
     if (!rows) return fallback;
     for (let i = rows.length - 1; i >= 0; i--) {
       const r = rows[i];
-      if (r.effective_from <= atIso && (r.effective_to == null || r.effective_to > atIso)) {
+      if (
+        r.effective_from <= atIso &&
+        (r.effective_to == null || r.effective_to > atIso)
+      ) {
         return r.hourly_rate_cents;
       }
     }

@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { endOfMonth, format, startOfMonth } from "date-fns";
 import { useMemo, useState } from "react";
 import { Button } from "../components/ui/Button";
@@ -13,6 +13,9 @@ import { downloadCsv, toCsv } from "../lib/csv";
 import { useT } from "../lib/i18n";
 import { formatVnd } from "../lib/money";
 import { computePayroll } from "../services/payroll";
+import { listStorePrizeFine } from "../services/points";
+import { IssuePrizeFineModal } from "../components/payroll/IssuePrizeFineModal";
+import { StorePrizeFineTable } from "../components/payroll/StorePrizeFineTable";
 
 interface PayrollPageProps {
   storeId: string;
@@ -20,9 +23,11 @@ interface PayrollPageProps {
 
 export function PayrollPage({ storeId }: PayrollPageProps) {
   const t = useT();
+  const queryClient = useQueryClient();
   const role = useRoleOn(storeId);
   const isManager = isManagerRole(role);
   const [date, setDate] = useState(() => new Date());
+  const [issuePrizeFineOpen, setIssuePrizeFineOpen] = useState(false);
 
   const startDate = startOfMonth(date);
   const endDate = endOfMonth(date);
@@ -42,10 +47,17 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
     enabled: isManager,
   });
 
-  const handleDownloadCsv = () => {
+  const prizeFineQuery = useQuery({
+    queryKey: ["store-prize-fine-csv", storeId, fromIso, toIso],
+    queryFn: () => listStorePrizeFine(storeId),
+    enabled: isManager && !!storeId,
+  });
+
+  const handleDownloadCsv = async () => {
     if (!payroll) return;
 
     const rows: Array<Record<string, string>> = [];
+    const allPrizeFineEvents = prizeFineQuery.data || [];
 
     for (const row of payroll) {
       // Aggregate row
@@ -61,6 +73,10 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
         "Prizes (VND)": row.prizes_cents.toString(),
         "Fines (VND)": row.fines_cents.toString(),
         "Total (VND)": row.total_cents.toString(),
+        Status: "",
+        Reason: "",
+        "Paid at": "",
+        "Paid by": "",
       });
 
       // Daily breakdown rows
@@ -75,6 +91,40 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
           "Prizes (VND)": "",
           "Fines (VND)": "",
           "Total (VND)": "",
+          Status: "",
+          Reason: "",
+          "Paid at": "",
+          "Paid by": "",
+        });
+      }
+
+      // Prize/fine events for this user in the date range
+      const userEvents = allPrizeFineEvents.filter(
+        (pf) =>
+          pf.user_id === row.user_id &&
+          new Date(pf.created_at) >= startDate &&
+          new Date(pf.created_at) <= endDate,
+      );
+
+      for (const pf of userEvents) {
+        const paidAtStr = pf.paid_at
+          ? new Date(pf.paid_at).toLocaleDateString("sv-SE")
+          : "";
+        rows.push({
+          Name: "",
+          Date: new Date(pf.created_at).toLocaleDateString("sv-SE"),
+          Multiplier: "",
+          Hours: "",
+          "Hourly rate (VND)": "",
+          "Wages (VND)": "",
+          "Prizes (VND)":
+            pf.kind === "prize" ? pf.amount_cents.toString() : "",
+          "Fines (VND)": pf.kind === "fine" ? pf.amount_cents.toString() : "",
+          "Total (VND)": "",
+          Status: pf.status,
+          Reason: pf.reason || "",
+          "Paid at": paidAtStr,
+          "Paid by": pf.paid_by || "",
         });
       }
     }
@@ -89,6 +139,10 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
       "Prizes (VND)",
       "Fines (VND)",
       "Total (VND)",
+      "Status",
+      "Reason",
+      "Paid at",
+      "Paid by",
     ];
     const csv = toCsv(rows, headers);
     const filename = `payroll-${format(startDate, "yyyy-MM-dd")}-${format(endDate, "yyyy-MM-dd")}.csv`;
@@ -164,6 +218,12 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
           </div>
 
           <div className="flex gap-2">
+            <Button
+              onClick={() => setIssuePrizeFineOpen(true)}
+              variant="secondary"
+            >
+              {t("payroll.issue_prize_fine_button")}
+            </Button>
             <Button
               onClick={handleDownloadCsv}
               disabled={!payroll || payroll.length === 0}
@@ -263,6 +323,17 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
           </div>
         </>
       )}
+
+      <StorePrizeFineTable storeId={storeId} />
+
+      <IssuePrizeFineModal
+        open={issuePrizeFineOpen}
+        onClose={() => setIssuePrizeFineOpen(false)}
+        storeId={storeId}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["payroll", storeId] });
+        }}
+      />
     </div>
   );
 }

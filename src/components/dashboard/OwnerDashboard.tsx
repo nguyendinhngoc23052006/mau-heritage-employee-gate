@@ -1,14 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { AttendanceFlagsCard } from "./AttendanceFlagsCard";
-import { WagesBriefCard } from "./WagesBriefCard";
-import { UnpaidPrizeFineCard } from "./UnpaidPrizeFineCard";
-import { HiringPipelineCard } from "./HiringPipelineCard";
-import { AnnouncementsCard } from "./AnnouncementsCard";
 import { useT } from "../../lib/i18n";
 import { listAnnouncements } from "../../services/announcements";
+import type { Announcement } from "../../types/database";
 import { Card, CardTitle } from "../ui/Card";
 import { EmptyState } from "../ui/EmptyState";
-import type { Announcement } from "../../types/database";
+import { AttendanceFlagsCard } from "./AttendanceFlagsCard";
+import { HiringPipelineCard } from "./HiringPipelineCard";
+import { UnpaidPrizeFineCard } from "./UnpaidPrizeFineCard";
+import { WagesBriefCard } from "./WagesBriefCard";
 
 interface OwnerDashboardProps {
   storeId: string;

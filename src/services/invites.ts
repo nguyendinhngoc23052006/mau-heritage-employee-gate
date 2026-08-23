@@ -1,5 +1,10 @@
 import { getSupabase } from "../lib/supabaseClient";
-import type { Invite } from "../types/database";
+import type {
+  EmploymentType,
+  Invite,
+  Membership,
+  Role,
+} from "../types/database";
 
 export async function resendInvite(inviteId: string): Promise<Invite> {
   const supabase = getSupabase();
@@ -9,13 +14,6 @@ export async function resendInvite(inviteId: string): Promise<Invite> {
   if (error) throw error;
   return data as Invite;
 }
-
-import type {
-  EmploymentType,
-  Invite,
-  Membership,
-  Role,
-} from "../types/database";
 
 export async function listInvitesFor(storeId: string): Promise<Invite[]> {
   const supabase = getSupabase();

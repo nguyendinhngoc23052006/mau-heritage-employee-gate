@@ -39,6 +39,7 @@ import {
   updateMemberRole,
 } from "../services/members";
 import { applyManualRule, listRules } from "../services/rules";
+import { IssuePrizeFineModal } from "../components/payroll/IssuePrizeFineModal";
 import type { EmploymentType, Role, Rule } from "../types/database";
 
 export function PeoplePage(): JSX.Element {
@@ -87,6 +88,8 @@ export function PeoplePage(): JSX.Element {
   const [deactivateUserId, setDeactivateUserId] = useState("");
   const [deactivateMemberName, setDeactivateMemberName] = useState("");
 
+  const [issuePrizeFineOpen, setIssuePrizeFineOpen] = useState(false);
+  const [issuePrizeFineUserId, setIssuePrizeFineUserId] = useState("");
   const membersQuery = useQuery({
     queryKey: ["members", storeId],
     queryFn: () => (storeId ? listMembers(storeId) : Promise.resolve([])),
@@ -646,6 +649,15 @@ export function PeoplePage(): JSX.Element {
                       >
                         {t("people.edit_rate")}
                       </Button>
+                      <Button
+                        onClick={() => {
+                          setIssuePrizeFineUserId(member.user_id);
+                          setIssuePrizeFineOpen(true);
+                        }}
+                        className="text-xs"
+                      >
+                        {t("people.issue_prize_fine")}
+                      </Button>
                       <div
                         title={
                           isLastOwner
@@ -1037,5 +1049,15 @@ export function PeoplePage(): JSX.Element {
         )}
       </Dialog>
     </div>
+
+      <IssuePrizeFineModal
+        open={issuePrizeFineOpen}
+        onClose={() => setIssuePrizeFineOpen(false)}
+        storeId={storeId || ""}
+        preselectedUserId={issuePrizeFineUserId}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["members", storeId] });
+        }}
+      />
   );
 }

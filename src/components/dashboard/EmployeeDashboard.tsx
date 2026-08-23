@@ -1,15 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "../../hooks/useSession";
 import { useT } from "../../lib/i18n";
-import { getSupabase } from "../../lib/supabaseClient";
 import { listAnnouncements } from "../../services/announcements";
 import { listMyNotifications } from "../../services/notifications";
-import { getMyBalance, listMyPrizeFine } from "../../services/points";
-import { listShifts } from "../../services/shifts";
+import { getMyBalance } from "../../services/points";
 import { listSlotsForShifts } from "../../services/shiftSlots";
+import { listShifts } from "../../services/shifts";
+import type { Announcement } from "../../types/database";
 import { Card, CardTitle } from "../ui/Card";
 import { EmptyState, LoadingState } from "../ui/EmptyState";
-import type { Announcement, Shift } from "../../types/database";
 import { NextShiftCard } from "./NextShiftCard";
 import { UnpaidPrizeFineCard } from "./UnpaidPrizeFineCard";
 
@@ -47,16 +46,6 @@ export function EmployeeDashboard({ storeId }: EmployeeDashboardProps) {
     queryFn: () => getMyBalance(storeId),
   });
 
-  // Unpaid fines
-  const { data: unorderedFines, isLoading: finesLoading } = useQuery({
-    queryKey: ["my-fines", storeId, userId],
-    enabled: ready,
-    queryFn: () =>
-      listMyPrizeFine(storeId, 100).then((items) =>
-        items.filter((f) => f.kind === "fine" && f.status === "pending"),
-      ),
-  });
-
   // Upcoming shifts count
   const { data: upcomingShiftsCount, isLoading: shiftsLoading } = useQuery({
     queryKey: ["shifts", storeId, "upcoming-count"],
@@ -78,18 +67,13 @@ export function EmployeeDashboard({ storeId }: EmployeeDashboardProps) {
     },
   });
 
-  const isLoading =
-    notificationsLoading || pointsLoading || finesLoading || shiftsLoading;
+  const isLoading = notificationsLoading || pointsLoading || shiftsLoading;
 
   if (isLoading) {
     return <LoadingState>{t("common.loading")}</LoadingState>;
   }
 
   const unreadCount = notifications?.filter((n) => !n.read_at).length ?? 0;
-  const unpaidFinesAmount = (unorderedFines ?? []).reduce(
-    (sum, f) => sum + (f.amount_cents || 0),
-    0,
-  );
 
   return (
     <div className="space-y-6">

@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { EmployeeDashboard } from "../components/dashboard/EmployeeDashboard";
 import { ManagerDashboard } from "../components/dashboard/ManagerDashboard";
@@ -7,7 +8,6 @@ import { ErrorState, LoadingState } from "../components/ui/EmptyState";
 import { isManagerRole, isOwnerRole, useRoleOn } from "../hooks/useMemberships";
 import { useSession } from "../hooks/useSession";
 import { useT } from "../lib/i18n";
-import { useQuery } from "@tanstack/react-query";
 import { getTodayMultiplier } from "../services/payMultipliers";
 
 export function DashboardPage() {
