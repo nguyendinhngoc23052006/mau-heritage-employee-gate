@@ -1,25 +1,27 @@
 import { useQuery } from "@tanstack/react-query";
 import { endOfMonth, format, startOfMonth } from "date-fns";
 import { useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
+
+import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
 import {
   EmptyState,
   ErrorState,
   LoadingState,
 } from "../components/ui/EmptyState";
-import { Button } from "../components/ui/Button";
 import { useSession } from "../hooks/useSession";
 import { useT } from "../lib/i18n";
 import { formatVnd } from "../lib/money";
+import { getSupabase } from "../lib/supabaseClient";
 import { computePayroll } from "../services/payroll";
 import { listMyPrizeFine } from "../services/points";
-import { getSupabase } from "../lib/supabaseClient";
 import type { RateHistory } from "../types/database";
 
 export function MyPayPage() {
   const t = useT();
   const { user } = useSession();
-  const storeId = new URLSearchParams(window.location.search).get("storeId");
+  const { storeId } = useParams<{ storeId: string }>();
   const [date, setDate] = useState(() => new Date());
 
   const startDate = startOfMonth(date);
@@ -201,7 +203,8 @@ export function MyPayPage() {
                           <td className="text-right px-4 py-2">
                             {formatVnd(
                               Math.round(
-                                (day.wages * 6000) / (day.minutes * day.multiplier),
+                                (day.wages * 6000) /
+                                  (day.minutes * day.multiplier),
                               ),
                             )}
                           </td>

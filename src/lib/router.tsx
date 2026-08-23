@@ -18,6 +18,7 @@ import { clockRoutes } from "../routes/clock";
 import { dashboardRoutes } from "../routes/dashboard";
 import { inviteRoutes } from "../routes/invite";
 import { meRoutes } from "../routes/me";
+import { mePayRoutes } from "../routes/mePay";
 import { onboardingRoutes } from "../routes/onboarding";
 import { payrollRoutes } from "../routes/payroll";
 import { peopleRoutes } from "../routes/people";
@@ -39,6 +40,7 @@ const storeChildren: RouteObject[] = [
   { path: "analytics", element: <AnalyticsPage /> },
   ...settingsRoutes,
   ...meRoutes,
+  ...mePayRoutes,
 ];
 
 export const router = createBrowserRouter([

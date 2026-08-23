@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type JSX, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { IssuePrizeFineModal } from "../components/payroll/IssuePrizeFineModal";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
@@ -31,6 +31,7 @@ import {
   buildInviteLink,
   createInvite,
   listInvitesFor,
+  resendInvite,
   revokeInvite,
 } from "../services/invites";
 import {
@@ -135,6 +136,13 @@ export function PeoplePage(): JSX.Element {
 
   const revokeInviteMutation = useMutation({
     mutationFn: (id: string) => revokeInvite(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invites", storeId] });
+    },
+  });
+
+  const resendInviteMutation = useMutation({
+    mutationFn: (id: string) => resendInvite(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invites", storeId] });
     },
@@ -593,11 +601,14 @@ export function PeoplePage(): JSX.Element {
                   className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2"
                 >
                   <div className="flex-1">
-                    <div className="font-medium text-sm text-slate-900">
+                    <Link
+                      to={storeId ? `/store/${storeId}/people/${member.user_id}` : "#"}
+                      className="font-medium text-sm text-slate-900 hover:text-blue-600"
+                    >
                       {member.profile?.display_name ||
                         member.user_id?.substring(0, 8) ||
                         "—"}
-                    </div>
+                    </Link>
                     <div className="text-xs text-slate-500">
                       {t(`people.role_${member.role}`)}
                     </div>
@@ -723,6 +734,16 @@ export function PeoplePage(): JSX.Element {
                         className="text-xs"
                       >
                         {t("people.invite.link")}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        onClick={() => resendInviteMutation.mutate(invite.id)}
+                        disabled={resendInviteMutation.isPending}
+                        className="text-xs"
+                      >
+                        {resendInviteMutation.isPending
+                          ? t("people.resending")
+                          : t("people.resend_invite")}
                       </Button>
                       <Button
                         variant="danger"

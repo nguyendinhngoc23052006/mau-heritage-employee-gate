@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
+
 import { errorMessage } from "../../lib/errorMessage";
 import { useT } from "../../lib/i18n";
 import { disputePrizeFine } from "../../services/points";
@@ -59,10 +60,7 @@ export function DisputePrizeFineDialog({
           <Button onClick={handleClose} variant="secondary">
             {t("common.cancel")}
           </Button>
-          <Button
-            onClick={() => mutation.mutate()}
-            disabled={!canSubmit}
-          >
+          <Button onClick={() => mutation.mutate()} disabled={!canSubmit}>
             {mutation.isPending ? t("common.loading") : t("common.save")}
           </Button>
         </>
@@ -72,8 +70,11 @@ export function DisputePrizeFineDialog({
         {error && <Alert variant="error">{error}</Alert>}
 
         <div>
-          <Label>{t("my_fines.dispute_reason_label")}</Label>
+          <Label htmlFor="dispute-reason">
+            {t("my_fines.dispute_reason_label")}
+          </Label>
           <Textarea
+            id="dispute-reason"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder={t("my_fines.dispute_reason_placeholder")}
