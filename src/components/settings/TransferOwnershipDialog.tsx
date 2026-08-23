@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { JSX } from "react";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
+import { useSession } from "../../hooks/useSession";
 import { errorMessage } from "../../lib/errorMessage";
 import { useT } from "../../lib/i18n";
 import { listMembers } from "../../services/members";
@@ -24,6 +25,7 @@ export function TransferOwnershipDialog({
 }: TransferOwnershipDialogProps): JSX.Element {
   const t = useT();
   const { storeId } = useParams<{ storeId: string }>();
+  const { user } = useSession();
   const queryClient = useQueryClient();
   const [selectedUserId, setSelectedUserId] = useState("");
 
@@ -48,7 +50,9 @@ export function TransferOwnershipDialog({
   });
 
   const members = membersQuery.data ?? [];
-  const managers = members.filter((m) => m.role === "manager" && m.active);
+  const managers = members.filter(
+    (m) => m.role === "manager" && m.active && m.user_id !== user?.id,
+  );
 
   const managerOptions = managers.map((m) => ({
     value: m.user_id,

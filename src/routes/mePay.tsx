@@ -6,7 +6,7 @@ import { MyPayPage } from "../pages/MyPayPage";
 
 function MyPayWrapper() {
   const { storeId } = useParams<{ storeId: string }>();
-  if (!storeId) return <div className="p-6">{storeId} not found</div>;
+  if (!storeId) return <div className="p-6">Store not found</div>;
   return <MyPayPage />;
 }
 

@@ -1,30 +1,32 @@
-# Demo-readiness review — PR #25 (post-sweep close-out)
+# Demo-readiness review — mega role-dashboards PR
 
 Reviewed against the "demo-posture tradeoff" in CLAUDE.md: preview URLs share the prod DB, so every write in a preview is a prod write.
 
-## Verdict: APPROVE for merge; safe for demo rollout.
+## Verdict: APPROVE with cautions
 
-## Destructive-write audit for this PR
-- **No new destructive writes.** Everything is either a policy tighten (deny stricter than before), a trigger add (write more audit rows), or a client-side gate/UX fix (no new writes). The migration is idempotent and safe to re-run.
-- **audit_log tighten:** existing rows unaffected; only future INSERTs are stricter. Trigger path unchanged (uses `auth.uid()`).
-- **clock_events audit trigger:** additive — writes to `audit_log`, no schema change to `clock_events` itself.
-- **attendance_flags audit trigger:** additive — extends existing trigger from UPDATE to INSERT+UPDATE.
-- **Clock RPC location_verified NULL semantics:** existing rows with `location_verified = false` unchanged (data migration not attempted; new rows going forward correctly use NULL when un-measured).
+## Destructive-write audit
+- **`delete_shift_safe`**: soft-delete only (sets `deleted_at`); reversible via `UPDATE shifts SET deleted_at = NULL`. Refuses if slots claimed without a reason. Audit-logged.
+- **`update_shift_safe`**: mutates `starts_at`/`ends_at`/`notes`/`slot_count`. Refuses past-shift edits + slot shrink below claimed count. Audit-logged.
+- **`delete_store`**: `DELETE FROM stores` cascades to memberships, shifts, clock_events, sales_reports, prize_fine_events, etc. **THIS IS IRREVERSIBLE** at the DB level. Guarded by: owner-only role check + type-store-name confirmation on the client. Reviewers should be careful not to click through on the demo.
+- **`transfer_ownership`**: atomic role swap; caller becomes manager, target becomes owner. Reversible only by the new owner doing another transfer. Guarded by: eligible-manager dropdown + explicit warning.
+- **`issue_prize_fine`**, **`cancel_prize_fine`**, **`dispute_prize_fine`**: monetary state changes. Reversible via cancel_prize_fine + resolve_prize_fine_dispute. All audit-logged.
+- **`edit_clock_event`**, **`insert_manual_clock_event`**: change wage-computation source data. Audit-logged. Manager-only.
 
-## User-visible changes on preview
-1. Fonts now render (previously fell back to system fonts).
-2. Payroll page requires manager role — employees see access_denied instead of the table.
-3. StoreSwitcher shows the store name + add option for single-store users (not just an add button).
-4. Bulk-create shifts refreshes slot counts immediately.
-5. Release slot failures now surface as alerts (were silent).
+## Demo cautions (add to PR review comment)
+- **Do not click "Delete Store" in the preview** unless you actually want the store gone from production. Type-name confirmation is the only guard.
+- **Transfer Ownership is a real prod state change** — the demoted owner cannot self-restore.
+- **Editing a clock event mutates the payroll compute** for the affected employee.
+
+## User-visible changes
+1. Dashboard reshapes by role — same URL, three views.
+2. Shift `⋯` menu appears on every card for managers.
+3. Payroll page has a Store Prize/Fine table underneath the payroll table.
+4. `/me/pay`, `/me/history`, `/me/fines`, `/store/:id/people/:userId`, `/store/:id/clock/corrections` are new routes.
+5. Settings has a Danger Zone at the bottom (owner-only visible).
+6. Google Fonts still render (PR #25 fix intact).
 
 ## Rollback path
-- **CSP + client fixes:** Cloudflare Pages → Deployments → Rollback to the prior deployment. Instant.
-- **Migration:** reversing SQL is documented in `.claude/pr-body.md → How to roll it back`.
+- Client: Cloudflare Pages → Deployments → Rollback.
+- Migration: drop statements documented at the bottom of the migration file. Some drops (like DELETE from stores if `delete_store` was called during preview) are NOT reversible.
 
-## Gaps still open (documented, not blocking demo)
-- GPS layer-2 anti-spoof (rotating store QR / IP allowlist / manager-approval flow). Layer-1 defense in place: RLS + SECURITY DEFINER + haversine re-check + audit trail. A rooted phone with fake-location can still cheat.
-- Auto-triggered rule evaluators (missed_shift, late_arrival, till_variance, points_threshold) not wired to pg_cron. Manual review only for now.
-- Analytics "missed shifts" + "late arrivals" sections are placeholder "coming soon".
-
-None of these are regressions from PR #25. Merge does not make the demo less safe.
+## No blockers for merge; note the demo cautions above.

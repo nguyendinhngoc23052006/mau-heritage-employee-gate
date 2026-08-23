@@ -614,5 +614,16 @@
   "common.review_note": "Review note",
   "common.submit": "Submit",
   "common.filter": "Filter",
-  "common.access_denied": "Access denied"
+  "common.access_denied": "Access denied",
+  "common.status": "Status",
+  "common.created": "Created",
+  "common.resolved": "Resolved",
+  "common.approve": "Approve",
+  "common.deny": "Deny",
+  "common.reason": "Reason",
+  "common.name": "Name",
+  "common.date": "Date",
+  "common.time": "Time",
+  "common.amount": "Amount",
+  "common.kind": "Kind"
 }

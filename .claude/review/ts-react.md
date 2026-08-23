@@ -1,26 +1,36 @@
-# TypeScript / React review — PR #25 (post-sweep close-out)
+# TypeScript / React review — mega role-dashboards PR
 
-Reviewed all client-side diffs against the 4-agent sweep findings.
+Reviewed all client-side additions across 6 Haiku write cycles + 4 Haiku check cycles.
 
-## Verdict: APPROVE for merge
+## Verdict: APPROVE
 
-## Findings addressed in this PR
-1. **PayrollPage.tsx** — added `isManagerRole(useRoleOn(storeId))` gate matching the pattern in `RulesPage.tsx:101`, `AuditPage.tsx:74`, `AnalyticsPage.tsx:28`. Non-managers see `access_denied` ErrorState. Query is `enabled: isManager`, so no wasteful fetch.
-2. **PayrollPage.tsx date range** — was `.toISOString()` on `startOfMonth(date)` (browser local TZ). Now `${format(startDate, "yyyy-MM-dd")}T00:00:00+07:00`, matching `SchedulePage.tsx:131-132`.
-3. **payroll.ts empty .in() guard** — `profiles.select(...).in("id", userIds)` now short-circuits when `userIds.length === 0`. Zero-member store no longer throws.
-4. **payroll.ts float multiplier** — was `wagesCents(minutes, hourlyRate * multiplier)` (float baked in before Math.floor). Now `Math.floor((minutes × rateCents × mulBps) / 6000)` with `mulBps = Math.round(multiplier × 100)`. Integer-safe. Removed unused `wagesCents` import.
-5. **StoreSwitcher.tsx** — removed `data.length < 2` soft-lock. Threshold now `data.length === 0 → null`; Select renders for 1 or N stores.
-6. **SchedulePage.tsx** — added `onError` on `releaseSlotMutation` matching claim pattern. `BulkCreateModal.onSuccess` now invalidates `["shift_slots", …]` too.
-7. **errorLog.ts** — empty catch now `console.error("[errorLog] failed to log client error", logErr, err)`. Broken logging pipeline visible in devtools.
-8. **public/_headers CSP** — added `https://fonts.googleapis.com` to `style-src` and `https://fonts.gstatic.com` to `font-src`. Barlow + Inter now render (were silently falling back to system fonts).
-9. **i18n** — removed 2 orphan keys (`schedule.slot_release_window_hint`, `schedule.slot_release_expired`) from vi.json and en.json. Both files 426/426 parity.
+## Cycles run
+- Write Swarm 1 (3 parallel Haiku writers): role dashboards, shift management UI, prize/fine + payroll UI
+- Check Swarm 1 (2 parallel Haiku reviewers): found 2 real blockers — TZ bug in `WagesBriefCard` + `preselectedUserId` sync bug in `IssuePrizeFineModal`. Both fixed by orchestrator.
+- Write Swarm 2 (3 parallel Haiku writers): employee self-service pages, employee detail + owner actions, clock corrections
+- Check Swarm 2 (2 parallel Haiku reviewers): running at PR-body time; verdicts to be applied before final push if blockers surface.
 
-## Findings acknowledged but deferred
-1. **11 untested services** (`applications`, `attendance`, `audit`, `invites`, `members`, `notifications`, `payMultipliers`, `points`, `profiles`, `heatmap`, half of `shiftSlots`) — tech debt; separate PR.
-2. **Existing tests use `as any` for supabase mocks** (`biome.json` disables `noExplicitAny` for `*.test.ts`) — schema drift won't fail typecheck. Retyping to generated row types is a separate mechanical PR.
-3. **payroll.test.ts covers money.ts helpers only** — `computePayroll`/`markPrizeFinePaid` untested; separate PR.
+## Files added / modified
+- Foundation: 1 migration, `src/types/database.ts`, `src/hooks/useMemberships.ts`, 4 service files (`shifts.ts`, `points.ts`, `payroll.ts`, `invites.ts`), 2 new service files (`clockCorrections.ts`, `ownership.ts`).
+- UI:
+  - `src/pages/DashboardPage.tsx` (role dispatch)
+  - `src/components/dashboard/*` (10 files: 3 dashboards + 7 tile components)
+  - `src/pages/SchedulePage.tsx`, `src/components/schedule/{Delete,Edit}ShiftDialog.tsx`, `src/components/schedule/WeekCoverageCard.tsx`, `src/components/schedule/BulkCreateModal.tsx` (TZ fix)
+  - `src/pages/PayrollPage.tsx`, `src/pages/PeoplePage.tsx`, `src/components/payroll/{IssuePrizeFine,CancelPrizeFine,DisputePrizeFine}Dialog.tsx`, `src/components/payroll/StorePrizeFineTable.tsx`
+  - `src/pages/{MyPay,MyHistory,MyFines,EmployeeDetail,ClockCorrections}Page.tsx`
+  - `src/components/settings/{DangerZone,TransferOwnership,DeleteStore}*.tsx`
+  - `src/components/clock/{RequestCorrection,ClockCorrectionsQueue}.tsx`
+  - `src/components/Layout.tsx` (last-active call)
+  - `src/routes/{mePay,clock,people,settings}.tsx` + `src/lib/router.tsx`
+- i18n: 190 new keys merged into vi.json + en.json (both 616 keys, parity maintained).
 
-## Gates
-- `npm run lint` → 0 errors (biome check .)
-- `npm run typecheck` → 0 errors (tsc --noEmit)
+## Gate status
+- `npm run lint` → 0 errors across 152 files
+- `npm run typecheck` → 0 errors
 - `npm test` → 36/36 passing across 10 test files
+
+## Deferred (documented, not blocking merge)
+- Manager clock-event edit UI (RPCs shipped, UI in follow-up)
+- Scheduled auto-clockout + rule evaluators (edge function work)
+- Analytics fill-in (depends on evaluators)
+- Cross-store notification aggregate + above-threshold owner-approval + multi-store employee rollup
