@@ -1,0 +1,210 @@
+{
+  "schedule.edit_shift_title": {
+    "vi": "Chỉnh sửa ca làm",
+    "en": "Edit shift"
+  },
+  "schedule.edit_shift_start": {
+    "vi": "Giờ bắt đầu",
+    "en": "Start time"
+  },
+  "schedule.edit_shift_end": {
+    "vi": "Giờ kết thúc",
+    "en": "End time"
+  },
+  "schedule.edit_shift_notes": {
+    "vi": "Ghi chú",
+    "en": "Notes"
+  },
+  "schedule.edit_shift_slots": {
+    "vi": "Số slot",
+    "en": "Slot count"
+  },
+  "schedule.edit_shift_claimed": {
+    "vi": "{count} slot đã được yêu cầu",
+    "en": "{count} slots claimed"
+  },
+  "schedule.edit_shift_cannot_shrink": {
+    "vi": "Không thể giảm dưới {min} slot",
+    "en": "Cannot shrink below {min} slots"
+  },
+  "schedule.edit_shift_past_error": {
+    "vi": "Không thể chỉnh sửa ca đã qua",
+    "en": "Cannot edit past shifts"
+  },
+  "schedule.edit_shift_invalid_time": {
+    "vi": "Giờ bắt đầu phải trước giờ kết thúc",
+    "en": "Start time must be before end time"
+  },
+  "schedule.delete_shift_title": {
+    "vi": "Xóa ca làm",
+    "en": "Delete shift"
+  },
+  "schedule.delete_shift_confirm": {
+    "vi": "Bạn chắc chắn muốn xóa ca làm này?",
+    "en": "Are you sure you want to delete this shift?"
+  },
+  "schedule.delete_shift_with_claims": {
+    "vi": "Ca làm này có {count} nhân viên. Hãy cung cấp lý do xóa.",
+    "en": "This shift has {count} employees. Please provide a reason for deletion."
+  },
+  "schedule.delete_shift_reason": {
+    "vi": "Lý do xóa",
+    "en": "Reason for deletion"
+  },
+  "schedule.delete_shift_irreversible": {
+    "vi": "Hành động này không thể hoàn tác.",
+    "en": "This action cannot be undone."
+  },
+  "schedule.close_claims_title": {
+    "vi": "Đóng tất cả yêu cầu",
+    "en": "Close all claims"
+  },
+  "schedule.close_claims_confirm": {
+    "vi": "Bạn chắc chắn muốn đóng tất cả yêu cầu cho ca làm này?",
+    "en": "Are you sure you want to close all claims for this shift?"
+  },
+  "schedule.close_claims_success": {
+    "vi": "Đã giải phóng {count} slot",
+    "en": "Released {count} slots"
+  },
+  "schedule.force_open_title": {
+    "vi": "Mở ca làm",
+    "en": "Force open shift"
+  },
+  "schedule.force_open_confirm": {
+    "vi": "Mở ca làm này để yêu cầu?",
+    "en": "Open this shift for claims?"
+  },
+  "schedule.shift_menu_edit": {
+    "vi": "Chỉnh sửa",
+    "en": "Edit"
+  },
+  "schedule.shift_menu_delete": {
+    "vi": "Xóa",
+    "en": "Delete"
+  },
+  "schedule.shift_menu_close_claims": {
+    "vi": "Đóng yêu cầu",
+    "en": "Close claims"
+  },
+  "schedule.shift_menu_force_open": {
+    "vi": "Mở buộc",
+    "en": "Force open"
+  },
+  "schedule.week_coverage_title": {
+    "vi": "Bao phủ tuần",
+    "en": "Week coverage"
+  },
+  "schedule.week_coverage_day": {
+    "vi": "{day} {date}",
+    "en": "{day} {date}"
+  },
+  "schedule.week_coverage_slots": {
+    "vi": "{filled}/{total}",
+    "en": "{filled}/{total}"
+  },
+  "schedule.bulk_template_remove": {
+    "vi": "Xóa",
+    "en": "Remove"
+  },
+  "schedule.bulk_slots_invalid": {
+    "vi": "Số slot phải từ 1 đến 20",
+    "en": "Slots must be 1–20"
+  },
+  "schedule.bulk_time_invalid": {
+    "vi": "Giờ kết thúc phải sau giờ bắt đầu",
+    "en": "End time must be after start time"
+  },
+  "schedule.bulk_multiplier_moved_hint": {
+    "vi": "Lưu ý: bội số lương sẽ được áp dụng cho các ngày trong phạm vi nếu đã có bội số trước đó",
+    "en": "Note: pay multipliers will be applied to dates in range if they existed before"
+  },
+  "schedule.week_prev": {
+    "vi": "Tuần trước",
+    "en": "Previous week"
+  },
+  "schedule.week_next": {
+    "vi": "Tuần sau",
+    "en": "Next week"
+  },
+  "schedule.week_today": {
+    "vi": "Hôm nay",
+    "en": "Today"
+  },
+  "schedule.day_shift_count": {
+    "vi": "{n} ca",
+    "en": "{n} shifts"
+  },
+  "schedule.multiplier_badge_short": {
+    "vi": "lương",
+    "en": "pay"
+  },
+  "schedule.day_empty_shifts": {
+    "vi": "Chưa có ca làm nào trong ngày này",
+    "en": "No shifts scheduled for this day"
+  },
+  "schedule.open_all_next_14d": {
+    "vi": "Mở tất cả (14 ngày tới)",
+    "en": "Open all (next 14d)"
+  },
+  "schedule.close_all_next_14d": {
+    "vi": "Đóng tất cả (14 ngày tới)",
+    "en": "Close all (next 14d)"
+  },
+  "common.error_generic": {
+    "vi": "Có lỗi xảy ra",
+    "en": "An error occurred"
+  },
+  "common.confirm": {
+    "vi": "Xác nhận",
+    "en": "Confirm"
+  },
+  "common.cancel": {
+    "vi": "Hủy",
+    "en": "Cancel"
+  },
+  "common.save": {
+    "vi": "Lưu",
+    "en": "Save"
+  },
+  "common.error": {
+    "vi": "Lỗi: {message}",
+    "en": "Error: {message}"
+  },
+  "common.loading": {
+    "vi": "Đang tải...",
+    "en": "Loading…"
+  },
+  "common.optional": {
+    "vi": "Tùy chọn",
+    "en": "Optional"
+  },
+  "rules.apply.select_employee": {
+    "vi": "Chọn nhân viên",
+    "en": "Select employee"
+  },
+  "common.select_placeholder": {
+    "vi": "Chọn...",
+    "en": "Select…"
+  },
+  "swap.request_button": {
+    "vi": "Yêu cầu trao đổi",
+    "en": "Request swap"
+  },
+  "swap.request_title": {
+    "vi": "Yêu cầu trao đổi ca",
+    "en": "Request shift swap"
+  },
+  "swap.approve_title": {
+    "vi": "Yêu cầu trao đổi ca đang chờ",
+    "en": "Pending shift swaps"
+  },
+  "swap.approve_button": {
+    "vi": "Chấp nhận",
+    "en": "Approve"
+  },
+  "swap.decline_button": {
+    "vi": "Từ chối",
+    "en": "Decline"
+  }
+}

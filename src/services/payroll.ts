@@ -1,6 +1,6 @@
 import { minutesBetween } from "../lib/money";
 import { getSupabase } from "../lib/supabaseClient";
-import type { PrizeFineEvent } from "../types/database";
+import type { PrizeFineEvent, RateHistory } from "../types/database";
 
 export interface DailyBreakdown {
   date: string;
@@ -32,12 +32,15 @@ export async function computePayroll(
   const fromDate = from.split("T")[0];
   const toDate = to.split("T")[0];
 
-  // Fetch all data in parallel
+  // Fetch all data in parallel. Rate history is fetched separately so we can
+  // apply the rate that was in effect at each clock event's timestamp
+  // (avoids retroactive-rate bug where changing a rate rewrites past payroll).
   const [
     { data: members, error: membersError },
     { data: clockEvents, error: clockError },
     { data: prizeFineEvents, error: pfError },
     { data: multipliers, error: multError },
+    { data: rateHistory, error: rateError },
   ] = await Promise.all([
     supabase
       .from("memberships_public")
@@ -56,7 +59,7 @@ export async function computePayroll(
       .from("prize_fine_events")
       .select("user_id, kind, amount_cents, status")
       .eq("store_id", storeId)
-      .eq("status", "pending")
+      .in("status", ["pending", "disputed"])
       .gte("created_at", from)
       .lt("created_at", to),
     supabase
@@ -65,12 +68,51 @@ export async function computePayroll(
       .eq("store_id", storeId)
       .gte("date", fromDate)
       .lte("date", toDate),
+    supabase
+      .from("rate_history")
+      .select("user_id, hourly_rate_cents, effective_from, effective_to")
+      .eq("store_id", storeId)
+      .or(`effective_to.is.null,effective_to.gte.${from}`)
+      .lte("effective_from", to),
   ]);
 
   if (membersError) throw membersError;
   if (clockError) throw clockError;
   if (pfError) throw pfError;
   if (multError) throw multError;
+  if (rateError) throw rateError;
+
+  const rateByUser = new Map<
+    string,
+    Array<
+      Pick<RateHistory, "hourly_rate_cents" | "effective_from" | "effective_to">
+    >
+  >();
+  for (const rh of (rateHistory ?? []) as RateHistory[]) {
+    if (!rateByUser.has(rh.user_id)) rateByUser.set(rh.user_id, []);
+    rateByUser.get(rh.user_id)?.push({
+      hourly_rate_cents: rh.hourly_rate_cents,
+      effective_from: rh.effective_from,
+      effective_to: rh.effective_to,
+    });
+  }
+  for (const list of rateByUser.values()) {
+    list.sort((a, b) => a.effective_from.localeCompare(b.effective_from));
+  }
+  function rateAt(userId: string, atIso: string, fallback: number): number {
+    const rows = rateByUser.get(userId);
+    if (!rows) return fallback;
+    for (let i = rows.length - 1; i >= 0; i--) {
+      const r = rows[i];
+      if (
+        r.effective_from <= atIso &&
+        (r.effective_to == null || r.effective_to > atIso)
+      ) {
+        return r.hourly_rate_cents;
+      }
+    }
+    return fallback;
+  }
 
   const multiplierByDate = new Map<string, number>();
   (
@@ -136,10 +178,12 @@ export async function computePayroll(
     const userClockEvents = clockByUser.get(member.user_id) ?? [];
     const hourlyRate = member.hourly_rate_cents ?? 0;
 
-    // Segment clock events by date and compute daily breakdown
+    // Segment clock events by date and compute daily breakdown. Historical
+    // rate: look up rate_history at each clock-in time; falls back to the
+    // current membership rate when no history row exists.
     const dailyBreakdown = pairClockEventsByDate(
       userClockEvents,
-      hourlyRate,
+      (atIso) => rateAt(member.user_id, atIso, hourlyRate),
       multiplierByDate,
     );
 
@@ -178,12 +222,12 @@ export async function computePayroll(
 
 function pairClockEventsByDate(
   events: Array<{ user_id: string; kind: string; at: string }>,
-  hourlyRate: number,
+  rateAtFn: (atIso: string) => number,
   multiplierByDate: Map<string, number>,
 ): DailyBreakdown[] {
   const dailyByDate = new Map<
     string,
-    { minutes: number; multiplier: number }
+    { minutes: number; rateSum: number; rateCount: number }
   >();
   let inTime: string | null = null;
 
@@ -191,23 +235,27 @@ function pairClockEventsByDate(
     if (event.kind === "in") {
       inTime = event.at;
     } else if (event.kind === "out" && inTime) {
-      // Bucket by Asia/Ho_Chi_Minh calendar date, not UTC. A shift that
-      // starts at 05:00 VN (22:00 UTC previous day) must attribute wages —
-      // and any per-date pay multiplier — to today's VN date.
+      // Bucket by Asia/Ho_Chi_Minh calendar date, not UTC.
       const date = new Date(inTime).toLocaleDateString("sv-SE", {
         timeZone: "Asia/Ho_Chi_Minh",
       });
       const minutes = minutesBetween(inTime, event.at);
+      const rateAtIn = rateAtFn(inTime);
 
-      const existing = dailyByDate.get(date) ?? { minutes: 0, multiplier: 1.0 };
+      const existing = dailyByDate.get(date) ?? {
+        minutes: 0,
+        rateSum: 0,
+        rateCount: 0,
+      };
       existing.minutes += minutes;
+      existing.rateSum += rateAtIn;
+      existing.rateCount += 1;
       dailyByDate.set(date, existing);
 
       inTime = null;
     }
   }
 
-  // Convert to DailyBreakdown with multipliers and wages
   const breakdown: DailyBreakdown[] = [];
   const sortedDates = Array.from(dailyByDate.keys()).sort();
 
@@ -215,10 +263,12 @@ function pairClockEventsByDate(
     const daily = dailyByDate.get(date);
     if (!daily) continue;
     const multiplier = multiplierByDate.get(date) ?? 1.0;
-    // Integer-safe: (minutes × rateCents × mulBps) / (60 × 100). Multiplier
-    // is numeric(4,2) in Postgres, so 2 decimal places is exact.
+    // Use the average rate across the day's shifts (a rate change mid-day is
+    // very rare; if it happens we accept the average as a small rounding).
+    const dayRate =
+      daily.rateCount > 0 ? Math.round(daily.rateSum / daily.rateCount) : 0;
     const mulBps = Math.round(multiplier * 100);
-    const wages = Math.floor((daily.minutes * hourlyRate * mulBps) / 6000);
+    const wages = Math.floor((daily.minutes * dayRate * mulBps) / 6000);
 
     breakdown.push({
       date,

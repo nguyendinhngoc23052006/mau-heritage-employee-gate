@@ -1,0 +1,142 @@
+{
+  "payroll.issue_prize_fine_title": {
+    "vi": "Cấp phát giải thưởng/phạt",
+    "en": "Issue prize/fine"
+  },
+  "payroll.issue_prize_fine_button": {
+    "vi": "Cấp phát giải thưởng/phạt",
+    "en": "Issue prize/fine"
+  },
+  "payroll.member_label": {
+    "vi": "Nhân viên",
+    "en": "Employee"
+  },
+  "payroll.kind_label": {
+    "vi": "Loại",
+    "en": "Kind"
+  },
+  "payroll.kind_prize": {
+    "vi": "Giải thưởng",
+    "en": "Prize"
+  },
+  "payroll.kind_fine": {
+    "vi": "Phạt",
+    "en": "Fine"
+  },
+  "payroll.amount_label": {
+    "vi": "Số tiền (VND)",
+    "en": "Amount (VND)"
+  },
+  "payroll.reason_label": {
+    "vi": "Lý do",
+    "en": "Reason"
+  },
+  "payroll.reason_placeholder": {
+    "vi": "Nhập lý do...",
+    "en": "Enter reason…"
+  },
+  "payroll.cancel_prize_fine_title": {
+    "vi": "Hủy giải thưởng/phạt",
+    "en": "Cancel prize/fine"
+  },
+  "payroll.cancel_reason_label": {
+    "vi": "Lý do hủy",
+    "en": "Cancellation reason"
+  },
+  "payroll.cancel_reason_placeholder": {
+    "vi": "Nhập lý do hủy...",
+    "en": "Enter cancellation reason…"
+  },
+  "payroll.confirm_cancel": {
+    "vi": "Xác nhận hủy",
+    "en": "Confirm cancellation"
+  },
+  "payroll.prize_fine_table_title": {
+    "vi": "Giải thưởng/Phạt",
+    "en": "Prizes/Fines"
+  },
+  "payroll.filter_all": {
+    "vi": "Tất cả",
+    "en": "All"
+  },
+  "payroll.filter_pending": {
+    "vi": "Chưa thanh toán",
+    "en": "Pending"
+  },
+  "payroll.filter_paid": {
+    "vi": "Đã thanh toán",
+    "en": "Paid"
+  },
+  "payroll.filter_cancelled": {
+    "vi": "Đã hủy",
+    "en": "Cancelled"
+  },
+  "payroll.filter_disputed": {
+    "vi": "Tranh chấp",
+    "en": "Disputed"
+  },
+  "payroll.employee_col": {
+    "vi": "Nhân viên",
+    "en": "Employee"
+  },
+  "payroll.kind_col": {
+    "vi": "Loại",
+    "en": "Kind"
+  },
+  "payroll.amount_col": {
+    "vi": "Số tiền",
+    "en": "Amount"
+  },
+  "payroll.reason_col": {
+    "vi": "Lý do",
+    "en": "Reason"
+  },
+  "payroll.status_col": {
+    "vi": "Trạng thái",
+    "en": "Status"
+  },
+  "payroll.created_col": {
+    "vi": "Ngày tạo",
+    "en": "Created"
+  },
+  "payroll.actions_col": {
+    "vi": "Hành động",
+    "en": "Actions"
+  },
+  "payroll.status_pending": {
+    "vi": "Chưa thanh toán",
+    "en": "Pending"
+  },
+  "payroll.status_paid": {
+    "vi": "Đã thanh toán",
+    "en": "Paid"
+  },
+  "payroll.status_cancelled": {
+    "vi": "Đã hủy",
+    "en": "Cancelled"
+  },
+  "payroll.status_disputed": {
+    "vi": "Tranh chấp",
+    "en": "Disputed"
+  },
+  "payroll.mark_paid": {
+    "vi": "Đánh dấu đã thanh toán",
+    "en": "Mark paid"
+  },
+  "payroll.cancel": {
+    "vi": "Hủy",
+    "en": "Cancel"
+  },
+  "payroll.uphold": {
+    "vi": "Giữ lại",
+    "en": "Uphold"
+  },
+  "payroll.reverse": {
+    "vi": "Đảo ngược",
+    "en": "Reverse"
+  },
+  "people.issue_prize_fine": {
+    "vi": "Cấp phát giải thưởng/phạt",
+    "en": "Issue prize/fine"
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "dashboard.coverage_gaps": {
+    "en": "Coverage gaps (next 24h)",
+    "vi": "Thiếu nhân sự (24h tới)"
+  },
+  "dashboard.coverage_full": {
+    "en": "All shifts covered.",
+    "vi": "Tất cả ca đã đủ nhân sự."
+  },
+  "common.view": {
+    "en": "View",
+    "vi": "Xem"
+  },
+  "dashboard.unpaid_fines": {
+    "en": "Unpaid fines & prizes",
+    "vi": "Phạt & thưởng chưa thanh toán"
+  },
+  "dashboard.no_pending_fines": {
+    "en": "No pending fines or prizes.",
+    "vi": "Không có phạt hay thưởng chưa thanh toán."
+  },
+  "dashboard.fines": {
+    "en": "Fines",
+    "vi": "Phạt"
+  },
+  "dashboard.prizes": {
+    "en": "Prizes",
+    "vi": "Thưởng"
+  },
+  "dashboard.next_shift": {
+    "en": "Next shift",
+    "vi": "Ca làm kế tiếp"
+  },
+  "dashboard.no_upcoming_shifts": {
+    "en": "No upcoming shifts scheduled.",
+    "vi": "Không có ca làm nào sắp tới."
+  },
+  "dashboard.wage_costs": {
+    "en": "Wage costs",
+    "vi": "Chi phí tiền lương"
+  },
+  "dashboard.today": {
+    "en": "Today",
+    "vi": "Hôm nay"
+  },
+  "dashboard.month_to_date": {
+    "en": "Month to date",
+    "vi": "Tính từ đầu tháng"
+  },
+  "dashboard.hiring_pipeline": {
+    "en": "Hiring pipeline",
+    "vi": "Quy trình tuyển dụng"
+  },
+  "dashboard.pending_applications": {
+    "en": "Pending applications",
+    "vi": "Đơn chưa phê duyệt"
+  },
+  "dashboard.pending_invites": {
+    "en": "Pending invites",
+    "vi": "Lời mời chưa nhận"
+  },
+  "dashboard.pending_swaps": {
+    "en": "Pending swaps",
+    "vi": "Yêu cầu đổi ca chưa duyệt"
+  },
+  "dashboard.no_pending_swaps": {
+    "en": "No pending swaps.",
+    "vi": "Không có yêu cầu đổi ca nào."
+  },
+  "dashboard.review_swaps": {
+    "en": "Review swaps",
+    "vi": "Xem yêu cầu đổi ca"
+  },
+  "dashboard.pending_applications_card": {
+    "en": "Pending applications",
+    "vi": "Đơn chưa phê duyệt"
+  },
+  "dashboard.no_pending_applications": {
+    "en": "No pending applications.",
+    "vi": "Không có đơn chưa phê duyệt."
+  },
+  "dashboard.review_applications": {
+    "en": "Review applications",
+    "vi": "Xem đơn ứng tuyển"
+  }
+}

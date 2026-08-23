@@ -11,6 +11,8 @@ interface UseMembershipsResult {
   isLoading: boolean;
 }
 
+// 30s poll so a role demotion/promotion done by another manager reaches this
+// session without a hard refresh. Also refetches on window focus.
 export function useMemberships(): UseMembershipsResult {
   const query = useQuery<MembershipWithStore[]>({
     queryKey: ["memberships", "mine"],
@@ -19,10 +21,13 @@ export function useMemberships(): UseMembershipsResult {
       const { data, error } = await supabase
         .from("memberships")
         .select("*, store:stores(*)")
-        .eq("active", true);
+        .eq("active", true)
+        .order("last_active_at", { ascending: false, nullsFirst: false });
       if (error) throw error;
       return (data ?? []) as MembershipWithStore[];
     },
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   return {
@@ -39,4 +44,8 @@ export function useRoleOn(storeId: string | undefined): Role | undefined {
 
 export function isManagerRole(role: Role | undefined): boolean {
   return role === "owner" || role === "manager";
+}
+
+export function isOwnerRole(role: Role | undefined): boolean {
+  return role === "owner";
 }

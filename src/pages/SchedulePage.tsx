@@ -2,7 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { BulkCreateModal } from "../components/schedule/BulkCreateModal";
+import { DeleteShiftDialog } from "../components/schedule/DeleteShiftDialog";
+import { EditShiftDialog } from "../components/schedule/EditShiftDialog";
 import { SlotGrid } from "../components/schedule/SlotGrid";
+import { WeekCoverageCard } from "../components/schedule/WeekCoverageCard";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
 import { Checkbox } from "../components/ui/Checkbox";
@@ -25,8 +28,10 @@ import {
 } from "../services/shiftSlots";
 import {
   approveSwap,
+  closeShiftClaims,
   createShift,
   declineSwap,
+  forceOpenShift,
   listPendingSwaps,
   listShifts,
   requestShiftSwap,
@@ -122,6 +127,9 @@ export function SchedulePage() {
     ends_at: "",
     notes: "",
   });
+
+  const [editShiftId, setEditShiftId] = useState<string | null>(null);
+  const [deleteShiftId, setDeleteShiftId] = useState<string | null>(null);
 
   const weekEnd = useMemo(() => addDaysISO(weekStart, 6), [weekStart]);
   const weekDays = useMemo(
@@ -281,6 +289,34 @@ export function SchedulePage() {
       }),
   });
 
+  const closeClaimsMutation = useMutation({
+    mutationFn: (shiftId: string) => closeShiftClaims(shiftId),
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({
+        queryKey: ["shifts", storeId, weekStart, weekEnd],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["shift_slots", storeId, weekStart, weekEnd],
+      });
+      alert(t("schedule.close_claims_success", { count }));
+    },
+    onError: (err) => {
+      alert(t("common.error", { message: errorMessage(err) }));
+    },
+  });
+
+  const forceOpenMutation = useMutation({
+    mutationFn: (shiftId: string) => forceOpenShift(shiftId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["shifts", storeId, weekStart, weekEnd],
+      });
+    },
+    onError: (err) => {
+      alert(t("common.error", { message: errorMessage(err) }));
+    },
+  });
+
   const swapMutation = useMutation({
     mutationFn: () => {
       if (!swapDialogShiftId || !selectedSwapUserId)
@@ -364,6 +400,8 @@ export function SchedulePage() {
   const today = todayISO();
   const selectedDayShifts = shiftsByDay[selectedDay] ?? [];
   const selectedMultiplier = multiplierByDate[selectedDay];
+  const editShift = shifts?.find((s) => s.id === editShiftId);
+  const deleteShift = shifts?.find((s) => s.id === deleteShiftId);
 
   const dayShortLabels = [
     t("schedule.bulk_day_sun"),
@@ -418,6 +456,13 @@ export function SchedulePage() {
           )}
         </div>
       </div>
+
+      <WeekCoverageCard
+        weekStart={weekStart}
+        shifts={shifts ?? []}
+        slots={slots ?? []}
+        onSelectDay={setSelectedDay}
+      />
 
       <Card className="p-3 sm:p-4">
         <div className="flex items-center justify-between gap-2 mb-3">
@@ -600,6 +645,10 @@ export function SchedulePage() {
                   })
                 }
                 onRequestSwap={() => setSwapDialogShiftId(shift.id)}
+                onEditShift={() => setEditShiftId(shift.id)}
+                onDeleteShift={() => setDeleteShiftId(shift.id)}
+                onCloseAllClaims={() => closeClaimsMutation.mutate(shift.id)}
+                onForceOpen={() => forceOpenMutation.mutate(shift.id)}
                 claimingSlotId={
                   claimSlotMutation.isPending
                     ? claimSlotMutation.variables
@@ -632,6 +681,30 @@ export function SchedulePage() {
         />
       )}
 
+      {editShift && (
+        <EditShiftDialog
+          open={true}
+          onClose={() => setEditShiftId(null)}
+          shift={editShift}
+          slots={slotsByShift[editShift.id] ?? []}
+          storeId={storeId}
+          weekStart={weekStart}
+          weekEnd={weekEnd}
+        />
+      )}
+
+      {deleteShift && (
+        <DeleteShiftDialog
+          open={true}
+          onClose={() => setDeleteShiftId(null)}
+          shift={deleteShift}
+          slots={slotsByShift[deleteShift.id] ?? []}
+          storeId={storeId}
+          weekStart={weekStart}
+          weekEnd={weekEnd}
+        />
+      )}
+
       <BulkCreateModal
         open={bulkModalOpen}
         onClose={() => setBulkModalOpen(false)}
@@ -659,6 +732,10 @@ interface ShiftCardProps {
   onReleaseSlot: (slotId: string) => void;
   onSetClaimOpen: (open: boolean) => void;
   onRequestSwap: () => void;
+  onEditShift: () => void;
+  onDeleteShift: () => void;
+  onCloseAllClaims: () => void;
+  onForceOpen: () => void;
   claimingSlotId?: string;
   releasingSlotId?: string;
 }
@@ -673,10 +750,15 @@ function ShiftCard({
   onReleaseSlot,
   onSetClaimOpen,
   onRequestSwap,
+  onEditShift,
+  onDeleteShift,
+  onCloseAllClaims,
+  onForceOpen,
   claimingSlotId,
   releasingSlotId,
 }: ShiftCardProps) {
   const t = useT();
+  const [menuOpen, setMenuOpen] = useState(false);
   const filled = shiftSlots.filter((s) => s.claimed_by).length;
   const total = shiftSlots.length || shift.slot_count;
   const mineHere = shiftSlots.some((s) => s.claimed_by === currentUserId);
@@ -697,15 +779,70 @@ function ShiftCard({
             <div className="text-xs text-brand-muted mt-1">{shift.notes}</div>
           )}
         </div>
-        {mineHere && !isManager && (
-          <Button
-            onClick={onRequestSwap}
-            variant="ghost"
-            className="text-xs shrink-0"
-          >
-            {t("swap.request_button")}
-          </Button>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {mineHere && !isManager && (
+            <Button onClick={onRequestSwap} variant="ghost" className="text-xs">
+              {t("swap.request_button")}
+            </Button>
+          )}
+          {isManager && (
+            <div className="relative">
+              <Button
+                onClick={() => setMenuOpen(!menuOpen)}
+                variant="ghost"
+                className="text-xs px-2 py-1"
+              >
+                ⋯
+              </Button>
+              {menuOpen && (
+                <div className="absolute right-0 top-full mt-1 bg-white border border-brand-hairline rounded-md shadow-lg z-10">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onEditShift();
+                      setMenuOpen(false);
+                    }}
+                    className="block w-full text-left px-4 py-2 text-sm text-brand-ink hover:bg-brand-cream-light"
+                  >
+                    {t("schedule.shift_menu_edit")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onDeleteShift();
+                      setMenuOpen(false);
+                    }}
+                    className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                  >
+                    {t("schedule.shift_menu_delete")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onCloseAllClaims();
+                      setMenuOpen(false);
+                    }}
+                    className="block w-full text-left px-4 py-2 text-sm text-brand-ink hover:bg-brand-cream-light"
+                  >
+                    {t("schedule.shift_menu_close_claims")}
+                  </button>
+                  {!shift.claim_open && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onForceOpen();
+                        setMenuOpen(false);
+                      }}
+                      className="block w-full text-left px-4 py-2 text-sm text-brand-ink hover:bg-brand-cream-light"
+                    >
+                      {t("schedule.shift_menu_force_open")}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="mb-3">

@@ -25,13 +25,17 @@ interface Props {
   onSuccess: () => void;
 }
 
-function getNextMonday(): string {
-  const today = new Date();
-  const dayOfWeek = today.getDay();
+const TZ = "Asia/Ho_Chi_Minh";
+
+function getNextMondayICT(): string {
+  const now = new Date();
+  // Get current wall-clock day-of-week in ICT.
+  const ictDate = new Date(now.toLocaleString("en-US", { timeZone: TZ }));
+  const dayOfWeek = ictDate.getDay();
   const daysUntilMonday = (1 - dayOfWeek + 7) % 7 || 7;
-  const nextMonday = new Date(today);
-  nextMonday.setDate(today.getDate() + daysUntilMonday);
-  return nextMonday.toISOString().split("T")[0];
+  const nextMondayInIct = new Date(ictDate);
+  nextMondayInIct.setDate(ictDate.getDate() + daysUntilMonday);
+  return nextMondayInIct.toISOString().split("T")[0];
 }
 
 function getSunday(fromDate: string): string {
@@ -49,7 +53,7 @@ function parseSlots(raw: string): number | null {
 
 export function BulkCreateModal({ open, onClose, storeId, onSuccess }: Props) {
   const t = useT();
-  const monday = getNextMonday();
+  const monday = getNextMondayICT();
   const sunday = getSunday(monday);
 
   const [fromDate, setFromDate] = useState(monday);

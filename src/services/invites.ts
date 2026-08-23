@@ -6,6 +6,15 @@ import type {
   Role,
 } from "../types/database";
 
+export async function resendInvite(inviteId: string): Promise<Invite> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc("resend_invite", {
+    p_invite_id: inviteId,
+  });
+  if (error) throw error;
+  return data as Invite;
+}
+
 export async function listInvitesFor(storeId: string): Promise<Invite[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase

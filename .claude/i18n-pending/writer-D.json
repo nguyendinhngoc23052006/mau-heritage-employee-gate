@@ -1,0 +1,278 @@
+{
+  "my_pay.title": {
+    "vi": "Tính lương của tôi",
+    "en": "My Pay"
+  },
+  "my_pay.period": {
+    "vi": "Kỳ tính lương",
+    "en": "Period"
+  },
+  "my_pay.this_month_title": {
+    "vi": "Tính lương tháng này",
+    "en": "This Month's Pay"
+  },
+  "my_pay.hours_label": {
+    "vi": "Giờ làm",
+    "en": "Hours"
+  },
+  "my_pay.wages_label": {
+    "vi": "Lương",
+    "en": "Wages"
+  },
+  "my_pay.prizes_label": {
+    "vi": "Giải thưởng",
+    "en": "Prizes"
+  },
+  "my_pay.fines_label": {
+    "vi": "Phạt",
+    "en": "Fines"
+  },
+  "my_pay.date_col": {
+    "vi": "Ngày",
+    "en": "Date"
+  },
+  "my_pay.hours_col": {
+    "vi": "Giờ",
+    "en": "Hours"
+  },
+  "my_pay.wages_col": {
+    "vi": "Lương",
+    "en": "Wages"
+  },
+  "my_pay.prizes_fines_title": {
+    "vi": "Giải thưởng & Phạt",
+    "en": "Prizes & Fines"
+  },
+  "my_pay.created_date_col": {
+    "vi": "Ngày tạo",
+    "en": "Created"
+  },
+  "my_pay.kind_col": {
+    "vi": "Loại",
+    "en": "Kind"
+  },
+  "my_pay.amount_col": {
+    "vi": "Số tiền",
+    "en": "Amount"
+  },
+  "my_pay.reason_col": {
+    "vi": "Lý do",
+    "en": "Reason"
+  },
+  "my_pay.status_col": {
+    "vi": "Trạng thái",
+    "en": "Status"
+  },
+  "my_pay.status_pending": {
+    "vi": "Chưa thanh toán",
+    "en": "Pending"
+  },
+  "my_pay.status_paid": {
+    "vi": "Đã thanh toán",
+    "en": "Paid"
+  },
+  "my_pay.status_cancelled": {
+    "vi": "Đã hủy",
+    "en": "Cancelled"
+  },
+  "my_pay.status_disputed": {
+    "vi": "Tranh chấp",
+    "en": "Disputed"
+  },
+  "my_pay.rate_history_title": {
+    "vi": "Lịch sử mức lương",
+    "en": "Rate History"
+  },
+  "my_pay.effective_from_col": {
+    "vi": "Từ ngày",
+    "en": "Effective from"
+  },
+  "my_pay.effective_to_col": {
+    "vi": "Đến ngày",
+    "en": "Effective to"
+  },
+  "my_pay.rate_col": {
+    "vi": "Mức lương/giờ",
+    "en": "Rate/hour"
+  },
+  "my_pay.current": {
+    "vi": "Hiện tại",
+    "en": "Current"
+  },
+  "my_history.title": {
+    "vi": "Lịch sử của tôi",
+    "en": "My History"
+  },
+  "my_history.past_shifts_title": {
+    "vi": "Ca làm việc",
+    "en": "Past Shifts"
+  },
+  "my_history.date_col": {
+    "vi": "Ngày",
+    "en": "Date"
+  },
+  "my_history.in_time_col": {
+    "vi": "Vào lúc",
+    "en": "In time"
+  },
+  "my_history.out_time_col": {
+    "vi": "Ra lúc",
+    "en": "Out time"
+  },
+  "my_history.hours_col": {
+    "vi": "Giờ",
+    "en": "Hours"
+  },
+  "my_history.attendance_flags_title": {
+    "vi": "Cảnh báo chuyên cần",
+    "en": "Attendance Flags"
+  },
+  "my_history.kind_col": {
+    "vi": "Loại",
+    "en": "Kind"
+  },
+  "my_history.detail_col": {
+    "vi": "Chi tiết",
+    "en": "Detail"
+  },
+  "my_history.created_col": {
+    "vi": "Ngày tạo",
+    "en": "Created"
+  },
+  "my_history.resolved_col": {
+    "vi": "Ngày giải quyết",
+    "en": "Resolved"
+  },
+  "my_history.note_col": {
+    "vi": "Ghi chú",
+    "en": "Note"
+  },
+  "my_history.flag_auto_clockout": {
+    "vi": "Tự động ra",
+    "en": "Auto clock out"
+  },
+  "my_history.flag_geofence_miss": {
+    "vi": "Vị trí không khớp",
+    "en": "Geofence miss"
+  },
+  "my_history.sales_title": {
+    "vi": "Doanh số bán hàng",
+    "en": "Sales Reports"
+  },
+  "my_history.submitted_date_col": {
+    "vi": "Ngày nộp",
+    "en": "Submitted"
+  },
+  "my_history.cash_col": {
+    "vi": "Tiền mặt",
+    "en": "Cash"
+  },
+  "my_history.card_col": {
+    "vi": "Thẻ",
+    "en": "Card"
+  },
+  "my_history.qr_col": {
+    "vi": "QR",
+    "en": "QR"
+  },
+  "my_history.total_col": {
+    "vi": "Tổng",
+    "en": "Total"
+  },
+  "my_history.status_col": {
+    "vi": "Trạng thái",
+    "en": "Status"
+  },
+  "my_history.status_approved": {
+    "vi": "Đã phê duyệt",
+    "en": "Approved"
+  },
+  "my_fines.title": {
+    "vi": "Phạt của tôi",
+    "en": "My Fines"
+  },
+  "my_fines.filter_title": {
+    "vi": "Bộ lọc",
+    "en": "Filter"
+  },
+  "my_fines.status_label": {
+    "vi": "Trạng thái",
+    "en": "Status"
+  },
+  "my_fines.count": {
+    "vi": "{count} bản ghi",
+    "en": "{count} records"
+  },
+  "my_fines.date_col": {
+    "vi": "Ngày",
+    "en": "Date"
+  },
+  "my_fines.kind_col": {
+    "vi": "Loại",
+    "en": "Kind"
+  },
+  "my_fines.amount_col": {
+    "vi": "Số tiền",
+    "en": "Amount"
+  },
+  "my_fines.reason_col": {
+    "vi": "Lý do",
+    "en": "Reason"
+  },
+  "my_fines.status_col": {
+    "vi": "Trạng thái",
+    "en": "Status"
+  },
+  "my_fines.action_col": {
+    "vi": "Hành động",
+    "en": "Action"
+  },
+  "my_fines.status_pending": {
+    "vi": "Chưa thanh toán",
+    "en": "Pending"
+  },
+  "my_fines.status_paid": {
+    "vi": "Đã thanh toán",
+    "en": "Paid"
+  },
+  "my_fines.status_cancelled": {
+    "vi": "Đã hủy",
+    "en": "Cancelled"
+  },
+  "my_fines.status_disputed": {
+    "vi": "Tranh chấp",
+    "en": "Disputed"
+  },
+  "my_fines.dispute_button": {
+    "vi": "Tranh chấp",
+    "en": "Dispute"
+  },
+  "my_fines.dispute_title": {
+    "vi": "Tranh chấp phạt",
+    "en": "Dispute Fine"
+  },
+  "my_fines.dispute_reason_label": {
+    "vi": "Lý do tranh chấp",
+    "en": "Dispute reason"
+  },
+  "my_fines.dispute_reason_placeholder": {
+    "vi": "Nhập lý do tranh chấp...",
+    "en": "Enter dispute reason…"
+  },
+  "my_fines.dispute_reason_hint": {
+    "vi": "Cần ít nhất {count} ký tự nữa",
+    "en": "Need at least {count} more characters"
+  },
+  "common.no_reason": {
+    "vi": "Không có lý do",
+    "en": "No reason"
+  },
+  "common.pending": {
+    "vi": "Chờ xử lý",
+    "en": "Pending"
+  },
+  "common.all": {
+    "vi": "Tất cả",
+    "en": "All"
+  }
+}

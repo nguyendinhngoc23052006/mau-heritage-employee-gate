@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { DangerZoneCard } from "../components/settings/DangerZoneCard";
 import { GeofenceCard } from "../components/settings/GeofenceCard";
 import { PayMultipliersCard } from "../components/settings/PayMultipliersCard";
 import { VarianceThresholdCard } from "../components/settings/VarianceThresholdCard";
@@ -242,6 +243,7 @@ export function SettingsPage() {
       {canEdit && storeId && <PayMultipliersCard storeId={storeId} />}
       {canEdit && storeId && <GeofenceCard storeId={storeId} />}
       {canEdit && storeId && <VarianceThresholdCard storeId={storeId} />}
+      <DangerZoneCard />
     </div>
   );
 }
