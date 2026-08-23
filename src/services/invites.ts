@@ -1,4 +1,15 @@
 import { getSupabase } from "../lib/supabaseClient";
+import type { Invite } from "../types/database";
+
+export async function resendInvite(inviteId: string): Promise<Invite> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc("resend_invite", {
+    p_invite_id: inviteId,
+  });
+  if (error) throw error;
+  return data as Invite;
+}
+
 import type {
   EmploymentType,
   Invite,

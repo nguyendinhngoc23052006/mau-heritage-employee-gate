@@ -15,7 +15,9 @@ export type RuleTrigger =
   | "points_threshold"
   | "manager_manual";
 export type PrizeFineKind = "prize" | "fine";
-export type PrizeFineStatus = "pending" | "paid" | "cancelled";
+export type PrizeFineStatus = "pending" | "paid" | "cancelled" | "disputed";
+export type ClockCorrectionKind = "missing_in" | "missing_out" | "wrong_time";
+export type ClockCorrectionStatus = "pending" | "approved" | "denied";
 export type ApplicationStatus =
   | "pending"
   | "approved"
@@ -66,6 +68,7 @@ export interface Membership {
   employment_type: EmploymentType;
   active: boolean;
   created_at: string;
+  last_active_at: string | null;
 }
 
 export interface MembershipPublic {
@@ -130,6 +133,7 @@ export interface Shift {
   created_at: string;
   slot_count: number;
   claim_open: boolean;
+  deleted_at: string | null;
 }
 
 export interface ShiftClaim {
@@ -255,6 +259,27 @@ export interface PrizeFineEvent {
   created_at: string;
   paid_at: string | null;
   paid_by: string | null;
+  issued_by: string | null;
+  dispute_reason: string | null;
+  disputed_at: string | null;
+  canceled_reason: string | null;
+  canceled_by: string | null;
+  canceled_at: string | null;
+}
+
+export interface ClockCorrectionRequest {
+  id: string;
+  store_id: string;
+  user_id: string;
+  clock_event_id: string | null;
+  kind: ClockCorrectionKind;
+  proposed_at: string | null;
+  reason: string;
+  status: ClockCorrectionStatus;
+  created_at: string;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  review_note: string | null;
 }
 
 export interface Announcement {

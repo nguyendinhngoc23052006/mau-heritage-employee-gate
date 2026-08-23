@@ -10,6 +10,7 @@ export async function listShifts(
     .from("shifts")
     .select("*")
     .eq("store_id", storeId)
+    .is("deleted_at", null)
     .order("starts_at", { ascending: true });
 
   if (opts?.from) {
@@ -40,25 +41,54 @@ export async function createShift(input: {
   return data as Shift;
 }
 
-export async function updateShift(
-  id: string,
-  patch: Partial<Shift>,
-): Promise<Shift> {
+export async function updateShiftSafe(params: {
+  shiftId: string;
+  startsAt?: string;
+  endsAt?: string;
+  notes?: string;
+  slotCount?: number;
+}): Promise<Shift> {
   const supabase = getSupabase();
-  const { data, error } = await supabase
-    .from("shifts")
-    .update(patch)
-    .eq("id", id)
-    .select()
-    .single();
+  const { data, error } = await supabase.rpc("update_shift_safe", {
+    p_shift_id: params.shiftId,
+    p_starts_at: params.startsAt ?? null,
+    p_ends_at: params.endsAt ?? null,
+    p_notes: params.notes ?? null,
+    p_slot_count: params.slotCount ?? null,
+  });
   if (error) throw error;
   return data as Shift;
 }
 
-export async function deleteShift(id: string): Promise<void> {
+export async function deleteShiftSafe(
+  shiftId: string,
+  reason?: string,
+): Promise<Shift> {
   const supabase = getSupabase();
-  const { error } = await supabase.from("shifts").delete().eq("id", id);
+  const { data, error } = await supabase.rpc("delete_shift_safe", {
+    p_shift_id: shiftId,
+    p_reason: reason ?? null,
+  });
   if (error) throw error;
+  return data as Shift;
+}
+
+export async function closeShiftClaims(shiftId: string): Promise<number> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc("close_shift_claims", {
+    p_shift_id: shiftId,
+  });
+  if (error) throw error;
+  return (data ?? 0) as number;
+}
+
+export async function forceOpenShift(shiftId: string): Promise<Shift> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc("force_open_shift", {
+    p_shift_id: shiftId,
+  });
+  if (error) throw error;
+  return data as Shift;
 }
 
 export async function requestShiftSwap(input: {
