@@ -1,8 +1,10 @@
+import { useEffect } from "react";
 import { Outlet, useNavigate, useParams } from "react-router-dom";
 import { useMemberships } from "../hooks/useMemberships";
 import { useI18n, useT } from "../lib/i18n";
 import { clearAllQueries } from "../lib/query";
 import { getSupabase } from "../lib/supabaseClient";
+import { setMembershipLastActive } from "../services/ownership";
 import { Wordmark } from "./Brand/Wordmark";
 import { Nav } from "./Nav";
 import { StoreSwitcher } from "./StoreSwitcher";
@@ -38,6 +40,13 @@ export function Layout() {
   const { locale, setLocale } = useI18n();
   const navigate = useNavigate();
   const { storeId } = useParams<{ storeId: string }>();
+
+  // Update last_active_at whenever storeId changes
+  useEffect(() => {
+    if (storeId) {
+      setMembershipLastActive(storeId).catch(() => {});
+    }
+  }, [storeId]);
 
   async function signOut() {
     await getSupabase().auth.signOut();

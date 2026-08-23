@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { RequestCorrectionDialog } from "../components/clock/RequestCorrectionDialog";
 import { Alert } from "../components/ui/Alert";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
@@ -25,6 +26,7 @@ import {
   getCurrentClockState,
   listMyClockEvents,
 } from "../services/clock";
+import { listMyCorrectionRequests } from "../services/clockCorrections";
 import { getStore } from "../services/stores";
 
 function formatTime(iso: string): string {
@@ -61,6 +63,11 @@ export function ClockPage() {
   const ready = Boolean(storeId && userId);
   const [locError, setLocError] = useState<string | null>(null);
   const [locErrorDenied, setLocErrorDenied] = useState(false);
+  const [correctionDialogOpen, setCorrectionDialogOpen] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [selectedKind, setSelectedKind] = useState<
+    "missing_in" | "missing_out" | "wrong_time" | undefined
+  >(undefined);
   const role = useRoleOn(storeId);
   const isManager = isManagerRole(role);
   const { isLoading: membershipsLoading } = useMemberships();
@@ -87,6 +94,12 @@ export function ClockPage() {
         from: from.toISOString(),
       });
     },
+  });
+
+  const { data: myCorrections, isLoading: correctionsLoading } = useQuery({
+    queryKey: ["clock", "corrections", "my", storeId],
+    enabled: ready,
+    queryFn: () => listMyCorrectionRequests(storeId as string),
   });
 
   async function withCoords<T>(
@@ -142,6 +155,21 @@ export function ClockPage() {
     },
   });
 
+  function openCorrectionDialog(
+    eventId?: string,
+    kind: "missing_in" | "missing_out" | "wrong_time" = "missing_in",
+  ) {
+    setSelectedEventId(eventId ?? null);
+    setSelectedKind(kind);
+    setCorrectionDialogOpen(true);
+  }
+
+  function closeCorrectionDialog() {
+    setCorrectionDialogOpen(false);
+    setSelectedEventId(null);
+    setSelectedKind(undefined);
+  }
+
   if (!ready)
     return (
       <ErrorState
@@ -149,7 +177,13 @@ export function ClockPage() {
       />
     );
 
-  if (stateLoading || eventsLoading || storeLoading || membershipsLoading)
+  if (
+    stateLoading ||
+    eventsLoading ||
+    storeLoading ||
+    membershipsLoading ||
+    correctionsLoading
+  )
     return <LoadingState>{t("common.loading")}</LoadingState>;
 
   const isClockedIn = clockState === "in";
@@ -235,6 +269,24 @@ export function ClockPage() {
 
       <Card>
         <CardTitle>{t("clock.history_title")}</CardTitle>
+
+        <div className="mt-4 mb-4 flex flex-wrap gap-2">
+          <Button
+            variant="secondary"
+            className="text-xs px-2 py-1"
+            onClick={() => openCorrectionDialog(undefined, "missing_in")}
+          >
+            {t("clock.request_correction")}
+          </Button>
+          {isManager && (
+            <Link to={`/store/${storeId}/clock/corrections`}>
+              <Button variant="secondary" className="text-xs px-2 py-1">
+                {t("clock.view_corrections")}
+              </Button>
+            </Link>
+          )}
+        </div>
+
         {!events || events.length === 0 ? (
           <EmptyState>{t("clock.history_empty")}</EmptyState>
         ) : (
@@ -250,6 +302,9 @@ export function ClockPage() {
                   </th>
                   <th className="px-4 py-2 text-left text-slate-600">
                     {t("clock.location_col")}
+                  </th>
+                  <th className="px-4 py-2 text-left text-slate-600">
+                    {t("common.actions")}
                   </th>
                 </tr>
               </thead>
@@ -281,6 +336,17 @@ export function ClockPage() {
                             })
                           : t("clock.history_loc_ok")}
                     </td>
+                    <td className="px-4 py-2">
+                      <Button
+                        variant="ghost"
+                        className="text-xs px-2 py-1"
+                        onClick={() =>
+                          openCorrectionDialog(event.id, "wrong_time")
+                        }
+                      >
+                        {t("clock.fix_time")}
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -288,6 +354,70 @@ export function ClockPage() {
           </div>
         )}
       </Card>
+
+      {myCorrections && myCorrections.length > 0 && (
+        <Card className="mt-6">
+          <CardTitle>{t("clock.my_corrections_title")}</CardTitle>
+          <div className="mt-4 space-y-2">
+            {myCorrections.map((correction) => (
+              <div
+                key={correction.id}
+                className="rounded border border-slate-200 p-3"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-slate-600">
+                      {correction.kind === "missing_in"
+                        ? t("clock.correction_missing_in")
+                        : correction.kind === "missing_out"
+                          ? t("clock.correction_missing_out")
+                          : t("clock.correction_wrong_time")}{" "}
+                      •{" "}
+                      {format(
+                        new Date(correction.created_at),
+                        "yyyy-MM-dd HH:mm",
+                      )}
+                    </p>
+                    <p className="text-xs text-slate-700 mt-1 line-clamp-2">
+                      {correction.reason}
+                    </p>
+                    <div className="mt-1 flex items-center gap-2">
+                      <span
+                        className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${
+                          correction.status === "approved"
+                            ? "bg-green-100 text-green-800"
+                            : correction.status === "denied"
+                              ? "bg-red-100 text-red-800"
+                              : "bg-yellow-100 text-yellow-800"
+                        }`}
+                      >
+                        {correction.status === "approved"
+                          ? t("clock.status_approved")
+                          : correction.status === "denied"
+                            ? t("clock.status_denied")
+                            : t("clock.status_pending")}
+                      </span>
+                      {correction.review_note && (
+                        <span className="text-xs text-slate-600">
+                          {correction.review_note}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      <RequestCorrectionDialog
+        open={correctionDialogOpen}
+        onClose={closeCorrectionDialog}
+        storeId={storeId as string}
+        clockEventId={selectedEventId}
+        defaultKind={selectedKind}
+      />
     </div>
   );
 }
