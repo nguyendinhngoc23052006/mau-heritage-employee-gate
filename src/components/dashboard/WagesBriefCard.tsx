@@ -18,8 +18,8 @@ export function WagesBriefCard({ storeId }: WagesBriefCardProps) {
     const todayStr = now.toLocaleDateString("sv-SE", {
       timeZone: "Asia/Ho_Chi_Minh",
     });
-    const todayStart = `${todayStr}T00:00:00Z`;
-    const todayEnd = `${todayStr}T23:59:59Z`;
+    const todayStart = `${todayStr}T00:00:00+07:00`;
+    const todayEnd = `${todayStr}T23:59:59.999+07:00`;
     return { todayStart, todayEnd };
   };
 
@@ -30,8 +30,8 @@ export function WagesBriefCard({ storeId }: WagesBriefCardProps) {
       timeZone: "Asia/Ho_Chi_Minh",
     });
     const [year, month] = todayStr.split("-");
-    const monthStart = `${year}-${month}-01T00:00:00Z`;
-    const monthEnd = `${todayStr}T23:59:59Z`;
+    const monthStart = `${year}-${month}-01T00:00:00+07:00`;
+    const monthEnd = `${todayStr}T23:59:59.999+07:00`;
     return { monthStart, monthEnd };
   };
 
