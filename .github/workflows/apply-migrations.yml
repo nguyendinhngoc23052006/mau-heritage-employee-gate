@@ -20,7 +20,12 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Pin the CLI. `latest` calls GitHub's release API unauthenticated
+          # and shared runner IPs hit anon rate-limit constantly — fails 8+
+          # merges in a row. Pin + pass GITHUB_TOKEN belt-and-suspenders.
+          version: 2.20.5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Link project + repair ghost history + push new migrations
         env:
