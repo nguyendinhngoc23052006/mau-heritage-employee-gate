@@ -20,10 +20,13 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          # Pin the CLI. `latest` calls GitHub's release API unauthenticated
-          # and shared runner IPs hit anon rate-limit constantly — fails 8+
-          # merges in a row. Pin + pass GITHUB_TOKEN belt-and-suspenders.
-          version: 2.20.5
+          # Pin the CLI. `latest` hits GitHub's anon rate limit on shared
+          # runner IPs. `2.20.5` was too old — didn't recognize newer
+          # config.toml keys (db.health_timeout, db.migrations.enabled,
+          # experimental.pgdelta, storage.analytics, storage.s3_protocol,
+          # storage.vector, db.network_restrictions). Bumped to a version
+          # recent enough to accept all of them.
+          version: 2.30.4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
