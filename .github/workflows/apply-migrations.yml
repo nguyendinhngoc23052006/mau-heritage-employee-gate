@@ -51,8 +51,9 @@ jobs:
           printf 'project_id = "%s"\n' "$SUPABASE_PROJECT_REF" > supabase/config.toml
 
           supabase link --project-ref "$SUPABASE_PROJECT_REF"
-          # Legacy ghost migrations recorded remote-only. Mark reverted so
-          # `db push` reconciles. Idempotent (|| true) on subsequent runs.
+
+          # Ghost timestamps: recorded in schema_migrations with no local file.
+          # Mark reverted so they stop blocking reconciliation.
           supabase migration repair --linked \
             --status reverted \
             20260817072203 20260817072235 20260817072322 \
@@ -60,4 +61,21 @@ jobs:
             20260818131500 20260818131542 \
             20260821204255 \
             || true
+
+          # The inverse problem: these migrations WERE applied to prod by hand
+          # via the Supabase SQL Editor (the documented demo flow in CLAUDE.md),
+          # which does not write to schema_migrations. The schema is ahead of the
+          # recorded history, so `db push` tries to replay them and dies on the
+          # first unguarded DDL ("constraint ... already exists", 42710).
+          # Verified against prod on 2026-08-25: every object through
+          # 20260822130000 is present; nothing from 20260823120000 is.
+          # Record them as applied so push only runs what is genuinely pending.
+          supabase migration repair --linked \
+            --status applied \
+            20260815120000 20260816120000 \
+            20260817120000 20260817130000 \
+            20260818120000 20260818130000 \
+            20260819120000 20260822130000 \
+            || true
+
           supabase db push --linked
