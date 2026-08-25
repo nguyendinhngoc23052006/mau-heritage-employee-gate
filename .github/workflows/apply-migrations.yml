@@ -21,12 +21,13 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           # Pin the CLI. `latest` hits GitHub's anon rate limit on shared
-          # runner IPs. `2.20.5` was too old — didn't recognize newer
-          # config.toml keys (db.health_timeout, db.migrations.enabled,
-          # experimental.pgdelta, storage.analytics, storage.s3_protocol,
-          # storage.vector, db.network_restrictions). Bumped to a version
-          # recent enough to accept all of them.
-          version: 2.30.4
+          # runner IPs. Config.toml on this repo carries bleeding-edge keys
+          # (auth.oauth_server, local_smtp, apple.email_optional,
+          # db.health_timeout, db.network_restrictions, experimental.pgdelta,
+          # storage.{analytics,s3_protocol,vector}) — someone touched it with
+          # a very recent CLI, so we need to match. 2.20.5 and 2.30.4 both
+          # failed on config parse; going high.
+          version: 2.48.3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
