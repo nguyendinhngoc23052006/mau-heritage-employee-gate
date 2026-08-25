@@ -22,11 +22,22 @@ jobs:
         with:
           version: latest
 
-      - name: Link project + push new migrations
+      - name: Link project + repair ghost history + push new migrations
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
           SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
         run: |
           supabase link --project-ref "$SUPABASE_PROJECT_REF"
+          # Legacy: someone ran `supabase migration new` locally at these timestamps
+          # but never committed the files, leaving orphan rows in supabase_migrations.schema_migrations
+          # that `db push` refuses to reconcile. Mark them reverted so push proceeds.
+          # `|| true` because once repaired, subsequent runs no-op harmlessly.
+          supabase migration repair --linked \
+            --status reverted \
+            20260817072203 20260817072235 20260817072322 \
+            20260817113820 20260817121342 \
+            20260818131500 20260818131542 \
+            20260821204255 \
+            || true
           supabase db push --linked

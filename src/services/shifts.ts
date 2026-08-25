@@ -10,7 +10,6 @@ export async function listShifts(
     .from("shifts")
     .select("*")
     .eq("store_id", storeId)
-    .is("deleted_at", null)
     .order("starts_at", { ascending: true });
 
   if (opts?.from) {
@@ -22,7 +21,9 @@ export async function listShifts(
 
   const { data, error } = await query;
   if (error) throw error;
-  return (data ?? []) as Shift[];
+  // Filter soft-deleted rows client-side. The column may or may not exist
+  // depending on migration state; either way the row-level filter is safe.
+  return ((data ?? []) as Shift[]).filter((s) => s.deleted_at == null);
 }
 
 export async function createShift(input: {

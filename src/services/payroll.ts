@@ -68,12 +68,14 @@ export async function computePayroll(
       .eq("store_id", storeId)
       .gte("date", fromDate)
       .lte("date", toDate),
+    // Fetch all rate_history for the store; filter to the period client-side.
+    // The .or() filter with the ISO `from` timestamp trips over the "+" in the
+    // TZ offset (which URL-decodes to " " in the .or() string), so we keep the
+    // filter simple and refine below.
     supabase
       .from("rate_history")
       .select("user_id, hourly_rate_cents, effective_from, effective_to")
-      .eq("store_id", storeId)
-      .or(`effective_to.is.null,effective_to.gte.${from}`)
-      .lte("effective_from", to),
+      .eq("store_id", storeId),
   ]);
 
   if (membersError) throw membersError;
