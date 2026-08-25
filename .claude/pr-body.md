@@ -1,23 +1,36 @@
-**Intent:** Get `apply-migrations` unstuck so the mega-role-dashboards migration (merged with #26) finally lands on the prod DB.
+**Intent:** Finish what PR #32 started. The config stub worked — run #17 parsed config, linked, and reached `db push`. It then failed for a genuinely different reason, now diagnosed against the live DB rather than guessed.
 
-**Impact:** Workflow-only. Zero app code, zero schema files touched. This is the 5th attempt in the chain (#28 → #29 → #30 → #31 → this) — chasing the pinned CLI version is a losing game because `supabase/config.toml` in this repo carries keys no released CLI parses (`auth.oauth_server`, `local_smtp`, `apple.email_optional`, `storage.{analytics,s3_protocol,vector}`, `db.{health_timeout,network_restrictions}`, `experimental.pgdelta`) — someone wrote it with a nightly build. Instead of hunting a matching version, this PR replaces `config.toml` with a minimal `project_id = "..."` stub at workflow runtime. The checkout is ephemeral; the repo copy is untouched. `db push` only needs `project_id`.
+**Impact:** Workflow-only, one file. This should be the last one in the chain.
+
+**Root cause (verified, not inferred):** Migrations `20260815120000` … `20260822130000` were applied to prod **by hand via the Supabase SQL Editor** — the documented demo flow in `CLAUDE.md`. Hand-run SQL does not write to `supabase_migrations.schema_migrations`, so the schema is ahead of the recorded history. `db push` therefore tried to replay all 10 pending files and died on the first unguarded DDL:
+
+```
+ERROR: constraint "clock_events_membership_fk" for relation "clock_events" already exists (SQLSTATE 42710)
+```
+
+Checked against prod on 2026-08-25:
+- Recorded history stops at `20260814020000`.
+- Every RPC through `close_all_gaps` exists (`apply_manual_rule`, `close_stale_clock_event`, `submit_sales`, `clock_in_at`, …), and the `audit_log_service_insert` policy from `close_sweep_gaps` is present → those 8 files are genuinely applied.
+- Zero of the mega migration's markers exist — no `shifts.deleted_at`, no `memberships.last_active_at`, no `clock_correction_requests` table, no `prize_fine_events.dispute_reason`, and none of its 18 RPCs → that one file is genuinely pending.
+
+**The fix:** add a second `migration repair --status applied` for the 8 already-applied versions, so `db push` runs exactly one migration — `20260823120000_mega_role_dashboards_shifts_prize_fine_selfservice.sql`. The existing `--status reverted` repair for the 8 ghost timestamps stays as-is.
 
 ## Self-check
 - [x] base = main; exactly one PR
-- [~] no migration file in this PR (workflow-only)
+- [~] no migration file in this PR (workflow-only; the pending migration is already on main from #26)
 - [~] tests/lint/typecheck N/A — no app code touched
 - [~] script names N/A — no app code touched
 - [~] key/env contract N/A — no app code touched
-- [~] no migration in this PR — the SQL block for the mega migration was in PR #26's body
-- [~] no irreversible action (workflow re-runnable via `workflow_dispatch`)
-- [x] no avoidable debt; the workaround is documented inline in the workflow so a future reader knows why config.toml is being mv'd
-- [x] plain-English explanation below
-- [~] reviewers N/A — workflow-only change, no app diff to review
-- [~] no subagent dispatched — single-file surgical fix
+- [~] no new migration — the one being applied shipped with #26
+- [~] no irreversible action from the workflow itself; the migration it applies is additive (new columns/table/RPCs), reversing SQL is in #26's body
+- [x] no avoidable debt; the *why* is documented inline in the workflow with the verification date
+- [x] migrations explained in plain English below
+- [~] reviewers N/A — workflow-only change
+- [~] no subagent dispatched — single-file fix from a direct DB read
 
 ## For you
-**What changed:** The `apply-migrations` GitHub Action now moves `supabase/config.toml` aside on the runner and writes a one-line stub (`project_id = "..."`) before running `supabase link` + `db push`, so the CLI's strict parser doesn't choke on bleeding-edge keys. The repo's real `config.toml` is not modified.
+**What changed:** The `apply-migrations` workflow now tells Supabase that the 8 migrations you already ran by hand in the SQL Editor are in fact applied, before it pushes. Without that, it kept trying to re-run them and crashing on the first line that can't run twice.
 
-**What you do next:** Review the workflow diff, then **merge this PR**. On merge, `apply-migrations` will fire again — this time it should reach `db push` and finally apply the mega migration (18 RPCs + `clock_correction_requests` table) that PR #26 committed 10 days ago. You'll know it worked when the Schedule page stops throwing `PGRST202` on `close_shift_claims` / `delete_shift_safe` / `force_open_shift`.
+**What you do next:** Merge. The workflow fires on merge and should apply the one genuinely-pending migration — the mega one from PR #26 with the 18 RPCs and the `clock_correction_requests` table. You'll know it worked when Schedule stops throwing `PGRST202` on `delete_shift_safe` / `close_shift_claims` / `force_open_shift`, and the ⋯ menu on a shift card actually works.
 
-**How to roll it back:** GitHub → Actions → the failing `apply-migrations` run doesn't need rollback (the DB is idempotent under `migration repair --status reverted || true`). For the workflow itself: `git revert` this commit and merge — that restores the CLI-version-pinning approach from PR #31, which will fail the same way run #16 did but doesn't harm anything.
+**How to roll it back:** Nothing to undo in the workflow — re-runnable via Actions → apply-migrations → Run workflow. If the migration itself applies and you want it gone, the reversing SQL is in PR #26's body (drop the 18 functions, the `clock_correction_requests` table, and the added columns).
