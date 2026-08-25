@@ -393,7 +393,9 @@ export function SchedulePage() {
     );
   if (error)
     return (
-      <ErrorState message={t("common.error", { message: String(error) })} />
+      <ErrorState
+        message={t("common.error", { message: errorMessage(error) })}
+      />
     );
   if (isLoading) return <LoadingState>{t("common.loading")}</LoadingState>;
 
