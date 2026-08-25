@@ -31,17 +31,28 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Link project + repair ghost history + push new migrations
+      - name: Stub config.toml + link + repair ghost history + push
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
           SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
         run: |
+          # Config.toml in this repo carries bleeding-edge keys that no pinned
+          # CLI parses (auth.oauth_server, local_smtp, apple.email_optional,
+          # storage.{analytics,s3_protocol,vector}, db.{health_timeout,
+          # network_restrictions}, experimental.pgdelta). Chasing the CLI
+          # version is a losing game — the config was likely written by a
+          # nightly build.
+          #
+          # For migration push we only need `project_id`. Replace config.toml
+          # with a minimal stub at workflow-runtime — the checkout is
+          # ephemeral, the repo copy is untouched.
+          mv supabase/config.toml supabase/config.toml.original
+          printf 'project_id = "%s"\n' "$SUPABASE_PROJECT_REF" > supabase/config.toml
+
           supabase link --project-ref "$SUPABASE_PROJECT_REF"
-          # Legacy: someone ran `supabase migration new` locally at these timestamps
-          # but never committed the files, leaving orphan rows in supabase_migrations.schema_migrations
-          # that `db push` refuses to reconcile. Mark them reverted so push proceeds.
-          # `|| true` because once repaired, subsequent runs no-op harmlessly.
+          # Legacy ghost migrations recorded remote-only. Mark reverted so
+          # `db push` reconciles. Idempotent (|| true) on subsequent runs.
           supabase migration repair --linked \
             --status reverted \
             20260817072203 20260817072235 20260817072322 \
