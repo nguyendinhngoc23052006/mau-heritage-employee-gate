@@ -205,7 +205,7 @@ export function RulesPage({ storeId }: RulesPageProps) {
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      points_delta: Number.parseInt(e.target.value) || 0,
+                      points_delta: Number.parseInt(e.target.value, 10) || 0,
                     })
                   }
                 />
@@ -220,7 +220,7 @@ export function RulesPage({ storeId }: RulesPageProps) {
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      amount_cents: Number.parseInt(e.target.value) || 0,
+                      amount_cents: Number.parseInt(e.target.value, 10) || 0,
                     })
                   }
                 />

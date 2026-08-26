@@ -125,100 +125,98 @@ export function MyPayPage() {
       </Card>
 
       {payroll ? (
-        <>
-          <Card>
-            <CardTitle>{t("my_pay.this_month_title")}</CardTitle>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                <div className="p-3 bg-blue-50 rounded border border-blue-200">
-                  <div className="text-xs font-semibold text-blue-700">
-                    {t("my_pay.hours_label")}
-                  </div>
-                  <div className="text-lg font-bold text-blue-900">
-                    {(payroll.minutes_worked / 60).toFixed(1)} h
-                  </div>
+        <Card>
+          <CardTitle>{t("my_pay.this_month_title")}</CardTitle>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+              <div className="p-3 bg-blue-50 rounded border border-blue-200">
+                <div className="text-xs font-semibold text-blue-700">
+                  {t("my_pay.hours_label")}
                 </div>
-                <div className="p-3 bg-green-50 rounded border border-green-200">
-                  <div className="text-xs font-semibold text-green-700">
-                    {t("my_pay.wages_label")}
-                  </div>
-                  <div className="text-lg font-bold text-green-900">
-                    {formatVnd(payroll.wages_cents)}
-                  </div>
-                </div>
-                <div className="p-3 bg-green-50 rounded border border-green-200">
-                  <div className="text-xs font-semibold text-green-700">
-                    {t("my_pay.prizes_label")}
-                  </div>
-                  <div className="text-lg font-bold text-green-900">
-                    {formatVnd(prizeFineThisMonth.prizes)}
-                  </div>
-                </div>
-                <div className="p-3 bg-red-50 rounded border border-red-200">
-                  <div className="text-xs font-semibold text-red-700">
-                    {t("my_pay.fines_label")}
-                  </div>
-                  <div className="text-lg font-bold text-red-900">
-                    {formatVnd(prizeFineThisMonth.fines)}
-                  </div>
+                <div className="text-lg font-bold text-blue-900">
+                  {(payroll.minutes_worked / 60).toFixed(1)} h
                 </div>
               </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="border-b bg-brand-cream-light">
-                    <tr>
-                      <th className="text-left px-4 py-2">
-                        {t("my_pay.date_col")}
-                      </th>
-                      <th className="text-right px-4 py-2">
-                        {t("my_pay.hours_col")}
-                      </th>
-                      <th className="text-right px-4 py-2">
-                        {t("payroll.rate_col")}
-                      </th>
-                      <th className="text-right px-4 py-2">
-                        {t("my_pay.wages_col")}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {payroll.daily_breakdown.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className="px-4 py-2 text-center">
-                          {t("common.empty")}
-                        </td>
-                      </tr>
-                    ) : (
-                      payroll.daily_breakdown.map((day) => (
-                        <tr
-                          key={day.date}
-                          className="border-b hover:bg-brand-cream-light"
-                        >
-                          <td className="px-4 py-2">{day.date}</td>
-                          <td className="text-right px-4 py-2">
-                            {(day.minutes / 60).toFixed(1)} h
-                          </td>
-                          <td className="text-right px-4 py-2">
-                            {formatVnd(
-                              Math.round(
-                                (day.wages * 6000) /
-                                  (day.minutes * day.multiplier),
-                              ),
-                            )}
-                          </td>
-                          <td className="text-right px-4 py-2">
-                            {formatVnd(day.wages)}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+              <div className="p-3 bg-green-50 rounded border border-green-200">
+                <div className="text-xs font-semibold text-green-700">
+                  {t("my_pay.wages_label")}
+                </div>
+                <div className="text-lg font-bold text-green-900">
+                  {formatVnd(payroll.wages_cents)}
+                </div>
+              </div>
+              <div className="p-3 bg-green-50 rounded border border-green-200">
+                <div className="text-xs font-semibold text-green-700">
+                  {t("my_pay.prizes_label")}
+                </div>
+                <div className="text-lg font-bold text-green-900">
+                  {formatVnd(prizeFineThisMonth.prizes)}
+                </div>
+              </div>
+              <div className="p-3 bg-red-50 rounded border border-red-200">
+                <div className="text-xs font-semibold text-red-700">
+                  {t("my_pay.fines_label")}
+                </div>
+                <div className="text-lg font-bold text-red-900">
+                  {formatVnd(prizeFineThisMonth.fines)}
+                </div>
               </div>
             </div>
-          </Card>
-        </>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="border-b bg-brand-cream-light">
+                  <tr>
+                    <th className="text-left px-4 py-2">
+                      {t("my_pay.date_col")}
+                    </th>
+                    <th className="text-right px-4 py-2">
+                      {t("my_pay.hours_col")}
+                    </th>
+                    <th className="text-right px-4 py-2">
+                      {t("payroll.rate_col")}
+                    </th>
+                    <th className="text-right px-4 py-2">
+                      {t("my_pay.wages_col")}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {payroll.daily_breakdown.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-2 text-center">
+                        {t("common.empty")}
+                      </td>
+                    </tr>
+                  ) : (
+                    payroll.daily_breakdown.map((day) => (
+                      <tr
+                        key={day.date}
+                        className="border-b hover:bg-brand-cream-light"
+                      >
+                        <td className="px-4 py-2">{day.date}</td>
+                        <td className="text-right px-4 py-2">
+                          {(day.minutes / 60).toFixed(1)} h
+                        </td>
+                        <td className="text-right px-4 py-2">
+                          {formatVnd(
+                            Math.round(
+                              (day.wages * 6000) /
+                                (day.minutes * day.multiplier),
+                            ),
+                          )}
+                        </td>
+                        <td className="text-right px-4 py-2">
+                          {formatVnd(day.wages)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </Card>
       ) : (
         <EmptyState>{t("common.empty")}</EmptyState>
       )}

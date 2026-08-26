@@ -235,91 +235,85 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
       {!payroll || payroll.length === 0 ? (
         <EmptyState>{t("common.empty")}</EmptyState>
       ) : (
-        <>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-b bg-brand-cream-light">
-                <tr>
-                  <th className="text-left px-4 py-2">
-                    {t("payroll.name_col")}
-                  </th>
-                  <th className="text-right px-4 py-2">{t("payroll.hours")}</th>
-                  <th className="text-right px-4 py-2">
-                    {t("payroll.multiplier_col")}
-                  </th>
-                  <th className="text-right px-4 py-2">
-                    {t("payroll.rate_col")}
-                  </th>
-                  <th className="text-right px-4 py-2">{t("payroll.wages")}</th>
-                  <th className="text-right px-4 py-2">
-                    {t("payroll.prizes")}
-                  </th>
-                  <th className="text-right px-4 py-2">{t("payroll.fines")}</th>
-                  <th className="text-right px-4 py-2">{t("payroll.total")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {payroll.map((row) => {
-                  return (
-                    <tr
-                      key={row.user_id}
-                      className="border-b hover:bg-brand-cream-light"
-                    >
-                      <td className="px-4 py-2">
-                        {row.display_name || row.user_id}
-                      </td>
-                      <td className="text-right px-4 py-2">
-                        {(row.minutes_worked / 60).toFixed(1)}
-                      </td>
-                      <td className="text-right px-4 py-2">
-                        {row.daily_breakdown.length === 0
-                          ? "×1"
-                          : `×${Math.max(1, ...row.daily_breakdown.map((d) => d.multiplier)).toFixed(1)}`}
-                      </td>
-                      <td className="text-right px-4 py-2">
-                        {row.hourly_rate_cents
-                          ? formatVnd(row.hourly_rate_cents)
-                          : "—"}
-                      </td>
-                      <td className="text-right px-4 py-2">
-                        {formatVnd(row.wages_cents)}
-                      </td>
-                      <td className="text-right px-4 py-2 text-green-600">
-                        {formatVnd(row.prizes_cents)}
-                      </td>
-                      <td className="text-right px-4 py-2 text-red-600">
-                        {formatVnd(row.fines_cents)}
-                      </td>
-                      <td className="text-right px-4 py-2 font-semibold">
-                        {formatVnd(row.total_cents)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-              <tfoot className="border-t font-semibold bg-brand-cream-light">
-                <tr>
-                  <td colSpan={3} className="px-4 py-2">
-                    {t("payroll.total_col")}
-                  </td>
-                  <td className="px-4 py-2" />
-                  <td className="text-right px-4 py-2">
-                    {formatVnd(totalWages)}
-                  </td>
-                  <td className="text-right px-4 py-2 text-green-600">
-                    {formatVnd(totalPrizes)}
-                  </td>
-                  <td className="text-right px-4 py-2 text-red-600">
-                    {formatVnd(totalFines)}
-                  </td>
-                  <td className="text-right px-4 py-2">
-                    {formatVnd(grandTotal)}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="border-b bg-brand-cream-light">
+              <tr>
+                <th className="text-left px-4 py-2">{t("payroll.name_col")}</th>
+                <th className="text-right px-4 py-2">{t("payroll.hours")}</th>
+                <th className="text-right px-4 py-2">
+                  {t("payroll.multiplier_col")}
+                </th>
+                <th className="text-right px-4 py-2">
+                  {t("payroll.rate_col")}
+                </th>
+                <th className="text-right px-4 py-2">{t("payroll.wages")}</th>
+                <th className="text-right px-4 py-2">{t("payroll.prizes")}</th>
+                <th className="text-right px-4 py-2">{t("payroll.fines")}</th>
+                <th className="text-right px-4 py-2">{t("payroll.total")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {payroll.map((row) => {
+                return (
+                  <tr
+                    key={row.user_id}
+                    className="border-b hover:bg-brand-cream-light"
+                  >
+                    <td className="px-4 py-2">
+                      {row.display_name || row.user_id}
+                    </td>
+                    <td className="text-right px-4 py-2">
+                      {(row.minutes_worked / 60).toFixed(1)}
+                    </td>
+                    <td className="text-right px-4 py-2">
+                      {row.daily_breakdown.length === 0
+                        ? "×1"
+                        : `×${Math.max(1, ...row.daily_breakdown.map((d) => d.multiplier)).toFixed(1)}`}
+                    </td>
+                    <td className="text-right px-4 py-2">
+                      {row.hourly_rate_cents
+                        ? formatVnd(row.hourly_rate_cents)
+                        : "—"}
+                    </td>
+                    <td className="text-right px-4 py-2">
+                      {formatVnd(row.wages_cents)}
+                    </td>
+                    <td className="text-right px-4 py-2 text-green-600">
+                      {formatVnd(row.prizes_cents)}
+                    </td>
+                    <td className="text-right px-4 py-2 text-red-600">
+                      {formatVnd(row.fines_cents)}
+                    </td>
+                    <td className="text-right px-4 py-2 font-semibold">
+                      {formatVnd(row.total_cents)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot className="border-t font-semibold bg-brand-cream-light">
+              <tr>
+                <td colSpan={3} className="px-4 py-2">
+                  {t("payroll.total_col")}
+                </td>
+                <td className="px-4 py-2" />
+                <td className="text-right px-4 py-2">
+                  {formatVnd(totalWages)}
+                </td>
+                <td className="text-right px-4 py-2 text-green-600">
+                  {formatVnd(totalPrizes)}
+                </td>
+                <td className="text-right px-4 py-2 text-red-600">
+                  {formatVnd(totalFines)}
+                </td>
+                <td className="text-right px-4 py-2">
+                  {formatVnd(grandTotal)}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
       )}
 
       <StorePrizeFineTable storeId={storeId} />

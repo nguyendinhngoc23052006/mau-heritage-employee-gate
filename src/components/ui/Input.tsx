@@ -27,7 +27,10 @@ export function Textarea({
 export function Label({
   children,
   htmlFor,
-}: { children: React.ReactNode; htmlFor?: string }) {
+}: {
+  children: React.ReactNode;
+  htmlFor?: string;
+}) {
   return (
     <label
       htmlFor={htmlFor}
