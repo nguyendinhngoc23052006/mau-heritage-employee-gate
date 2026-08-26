@@ -49,7 +49,7 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
 
   const prizeFineQuery = useQuery({
     queryKey: ["store-prize-fine-csv", storeId, fromIso, toIso],
-    queryFn: () => listStorePrizeFine(storeId),
+    queryFn: () => listStorePrizeFine(storeId, { from: fromIso, to: toIso }),
     enabled: isManager && !!storeId,
   });
 
@@ -98,12 +98,11 @@ export function PayrollPage({ storeId }: PayrollPageProps) {
         });
       }
 
-      // Prize/fine events for this user in the date range
+      // Prize/fine events for this user (query already filters by date range)
       const userEvents = allPrizeFineEvents.filter(
         (pf) =>
           pf.user_id === row.user_id &&
-          new Date(pf.created_at) >= startDate &&
-          new Date(pf.created_at) <= endDate,
+          (pf.status === "pending" || pf.status === "disputed"),
       );
 
       for (const pf of userEvents) {

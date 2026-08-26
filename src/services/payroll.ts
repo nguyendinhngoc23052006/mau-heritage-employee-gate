@@ -32,6 +32,12 @@ export async function computePayroll(
   const fromDate = from.split("T")[0];
   const toDate = to.split("T")[0];
 
+  // Widen clock_events fetch by 24h on each side to catch cross-midnight shifts.
+  // pairClockEventsByDate filters to keep only pairs whose clock-in falls within
+  // the ORIGINAL period (from/to).
+  const fetchFrom = new Date(new Date(from).getTime() - 86400000).toISOString();
+  const fetchTo = new Date(new Date(to).getTime() + 86400000).toISOString();
+
   // Fetch all data in parallel. Rate history is fetched separately so we can
   // apply the rate that was in effect at each clock event's timestamp
   // (avoids retroactive-rate bug where changing a rate rewrites past payroll).
@@ -44,15 +50,14 @@ export async function computePayroll(
   ] = await Promise.all([
     supabase
       .from("memberships_public")
-      .select("user_id, hourly_rate_cents, role")
-      .eq("store_id", storeId)
-      .eq("active", true),
+      .select("user_id, hourly_rate_cents, role, active")
+      .eq("store_id", storeId),
     supabase
       .from("clock_events")
       .select("user_id, kind, at")
       .eq("store_id", storeId)
-      .gte("at", from)
-      .lt("at", to)
+      .gte("at", fetchFrom)
+      .lt("at", fetchTo)
       .order("user_id")
       .order("at"),
     supabase
@@ -68,14 +73,11 @@ export async function computePayroll(
       .eq("store_id", storeId)
       .gte("date", fromDate)
       .lte("date", toDate),
-    // Fetch all rate_history for the store; filter to the period client-side.
-    // The .or() filter with the ISO `from` timestamp trips over the "+" in the
-    // TZ offset (which URL-decodes to " " in the .or() string), so we keep the
-    // filter simple and refine below.
     supabase
       .from("rate_history")
       .select("user_id, hourly_rate_cents, effective_from, effective_to")
-      .eq("store_id", storeId),
+      .eq("store_id", storeId)
+      .lte("effective_from", to),
   ]);
 
   if (membersError) throw membersError;
@@ -187,6 +189,8 @@ export async function computePayroll(
       userClockEvents,
       (atIso) => rateAt(member.user_id, atIso, hourlyRate),
       multiplierByDate,
+      from,
+      to,
     );
 
     // Sum totals across all days
@@ -205,6 +209,16 @@ export async function computePayroll(
     }
 
     const total = wages + prizes - fines;
+
+    // Drop rows that are BOTH inactive AND have no activity.
+    if (
+      member.active === false &&
+      minutesWorked === 0 &&
+      prizes === 0 &&
+      fines === 0
+    ) {
+      continue;
+    }
 
     rows.push({
       user_id: member.user_id,
@@ -226,17 +240,31 @@ function pairClockEventsByDate(
   events: Array<{ user_id: string; kind: string; at: string }>,
   rateAtFn: (atIso: string) => number,
   multiplierByDate: Map<string, number>,
+  from: string,
+  to: string,
 ): DailyBreakdown[] {
   const dailyByDate = new Map<
     string,
     { minutes: number; rateSum: number; rateCount: number }
   >();
+  // Compare as epoch ms, never as strings: PostgREST returns `at` with a
+  // +00:00 offset while from/to carry +07:00, so lexicographic comparison
+  // is not chronological.
+  const fromMs = new Date(from).getTime();
+  const toMs = new Date(to).getTime();
   let inTime: string | null = null;
 
   for (const event of events) {
     if (event.kind === "in") {
       inTime = event.at;
     } else if (event.kind === "out" && inTime) {
+      // Keep only pairs whose clock-in falls within the original period.
+      const inMs = new Date(inTime).getTime();
+      if (inMs < fromMs || inMs >= toMs) {
+        inTime = null;
+        continue;
+      }
+
       // Bucket by Asia/Ho_Chi_Minh calendar date, not UTC.
       const date = new Date(inTime).toLocaleDateString("sv-SE", {
         timeZone: "Asia/Ho_Chi_Minh",

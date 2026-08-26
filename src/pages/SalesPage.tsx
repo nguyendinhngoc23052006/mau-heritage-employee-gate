@@ -13,6 +13,7 @@ import {
 import { Input, Label, Textarea } from "../components/ui/Input";
 import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
 import { useSession } from "../hooks/useSession";
+import { errorMessage } from "../lib/errorMessage";
 import { useT } from "../lib/i18n";
 import { formatVnd, parseVndToCents } from "../lib/money";
 import {
@@ -220,7 +221,9 @@ function PendingReviews({ storeId }: { storeId: string }) {
 
   if (error)
     return (
-      <ErrorState message={t("common.error", { message: String(error) })} />
+      <ErrorState
+        message={t("common.error", { message: errorMessage(error) })}
+      />
     );
   if (isLoading) return <LoadingState>{t("common.loading")}</LoadingState>;
   if (!pending || pending.length === 0)

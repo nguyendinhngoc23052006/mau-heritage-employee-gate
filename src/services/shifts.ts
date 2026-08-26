@@ -19,11 +19,9 @@ export async function listShifts(
     query = query.lte("starts_at", opts.to);
   }
 
-  const { data, error } = await query;
+  const { data, error } = await query.is("deleted_at", null);
   if (error) throw error;
-  // Filter soft-deleted rows client-side. The column may or may not exist
-  // depending on migration state; either way the row-level filter is safe.
-  return ((data ?? []) as Shift[]).filter((s) => s.deleted_at == null);
+  return (data ?? []) as Shift[];
 }
 
 export async function createShift(input: {
