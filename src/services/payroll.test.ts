@@ -64,21 +64,30 @@ type Rows = Record<string, unknown[]>;
 function mockSupabaseTables(rows: Rows) {
   const builderFor = (table: string) => {
     const builder: Record<string, unknown> = {};
-    for (const method of [
-      "select",
-      "eq",
-      "gte",
-      "lt",
-      "lte",
-      "is",
-      "in",
-      "order",
-    ]) {
+    // Range filters are recorded and applied, so a test can prove the query
+    // actually fetched a row rather than the mock handing it over regardless.
+    const bounds: Array<{ col: string; op: "gte" | "lt"; value: string }> = [];
+    for (const method of ["select", "eq", "lte", "is", "in", "order"]) {
       builder[method] = vi.fn(() => builder);
+    }
+    for (const op of ["gte", "lt"] as const) {
+      builder[op] = vi.fn((col: string, value: unknown) => {
+        if (typeof value === "string") bounds.push({ col, op, value });
+        return builder;
+      });
     }
     // biome-ignore lint/suspicious/noThenProperty: mimics supabase-js thenable query builder
     builder.then = (resolve: (v: unknown) => void) => {
-      resolve({ data: rows[table] ?? [], error: null });
+      const data = (rows[table] ?? []).filter((row) =>
+        bounds.every(({ col, op, value }) => {
+          const cell = (row as Record<string, unknown>)[col];
+          if (typeof cell !== "string") return true;
+          const at = new Date(cell).getTime();
+          const bound = new Date(value).getTime();
+          return op === "gte" ? at >= bound : at < bound;
+        }),
+      );
+      resolve({ data, error: null });
       return Promise.resolve();
     };
     return builder;

@@ -1,56 +1,53 @@
-**Intent:** Fix the actual bug that has blocked the mega migration for ten days. Every prior hotfix (#28–#33) fixed real infrastructure problems stacked on top of it; this is the one underneath.
+**Intent:** Fix three classes of payroll bug found by auditing the code after the mega migration finally applied. All of them cost real money once a store has more than a couple of employees; none has surfaced yet only because the data volumes are still tiny (14 clock events, 0 rate_history rows).
 
-**Impact:** One new 1-statement migration, one correction to the unapplied mega migration. No app code.
+**Impact:** No schema change, no migration, no env change. Read-path only. Tests 36 → 42.
 
-**Root cause:** `20260823120000` extends the prize/fine dispute flow and assumed `prize_fine_events.status` is a text column guarded by a CHECK constraint. It is not — it is the enum `public.prize_fine_status` with labels `pending, paid, cancelled`. So the migration's
+## The money bugs
 
-```sql
-alter table public.prize_fine_events drop constraint if exists prize_fine_events_status_check;  -- no-op, no such constraint
-alter table public.prize_fine_events add constraint prize_fine_events_status_check
-  check (status in ('pending', 'paid', 'cancelled', 'disputed'));
-```
+**Deactivated employees lost their final wages.** `computePayroll` filtered memberships with `.eq("active", true)`, so deactivating someone erased the hours they had already worked — you could not pay a leaver. Now all members are fetched and a row is dropped only when the member is inactive *and* has no minutes, prizes or fines in the period. Active members with zero hours still appear.
 
-failed comparing the enum against a label that does not exist in it:
+**Shifts crossing a period boundary were paid in neither month.** Clock events were fetched windowed to `[from, to)`, and pairing required both ends inside that window, so a 23:00–02:00 shift across month end vanished from both months. The fetch window is now widened 24h on each side and each pair is attributed to the period containing its clock-in.
 
-```
-NOTICE:  constraint "prize_fine_events_status_check" ... does not exist, skipping
-ERROR:  invalid input value for enum prize_fine_status: "disputed" (SQLSTATE 22P02)
-At statement: 11
-```
+**The payroll CSV did not reconcile with its own totals.** Three separate causes: `listStorePrizeFine` ignored the date range while its cache key claimed otherwise, so line items could come from any month; line items printed every status while the totals count only `pending` + `disputed`, so a cancelled fine appeared as a row carrying an amount deliberately absent from the total above it; and the row filter compared browser-local month bounds against `+07:00`-anchored totals, so a non-Vietnam browser disagreed with itself by up to a day at the boundary. The range is now applied server-side, statuses match the aggregate, and the duplicate client-side filter is gone — one definition of the period.
 
-The migration rolled back cleanly — verified nothing partially applied (`shifts.deleted_at`, `memberships.last_active_at`, `clock_correction_requests`, and all 17 RPCs still absent).
+## Also
 
-**The fix:** add `'disputed'` to the enum, in its own migration. Postgres permits `ALTER TYPE ... ADD VALUE` inside a transaction but forbids *using* the new label until that transaction commits, so it must not share a transaction with the functions that reference it. `20260823110000` sorts before the mega migration and after the newest applied version (`20260822130000`), so `db push` applies it first, in its own transaction.
+- `String(error)` rendered a Supabase `PostgrestError` as the literal `[object Object]` on Sales and Analytics — the same bug already fixed on Schedule. Both now use the existing `errorMessage` helper.
+- The client-side `deleted_at` filter and `last_active_at` sort go back to the database now that the mega migration has applied.
 
-**I audited the rest of the file rather than fixing statement 11 and rediscovering this tomorrow.** Cross-checked every table, column, enum, and helper the migration touches against the live schema: `shift_slots.claimed_by` (not `user_id`), `shifts.{slot_count,claim_open,starts_at,ends_at,notes}`, `invites.{accepted_at,revoked_at,expires_at}`, `rate_history.{effective_from,effective_to}`, and the `has_role_on` / `is_member_of` / `write_audit` helpers all match. The enum mismatch was the only schema error. `clock_correction_requests` declares its own `status text ... check (...)` and is self-consistent.
+## A note on how this was built
 
-`src/types/database.ts:18` already types `PrizeFineStatus` with `"disputed"`, so no type change is needed.
+Two Haiku writers worked disjoint file sets, then two Haiku checkers cross-audited the other's work. That caught real defects, including one the writers' own tests could not:
+
+The period guard was written as a string comparison. PostgREST returns `timestamptz` with a `+00:00` offset while callers pass `+07:00` bounds, so `"2026-07-31T17:30:00+00:00" >= "2026-08-01T00:00:00+07:00"` is `false` — the first seven hours of every month would have gone unpaid, and the next month's first hours would have been pulled in. It reintroduced the exact bug class this PR set out to fix.
+
+It survived the writers' tests because every mocked timestamp used `+07:00`, a format the database never returns. Both writer-authored tests passed against the broken comparison. The mocks now use `+00:00`, and the query builder records and applies range filters instead of handing back rows regardless — without that, no test could cover the fetch widening either.
+
+Each fix was verified by reverting it and confirming a specific test fails:
+- revert the epoch comparison → *"counts a shift in the first VN hours of the period"* fails
+- revert the 24h widening → *"counts a shift that starts inside the period and ends after it"* fails
+
+## Rule gap for you (not changed here)
+
+`CLAUDE.md` documents hand-applying migration SQL through the Supabase SQL Editor *and* the `apply-migrations` workflow pushes the same files. Both are live and neither knows about the other — that is what desynced the migration history and cost ten days. It will desync again on the next migration. `CLAUDE.md` is read-only to me, so this is a flag, not an edit: pick one path and I will move the docs and workflow together.
 
 ## Self-check
-- [~] base = main; exactly one PR — one PR, but **two migration files touched**: one new file plus the removal of the broken block from the still-unapplied `20260823120000`. Splitting is required by the transaction rule above; editing the mega file is permitted because it has never applied.
-- [x] new migration UTC-timestamped after the newest *applied* version (`20260822130000`); no new tables, so no RLS needed; `src/types` already matches
-- [x] tests/lint/typecheck green — 36/36 tests, 0 biome, 0 tsc across 152 files
-- [x] scripts named `lint`, `typecheck`, `test`
+- [x] base = main; exactly one PR
+- [~] no migration file in this PR; `src/types` already matches (no schema change)
+- [x] tests/lint/typecheck green — 42/42 tests, 0 biome errors and 0 warnings, 0 tsc across 152 files; happy and unhappy paths both exercised
+- [x] scripts named exactly `lint`, `typecheck`, `test`
 - [~] e2e not yet added
-- [~] no env/key change
-- [x] migration paired with the exact SQL block below
-- [~] no irreversible action — additive enum label; the mega migration is additive and its rollback block is updated
-- [x] no avoidable debt
-- [x] migrations explained in plain English below
-- [~] reviewers N/A — schema-only fix verified directly against the live database
-- [~] no subagent dispatched
+- [x] key still read from `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY`; nothing hardcoded; no secret in code
+- [~] no migration, so no SQL block to paste
+- [~] no irreversible action introduced — read-path changes only
+- [x] no avoidable debt; ~150 lines of duplicated test mock boilerplate collapsed into one helper
+- [~] no migrations to explain
+- [x] reviewers ran — `.claude/review/{ts-react,demo-readiness,sql-rls-rpc}.md` refreshed this PR
+- [x] every subagent dispatched on Haiku, below the orchestrator's tier
 
 ## For you
-**What changed:** Added the missing `disputed` value to the prize/fine status list in the database, as its own small migration that runs first, and removed the broken block from the big migration that was trying to do it the wrong way.
+**What changed:** Deactivated employees are paid for hours they actually worked. Shifts that run past midnight across a month boundary are no longer lost from both months. The payroll CSV now covers exactly the same events its totals do. Two pages that showed `[object Object]` on error now show the real message. Shift and membership filtering moved back into the database now that the migration has landed.
 
-**What you do next:** Merge. `apply-migrations` fires on merge and should finally apply both. If you'd rather not wait on the workflow, paste this into **Supabase Dashboard → SQL Editor** and run it — it is the entire new migration:
+**What you do next:** Review the Cloudflare Pages preview, then merge. Worth spot-checking on the preview: open Payroll, switch months, and download the CSV — the prize/fine line items should now only be ones inside the selected month, and their amounts should add up to the totals in the summary rows. No env or Supabase action needed.
 
-```sql
-alter type public.prize_fine_status add value if not exists 'disputed';
-```
-
-Then re-run **Actions → apply-migrations → Run workflow** to let the mega migration through.
-
-One caveat worth knowing: the workflow intermittently fails at `link` with `Failed to get API keys for project`. Run #18 attempt 1 hit it, attempt 2 sailed past with the same token. It's transient on Supabase's side — if you see it, just re-run, don't go hunting.
-
-**How to roll it back:** The mega migration's own rollback block is at the bottom of its file. The enum label cannot be dropped — Postgres has no `DROP VALUE` — but an unused label costs nothing.
+**How to roll it back:** Cloudflare Pages → Deployments → Rollback to the prior deployment. No schema changed, so there is no SQL to reverse.

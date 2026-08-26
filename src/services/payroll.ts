@@ -106,12 +106,13 @@ export async function computePayroll(
   function rateAt(userId: string, atIso: string, fallback: number): number {
     const rows = rateByUser.get(userId);
     if (!rows) return fallback;
+    const atMs = new Date(atIso).getTime();
     for (let i = rows.length - 1; i >= 0; i--) {
       const r = rows[i];
-      if (
-        r.effective_from <= atIso &&
-        (r.effective_to == null || r.effective_to > atIso)
-      ) {
+      const fromMs = new Date(r.effective_from).getTime();
+      const toMs =
+        r.effective_to == null ? null : new Date(r.effective_to).getTime();
+      if (fromMs <= atMs && (toMs == null || toMs > atMs)) {
         return r.hourly_rate_cents;
       }
     }
