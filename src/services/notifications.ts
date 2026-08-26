@@ -3,7 +3,9 @@ import type { Notification } from "../types/database";
 
 export async function listMyNotifications({
   unreadOnly = false,
-}: { unreadOnly?: boolean } = {}): Promise<Notification[]> {
+}: {
+  unreadOnly?: boolean;
+} = {}): Promise<Notification[]> {
   const supabase = getSupabase();
   const {
     data: { user },

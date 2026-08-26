@@ -1,7 +1,7 @@
 import {
+  createBrowserRouter,
   Navigate,
   type RouteObject,
-  createBrowserRouter,
 } from "react-router-dom";
 import { AuthGate } from "../components/AuthGate";
 import { Layout } from "../components/Layout";
