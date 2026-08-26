@@ -1,7 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { minutesBetween, wagesCents } from "../lib/money";
+import { getSupabase } from "../lib/supabaseClient";
+import { computePayroll } from "./payroll";
+
+vi.mock("../lib/supabaseClient");
 
 describe("payroll helper functions", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("wagesCents calculates correctly with integer math", () => {
     // 60 minutes * 50000 VND/hour = 50000 VND
     expect(wagesCents(60, 50000)).toBe(50000);
@@ -45,5 +53,161 @@ describe("payroll helper functions", () => {
     expect(wages).toBe(400000);
     // 400k + 100k - 50k = 450k
     expect(total).toBe(450000);
+  });
+});
+
+// Timestamps here use +00:00 because that is what PostgREST actually returns
+// for timestamptz, while callers pass +07:00 period bounds. Mocking both with
+// the same offset hides comparison bugs across the two.
+type Rows = Record<string, unknown[]>;
+
+function mockSupabaseTables(rows: Rows) {
+  const builderFor = (table: string) => {
+    const builder: Record<string, unknown> = {};
+    // Range filters are recorded and applied, so a test can prove the query
+    // actually fetched a row rather than the mock handing it over regardless.
+    const bounds: Array<{ col: string; op: "gte" | "lt"; value: string }> = [];
+    for (const method of ["select", "eq", "lte", "is", "in", "order"]) {
+      builder[method] = vi.fn(() => builder);
+    }
+    for (const op of ["gte", "lt"] as const) {
+      builder[op] = vi.fn((col: string, value: unknown) => {
+        if (typeof value === "string") bounds.push({ col, op, value });
+        return builder;
+      });
+    }
+    // biome-ignore lint/suspicious/noThenProperty: mimics supabase-js thenable query builder
+    builder.then = (resolve: (v: unknown) => void) => {
+      const data = (rows[table] ?? []).filter((row) =>
+        bounds.every(({ col, op, value }) => {
+          const cell = (row as Record<string, unknown>)[col];
+          if (typeof cell !== "string") return true;
+          const at = new Date(cell).getTime();
+          const bound = new Date(value).getTime();
+          return op === "gte" ? at >= bound : at < bound;
+        }),
+      );
+      resolve({ data, error: null });
+      return Promise.resolve();
+    };
+    return builder;
+  };
+
+  vi.mocked(getSupabase).mockReturnValue({
+    from: vi.fn((table: string) => builderFor(table)),
+  } as unknown as ReturnType<typeof getSupabase>);
+}
+
+describe("computePayroll integration", () => {
+  const storeId = "store-1";
+  const from = "2026-08-01T00:00:00+07:00";
+  const to = "2026-08-31T23:59:59+07:00";
+  const userId = "user-1";
+
+  const member = (active: boolean) => ({
+    user_id: userId,
+    hourly_rate_cents: 50000,
+    role: "employee",
+    active,
+  });
+  const pair = (inAt: string, outAt: string) => [
+    { user_id: userId, kind: "in", at: inAt },
+    { user_id: userId, kind: "out", at: outAt },
+  ];
+  const profile = [{ id: userId, display_name: "Test User" }];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("still pays a deactivated member for hours worked in the period", async () => {
+    mockSupabaseTables({
+      memberships_public: [member(false)],
+      // VN 08:00 -> 17:00 on Aug 15
+      clock_events: pair(
+        "2026-08-15T01:00:00+00:00",
+        "2026-08-15T10:00:00+00:00",
+      ),
+      profiles: profile,
+    });
+
+    const result = await computePayroll(storeId, from, to);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].minutes_worked).toBe(540);
+    expect(result[0].wages_cents).toBe(450000);
+  });
+
+  it("drops a deactivated member with no activity in the period", async () => {
+    mockSupabaseTables({
+      memberships_public: [member(false)],
+      clock_events: [],
+      profiles: profile,
+    });
+
+    expect(await computePayroll(storeId, from, to)).toHaveLength(0);
+  });
+
+  it("keeps an active member with no hours", async () => {
+    mockSupabaseTables({
+      memberships_public: [member(true)],
+      clock_events: [],
+      profiles: profile,
+    });
+
+    const result = await computePayroll(storeId, from, to);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].minutes_worked).toBe(0);
+  });
+
+  it("counts a shift that starts inside the period and ends after it", async () => {
+    mockSupabaseTables({
+      memberships_public: [member(true)],
+      // VN 23:00 Aug 31 -> 02:00 Sep 1
+      clock_events: pair(
+        "2026-08-31T16:00:00+00:00",
+        "2026-08-31T19:00:00+00:00",
+      ),
+      profiles: profile,
+    });
+
+    const result = await computePayroll(storeId, from, to);
+
+    expect(result[0].minutes_worked).toBe(180);
+    expect(result[0].daily_breakdown[0].date).toBe("2026-08-31");
+  });
+
+  // Regression: comparing `at` (+00:00) against the period bounds (+07:00) as
+  // strings drops this shift, because "2026-07-31..." sorts before "2026-08-01...".
+  it("counts a shift in the first VN hours of the period, whose UTC instant is the prior month", async () => {
+    mockSupabaseTables({
+      memberships_public: [member(true)],
+      // VN 00:30 -> 05:30 on Aug 1
+      clock_events: pair(
+        "2026-07-31T17:30:00+00:00",
+        "2026-07-31T22:30:00+00:00",
+      ),
+      profiles: profile,
+    });
+
+    const result = await computePayroll(storeId, from, to);
+
+    expect(result[0].minutes_worked).toBe(300);
+    expect(result[0].daily_breakdown[0].date).toBe("2026-08-01");
+  });
+
+  it("excludes a shift that started before the period began", async () => {
+    mockSupabaseTables({
+      memberships_public: [member(true)],
+      // VN 23:00 Jul 31 -> 02:00 Aug 1: belongs to the previous period
+      clock_events: pair(
+        "2026-07-31T16:00:00+00:00",
+        "2026-07-31T19:00:00+00:00",
+      ),
+      profiles: profile,
+    });
+
+    expect((await computePayroll(storeId, from, to))[0].minutes_worked).toBe(0);
   });
 });

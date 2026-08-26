@@ -133,7 +133,11 @@ export async function resolvePrizeFineDispute(params: {
 
 export async function listStorePrizeFine(
   storeId: string,
-  opts?: { status?: "pending" | "paid" | "cancelled" | "disputed" },
+  opts?: {
+    status?: "pending" | "paid" | "cancelled" | "disputed";
+    from?: string;
+    to?: string;
+  },
 ): Promise<PrizeFineEvent[]> {
   const supabase = getSupabase();
   let query = supabase
@@ -142,6 +146,8 @@ export async function listStorePrizeFine(
     .eq("store_id", storeId)
     .order("created_at", { ascending: false });
   if (opts?.status) query = query.eq("status", opts.status);
+  if (opts?.from) query = query.gte("created_at", opts.from);
+  if (opts?.to) query = query.lt("created_at", opts.to);
   const { data, error } = await query;
   if (error) throw error;
   return (data ?? []) as PrizeFineEvent[];

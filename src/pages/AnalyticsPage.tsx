@@ -7,6 +7,7 @@ import {
   LoadingState,
 } from "../components/ui/EmptyState";
 import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
+import { errorMessage } from "../lib/errorMessage";
 import { useT } from "../lib/i18n";
 import { formatVnd } from "../lib/money";
 import { getSupabase } from "../lib/supabaseClient";
@@ -96,7 +97,9 @@ function WeeklyTillVariance({ storeId }: { storeId: string }) {
     return (
       <Card>
         <CardTitle>{t("analytics.till_variance")}</CardTitle>
-        <ErrorState message={t("common.error", { message: String(error) })} />
+        <ErrorState
+          message={t("common.error", { message: errorMessage(error) })}
+        />
       </Card>
     );
   }
