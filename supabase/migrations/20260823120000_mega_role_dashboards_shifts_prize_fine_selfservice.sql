@@ -49,10 +49,9 @@ alter table public.prize_fine_events add column if not exists canceled_by uuid
   references auth.users(id);
 alter table public.prize_fine_events add column if not exists canceled_at timestamptz;
 
--- Extend prize_fine_events.status to include 'disputed'.
-alter table public.prize_fine_events drop constraint if exists prize_fine_events_status_check;
-alter table public.prize_fine_events add constraint prize_fine_events_status_check
-  check (status in ('pending', 'paid', 'cancelled', 'disputed'));
+-- status is the prize_fine_status ENUM, not a text column with a CHECK, so the
+-- 'disputed' label is added by 20260823110000 which runs (and commits) first —
+-- a new enum label cannot be used in the transaction that created it.
 
 -- ============================================================
 -- 2. New table: clock_correction_requests
@@ -756,9 +755,8 @@ grant execute on function public.rate_at(uuid, uuid, timestamptz) to authenticat
 --   drop table public.clock_correction_requests;
 --   alter table public.prize_fine_events drop column dispute_reason, drop column disputed_at,
 --     drop column issued_by, drop column canceled_reason, drop column canceled_by, drop column canceled_at;
---   alter table public.prize_fine_events drop constraint prize_fine_events_status_check;
---   alter table public.prize_fine_events add constraint prize_fine_events_status_check
---     check (status in ('pending','paid','cancelled'));
+--   (The 'disputed' enum label added by 20260823110000 cannot be removed —
+--    Postgres has no DROP VALUE. Leaving it costs nothing once no row uses it.)
 --   alter table public.memberships drop column last_active_at;
 --   alter table public.shifts drop column deleted_at;
 --   (Reverting create_shifts_bulk to prior definition requires re-running the
