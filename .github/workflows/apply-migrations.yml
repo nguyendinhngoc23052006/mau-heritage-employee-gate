@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v3
         with:
           # Pin the CLI. `latest` hits GitHub's anon rate limit on shared
           # runner IPs. Config.toml on this repo carries bleeding-edge keys
