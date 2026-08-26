@@ -1,56 +1,64 @@
-**Intent:** Fix the actual bug that has blocked the mega migration for ten days. Every prior hotfix (#28–#33) fixed real infrastructure problems stacked on top of it; this is the one underneath.
+**Intent:** `npm run lint` has been failing on `main` for every PR, and failing *silently* for anyone whose `node_modules` predates the Biome bump. This makes the lint gate real again.
 
-**Impact:** One new 1-statement migration, one correction to the unapplied mega migration. No app code.
+**Impact:** Toolchain only. No behaviour change, no schema, no env. Stands alone per the "refactors never inside a feature PR" rule — it is deliberately not bundled into the payroll PR (#37) it currently blocks.
 
-**Root cause:** `20260823120000` extends the prize/fine dispute flow and assumed `prize_fine_events.status` is a text column guarded by a CHECK constraint. It is not — it is the enum `public.prize_fine_status` with labels `pending, paid, cancelled`. So the migration's
+## What was broken
 
-```sql
-alter table public.prize_fine_events drop constraint if exists prize_fine_events_status_check;  -- no-op, no such constraint
-alter table public.prize_fine_events add constraint prize_fine_events_status_check
-  check (status in ('pending', 'paid', 'cancelled', 'disputed'));
-```
-
-failed comparing the enum against a label that does not exist in it:
+`package.json` pins `@biomejs/biome: ^2.5.10` but `biome.json` was still a Biome **1.x** config, right down to `"$schema": ".../1.9.4/schema.json"`. Biome 2 renamed `files.ignore` → `files.includes` (with `!` negations) and `overrides[].include` → `includes`, so CI died before linting a single file:
 
 ```
-NOTICE:  constraint "prize_fine_events_status_check" ... does not exist, skipping
-ERROR:  invalid input value for enum prize_fine_status: "disputed" (SQLSTATE 22P02)
-At statement: 11
+× Found an unknown key `include`.
+× Biome exited because the configuration resulted in errors.
 ```
 
-The migration rolled back cleanly — verified nothing partially applied (`shifts.deleted_at`, `memberships.last_active_at`, `clock_correction_requests`, and all 17 RPCs still absent).
+This is a pre-existing break on `main`, not caused by any open PR.
 
-**The fix:** add `'disputed'` to the enum, in its own migration. Postgres permits `ALTER TYPE ... ADD VALUE` inside a transaction but forbids *using* the new label until that transaction commits, so it must not share a transaction with the functions that reference it. `20260823110000` sorts before the mega migration and after the newest applied version (`20260822130000`), so `db push` applies it first, in its own transaction.
+**It also hid itself.** A stale `node_modules` carrying Biome 1.9.4 accepts the old config and reports clean, so local runs passed while CI failed. Anyone who has not run `npm ci` since the bump is getting a false green from their lint gate right now — that is the more dangerous half of this bug.
 
-**I audited the rest of the file rather than fixing statement 11 and rediscovering this tomorrow.** Cross-checked every table, column, enum, and helper the migration touches against the live schema: `shift_slots.claimed_by` (not `user_id`), `shifts.{slot_count,claim_open,starts_at,ends_at,notes}`, `invites.{accepted_at,revoked_at,expires_at}`, `rate_history.{effective_from,effective_to}`, and the `has_role_on` / `is_member_of` / `write_audit` helpers all match. The enum mismatch was the only schema error. `clock_correction_requests` declares its own `status text ... check (...)` and is self-consistent.
+## What changed
 
-`src/types/database.ts:18` already types `PrizeFineStatus` with `"disputed"`, so no type change is needed.
+- `biome.json` migrated with `biome migrate` (Biome's own tool, not hand-edited), then extended:
+  - `css.parser.tailwindDirectives: true` — `src/index.css` uses Tailwind 4's `@theme`, which Biome 2 otherwise refuses to parse, aborting formatting of the file.
+- Safe autofixes applied across 12 files. Every non-formatting change verified behaviour-preserving:
+  - `Number.parseInt(x)` → `Number.parseInt(x, 10)` in `RulesPage.tsx` (explicit radix, identical for decimal input)
+  - two redundant `<>…</>` wrappers removed in `PayrollPage.tsx` / `MyPayPage.tsx` (`git diff -w` shows nothing else)
+  - import ordering in `router.tsx` / `supabaseClient.ts`
+  - the rest is pure formatting
+
+## Rules demoted to warnings, not silenced
+
+Biome 2 adds rules that flag genuine pre-existing findings. Fixing them means behaviour-sensitive edits across five files, which does not belong in a toolchain PR. They are set to `warn` — visible on every run, not blocking — and are follow-up work:
+
+| Rule | Where |
+| --- | --- |
+| `suspicious/useIterableCallbackReturn` | `SchedulePage.tsx:197`, `:989` |
+| `correctness/useExhaustiveDependencies` | `OnboardingPage.tsx:195` |
+| `suspicious/noArrayIndexKey` | `AttendanceHeatmap.tsx:106` |
+| `a11y/noStaticElementInteractions` | `Dialog.tsx:37`, `:45` |
+| `a11y/useAriaPropsSupportedByRole` | `Select.tsx:203` |
+| `a11y/noSvgWithoutTitle` | `public/logo-mark.svg` |
+
+The two `useIterableCallbackReturn` hits in `SchedulePage` are worth looking at first — that rule catches a callback that returns a value on some paths and not others, which is a real bug shape rather than a style nit.
+
+**One autofix was reverted:** Biome's *unsafe* fix for `useExhaustiveDependencies` on `OnboardingPage.tsx` introduced a fresh `noInvalidUseBeforeDeclaration` error. Reverted; that file is untouched.
 
 ## Self-check
-- [~] base = main; exactly one PR — one PR, but **two migration files touched**: one new file plus the removal of the broken block from the still-unapplied `20260823120000`. Splitting is required by the transaction rule above; editing the mega file is permitted because it has never applied.
-- [x] new migration UTC-timestamped after the newest *applied* version (`20260822130000`); no new tables, so no RLS needed; `src/types` already matches
-- [x] tests/lint/typecheck green — 36/36 tests, 0 biome, 0 tsc across 152 files
-- [x] scripts named `lint`, `typecheck`, `test`
+- [x] base = main; exactly one PR
+- [~] no migration; no schema change; `src/types` untouched
+- [x] tests/lint/typecheck green — 36/36 tests, `biome check` exits 0 with 8 warnings and 0 errors, 0 tsc across 154 files
+- [x] scripts named exactly `lint`, `typecheck`, `test`
 - [~] e2e not yet added
 - [~] no env/key change
-- [x] migration paired with the exact SQL block below
-- [~] no irreversible action — additive enum label; the mega migration is additive and its rollback block is updated
-- [x] no avoidable debt
-- [x] migrations explained in plain English below
-- [~] reviewers N/A — schema-only fix verified directly against the live database
-- [~] no subagent dispatched
+- [~] no migration, so no SQL block
+- [~] no irreversible action
+- [x] no avoidable debt; demoted rules are listed above rather than silently disabled
+- [~] no migrations to explain
+- [x] reviewers ran — `.claude/review/*` refreshed this PR
+- [~] no subagent dispatched — verified the diff directly
 
 ## For you
-**What changed:** Added the missing `disputed` value to the prize/fine status list in the database, as its own small migration that runs first, and removed the broken block from the big migration that was trying to do it the wrong way.
+**What changed:** The linter config was written for an old version of the linter, so the check was crashing before it looked at any code. Config migrated with the linter's own migration tool, its automatic fixes applied, and six newly-added rules turned into warnings so their existing findings stay visible without blocking anyone.
 
-**What you do next:** Merge. `apply-migrations` fires on merge and should finally apply both. If you'd rather not wait on the workflow, paste this into **Supabase Dashboard → SQL Editor** and run it — it is the entire new migration:
+**What you do next:** Review the Cloudflare Pages preview and merge. **Merge this before #37** — #37 is red purely because of this, and will go green once it picks up this change. Nothing to do in Supabase or Cloudflare.
 
-```sql
-alter type public.prize_fine_status add value if not exists 'disputed';
-```
-
-Then re-run **Actions → apply-migrations → Run workflow** to let the mega migration through.
-
-One caveat worth knowing: the workflow intermittently fails at `link` with `Failed to get API keys for project`. Run #18 attempt 1 hit it, attempt 2 sailed past with the same token. It's transient on Supabase's side — if you see it, just re-run, don't go hunting.
-
-**How to roll it back:** The mega migration's own rollback block is at the bottom of its file. The enum label cannot be dropped — Postgres has no `DROP VALUE` — but an unused label costs nothing.
+**How to roll it back:** Cloudflare Pages → Deployments → Rollback to the prior deployment. Reverting the commit restores the old config, which puts CI back to failing on every PR.

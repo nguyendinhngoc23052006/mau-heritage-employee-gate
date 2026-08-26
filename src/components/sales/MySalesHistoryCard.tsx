@@ -9,7 +9,10 @@ import { EmptyState, LoadingState } from "../ui/EmptyState";
 export function MySalesHistoryCard({
   userId,
   storeId,
-}: { userId: string; storeId: string }) {
+}: {
+  userId: string;
+  storeId: string;
+}) {
   const t = useT();
   const { data, isLoading } = useQuery({
     queryKey: ["sales", "mine", userId, storeId],

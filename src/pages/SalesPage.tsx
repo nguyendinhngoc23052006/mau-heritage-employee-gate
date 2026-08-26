@@ -57,7 +57,10 @@ export function SalesPage() {
 function SubmitSalesForm({
   userId,
   storeId,
-}: { userId: string; storeId: string }) {
+}: {
+  userId: string;
+  storeId: string;
+}) {
   const t = useT();
   const queryClient = useQueryClient();
 

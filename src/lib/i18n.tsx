@@ -1,6 +1,6 @@
 import {
-  type ReactNode,
   createContext,
+  type ReactNode,
   useCallback,
   useContext,
   useEffect,
@@ -35,7 +35,10 @@ function interpolate(
 export function I18nProvider({
   children,
   initialLocale,
-}: { children: ReactNode; initialLocale?: string }) {
+}: {
+  children: ReactNode;
+  initialLocale?: string;
+}) {
   const [locale, setLocaleState] = useState<string>(() => {
     return initialLocale || localStorage.getItem("locale") || "vi";
   });
