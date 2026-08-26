@@ -48,15 +48,16 @@ Regenerate via `/refresh` (guide-value drift) or `/reset-scope` (scope change). 
 - Folders: `src/components` (UI) · `src/hooks` (logic) · `src/services` (data + validation) · `src/lib` (incl. supabaseClient) · `src/types` · `supabase/migrations` (one SQL file per change) · `supabase/config.toml` · `supabase/seed.sql`.
 - `public/_redirects` contains `/* /index.html 200` for Pages SPA fallback so client-side routes work on hard reload.
 - **Designing structure on request** (`/prototype`, or "set up the project structure"): build it from my description — create only the feature/domain folders the project needs, and omit the rest. Every folder gets a real, used starter file — never empty or `.gitkeep` shells. Wire it to the baseline: types in `src/types`, one core migration draft with RLS per table, reads through `supabaseClient.ts`, routes + placeholder components with loading/empty/error states. Record the layout in `docs/ARCHITECTURE.md`. Keep it a skeleton, not finished features. One PR into `main` with the "For you" block.
-- **Feature flags** live in the `feature_flags` table; flip one by shipping a one-line migration PR + manual SQL apply, never a dashboard edit alone. The client flag helper defaults every flag **off** on any error — a failed lookup hides the feature, never exposes it.
+- **Feature flags** live in the `feature_flags` table; flip one by shipping a one-line migration PR, never a dashboard edit. The client flag helper defaults every flag **off** on any error — a failed lookup hides the feature, never exposes it.
 - **Unhandled client errors** insert into the `client_errors` table (RLS: insert-only; a user can read only their own rows); never swallow an error silently.
 
 ## Scale
 - Every table grows forever: paginate/limit, index any filtered or joined column, no N+1, handle loading/empty/error/partial states, idempotent writes.
 
 ## Migrations (single source of truth)
-- Schema exists as migration files in `supabase/migrations/`; never change a DB by hand without also committing a matching migration file.
-- **Demo migration flow (no Branching):** Claude drafts the SQL file. On PR merge to `main`, the human copies the SQL from the file into **Supabase Dashboard → SQL Editor** and runs it, then confirms. The PR is not "done" until this apply step happens. When Pro + Branching is later enabled, the flow becomes automatic and this step disappears.
+- Schema exists as migration files in `supabase/migrations/`; **never change a DB by hand or through the dashboard SQL Editor.** Merging *is* applying.
+- **How schema reaches production:** the `apply-migrations` workflow runs `supabase db push` on every merge to `main` that touches `supabase/migrations/**`. That is the only applier. Hand-run SQL never writes to `supabase_migrations.schema_migrations`, so it silently desyncs the recorded history from the real schema and the next `db push` dies replaying work that is already live — this cost ten days once; do not reintroduce it.
+- **If the workflow is down** and schema must land now: apply the SQL by hand, then immediately reconcile with `supabase migration repair --linked --status applied <version>` so history matches reality. Never leave a hand-applied migration unrecorded.
 - Never edit, rename, or re-timestamp a previously-applied migration — add a new one (fix-forward). If a migration is drafted but not yet applied (still on an open PR), it may be edited freely.
 - Ship schema + the code using it + `src/types` in one PR; every new table includes its RLS.
 - Name files `YYYYMMDDHHMMSS_description.sql` in UTC, later than the newest; one schema change in flight at a time.
@@ -64,7 +65,7 @@ Regenerate via `/refresh` (guide-value drift) or `/reset-scope` (scope change). 
 ## Supabase
 - Never hand-write `config.toml` — run `npx supabase init` (npx fetches the CLI; needs current Node LTS (20+); never a global `-g` install). Then edit only known keys: `[db.seed]`, plus any declared functions/buckets. Leave the top-level `project_id` at its `supabase init` default. The parser is strict.
 - Edge Functions read secrets from `Deno.env`; never commit a secret.
-- `seed.sql` is idempotent and safe to run multiple times; on Free tier without Branching it isn't auto-applied, but keep it truthful so a future Pro upgrade Just Works. A loginable seeded user needs an `auth.users` row (crypt password, pgcrypto) with GoTrue text token columns written as `''` (never NULL) — at minimum `confirmation_token`, `recovery_token`, `email_change`, `email_change_token_new` — plus a matching `auth.identities` row (provider `'email'`, with a `provider_id`). Make the seed self-healing: after insert, `UPDATE` those columns from NULL to `''` for the seeded email.
+- `seed.sql` is idempotent and safe to run multiple times; it isn't auto-applied without Branching, but keep it truthful so a future Pro upgrade Just Works. A loginable seeded user needs an `auth.users` row (crypt password, pgcrypto) with GoTrue text token columns written as `''` (never NULL) — at minimum `confirmation_token`, `recovery_token`, `email_change`, `email_change_token_new` — plus a matching `auth.identities` row (provider `'email'`, with a `provider_id`). Make the seed self-healing: after insert, `UPDATE` those columns from NULL to `''` for the seeded email.
 - Auth is **email + password** (`signInWithPassword` / `signUp` / `resetPasswordForEmail`); no magic-link OTP flow. If you ever add magic-link back, both sides of this contract must move in one PR.
 
 ## Memory (three tiers, self-pruning)
@@ -76,7 +77,7 @@ Regenerate via `/refresh` (guide-value drift) or `/reset-scope` (scope change). 
 ## Your place + every-PR rules
 - Build on a `claude/…` branch, open ONE PR into `main`, and stop there — I review the Cloudflare Pages preview and merge.
 - Your job ends at ONE PR into `main`; confirm the base is `main`; never merge or deploy (only I do).
-- Every migration file must be paired with the exact SQL block I'll paste into the Supabase SQL Editor after merge (Claude writes it verbatim inside the PR body's "For you → What you do next" — no summarizing).
+- A migration is applied by the `apply-migrations` workflow on merge, not by me. State in the PR body what the migration does in plain English and how to reverse it; do not paste SQL for me to run.
 - Irreversible actions (email, charge, state-changing API) need idempotency + a manual-verify flag in the PR. Because preview URLs share the production DB, treat every destructive write as production from the moment the PR opens.
 - Read env vars so the same code path works both against the production DB (which is what previews also hit — see above).
 - Write the PR description to `.claude/pr-body.md` (committed on the branch) FIRST, then open the PR from its contents — the Stop hook verifies that file locally, not GitHub.
@@ -88,7 +89,7 @@ Regenerate via `/refresh` (guide-value drift) or `/reset-scope` (scope change). 
 - [ ] tests/lint/typecheck green; happy AND unhappy paths exercised; e2e green (mark `- [~] e2e not yet added` if Playwright hasn't been installed yet)
 - [ ] scripts named exactly `lint`, `typecheck`, `test`; and `e2e` if installed (mark `- [~] not yet added` if not)
 - [ ] key read from `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`; `envPrefix: ['VITE_']`; nothing hardcoded; no secret in code
-- [ ] any new migration paired with the exact SQL block for me to paste into Supabase SQL Editor
+- [ ] any new migration is re-runnable (`if not exists` / `drop ... if exists` on new DDL) so a replay never hard-fails
 - [ ] irreversible actions guarded + idempotent + flagged
 - [ ] no avoidable debt; memory updated and pruned
 - [ ] migrations explained in plain English
@@ -99,7 +100,7 @@ Regenerate via `/refresh` (guide-value drift) or `/reset-scope` (scope change). 
 
 ## For you
 **What changed:** one plain-English sentence per change.
-**What you do next:** review the Cloudflare Pages preview, then merge — plus any manual env/secret action stated as a click-path, plus (if a migration is in this PR) the exact SQL block to paste into the Supabase SQL Editor.
+**What you do next:** review the Cloudflare Pages preview, then merge — plus any manual env/secret action stated as a click-path. A migration in this PR applies itself on merge; say what to look for to confirm it landed.
 **How to roll it back:** the concrete undo for THIS PR (usually: Cloudflare Pages → Deployments → Rollback to the prior deployment; if schema changed, the reversing SQL).
 
 ## Agents, plugins, MCP

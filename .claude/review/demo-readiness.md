@@ -1,16 +1,14 @@
-# demo-readiness — payroll correctness PR
+# demo-readiness — autonomous migration flow
 
 Verdict: **PASS.**
 
-- No schema change, no migration, no env or secret change. Nothing for the human to
-  do beyond reviewing the preview and merging.
-- No destructive or irreversible write introduced. All changes are read-path except
-  the unchanged `markPrizeFinePaid`.
-- Preview URLs share the production database; this PR only narrows what is read, so
-  a preview cannot corrupt production data through it.
-- `String(error)` → `errorMessage(error)` on Sales and Analytics removes the
-  `[object Object]` a user hit in production. No hardcoded English introduced;
-  every user-facing string still routes through `t()`.
-- CSV columns, headers, ordering and breakdown rows are unchanged. The only rows a
-  user loses are prize/fine line items outside the period or outside
-  pending/disputed — exactly the rows whose amounts were never in the totals.
+- Removes the last routine manual step from shipping schema. A normal change is
+  now merge-and-done; the human touches no dashboard.
+- The `link` retry converts the one known transient failure from "someone must
+  notice a red run and click re-run" into self-healing — the single biggest
+  remaining hole in autonomy.
+- Honest about its own limits: the break-glass path documents what to do when the
+  workflow is genuinely down, so an outage does not silently recreate the original
+  desync.
+- No preview/production risk: this PR touches no migrations, so the workflow will
+  not fire on merge. The next migration PR exercises it for real.
