@@ -1,53 +1,51 @@
-**Intent:** Fix three classes of payroll bug found by auditing the code after the mega migration finally applied. All of them cost real money once a store has more than a couple of employees; none has surfaced yet only because the data volumes are still tiny (14 clock events, 0 rate_history rows).
+**Intent:** Make schema delivery fully autonomous. The `apply-migrations` workflow becomes the only applier, and `CLAUDE.md` stops telling you to paste SQL into the dashboard.
 
-**Impact:** No schema change, no migration, no env change. Read-path only. Tests 36 → 42.
+**Impact:** Docs + workflow only. No app code, no migration, no schema change.
 
-## The money bugs
+## The contradiction being removed
 
-**Deactivated employees lost their final wages.** `computePayroll` filtered memberships with `.eq("active", true)`, so deactivating someone erased the hours they had already worked — you could not pay a leaver. Now all members are fetched and a row is dropped only when the member is inactive *and* has no minutes, prizes or fines in the period. Active members with zero hours still appear.
+`CLAUDE.md` documented hand-applying migration SQL through the Supabase SQL Editor. The `apply-migrations` workflow pushed the same files. Both were live, neither knew the other existed, and running one corrupted the other's bookkeeping — hand-run SQL never writes to `supabase_migrations.schema_migrations`, so the schema ran ahead of its recorded history and the next `db push` died replaying work that was already applied. That is what cost ten days across PRs #28–#33, and it would have recurred on the next migration.
 
-**Shifts crossing a period boundary were paid in neither month.** Clock events were fetched windowed to `[from, to)`, and pairing required both ends inside that window, so a 23:00–02:00 shift across month end vanished from both months. The fetch window is now widened 24h on each side and each pair is attributed to the period containing its clock-in.
+## What changed
 
-**The payroll CSV did not reconcile with its own totals.** Three separate causes: `listStorePrizeFine` ignored the date range while its cache key claimed otherwise, so line items could come from any month; line items printed every status while the totals count only `pending` + `disputed`, so a cancelled fine appeared as a row carrying an amount deliberately absent from the total above it; and the row filter compared browser-local month bounds against `+07:00`-anchored totals, so a non-Vietnam browser disagreed with itself by up to a day at the boundary. The range is now applied server-side, statuses match the aggregate, and the duplicate client-side filter is gone — one definition of the period.
+**`CLAUDE.md`** — five places instructed a manual apply; all now point at the workflow:
+- Migrations section: "never change a DB by hand or through the dashboard SQL Editor. Merging *is* applying," plus an explicit note on *why* hand-apply desyncs, so the reasoning survives the next reader.
+- Added a break-glass path: if the workflow is down, apply by hand **then** reconcile with `supabase migration repair --linked --status applied <version>`. The failure mode was never hand-applying — it was hand-applying without recording.
+- Feature-flag rule no longer says "+ manual SQL apply".
+- Every-PR rule no longer demands a verbatim SQL block for you to run.
+- Self-check swaps that line for one that actually prevents the failure: **new DDL must be re-runnable** (`if not exists` / `drop ... if exists`). An unguarded `add constraint` is what turned the desync into a hard stop.
+- "For you" block no longer asks for pasteable SQL.
 
-## Also
+**`supabase/CLAUDE.md`** — same correction, one line.
 
-- `String(error)` rendered a Supabase `PostgrestError` as the literal `[object Object]` on Sales and Analytics — the same bug already fixed on Schedule. Both now use the existing `errorMessage` helper.
-- The client-side `deleted_at` filter and `last_active_at` sort go back to the database now that the mega migration has applied.
+**`.github/workflows/apply-migrations.yml`**:
+- Deleted both `migration repair` blocks. They hardcoded the specific historical ghost timestamps and hand-applied versions, ran on every future migration, and swallowed failures with `|| true`. Verified they are now no-ops: recorded history is exactly the 16 files in `supabase/migrations/`, byte for byte, so there is nothing left to reconcile.
+- **`supabase link` now retries 3× with backoff.** It intermittently fails with `Failed to get API keys for project` and succeeds on retry with the same token — run #18 hit it, attempt 2 sailed through. Without the retry that leaves a migration unapplied until a human notices a red run, which is exactly the non-autonomy being removed.
+- Kept the `config.toml` stub, with the comment trimmed to the reason rather than the archaeology.
 
-## A note on how this was built
+**`MEMORY.md`** — records the settled flow, the retry, the stub, the re-runnable rule, and the lesson that schema must be verified against the database rather than a green workflow.
 
-Two Haiku writers worked disjoint file sets, then two Haiku checkers cross-audited the other's work. That caught real defects, including one the writers' own tests could not:
+## Note on editing the constitution
 
-The period guard was written as a string comparison. PostgREST returns `timestamptz` with a `+00:00` offset while callers pass `+07:00` bounds, so `"2026-07-31T17:30:00+00:00" >= "2026-08-01T00:00:00+07:00"` is `false` — the first seven hours of every month would have gone unpaid, and the next month's first hours would have been pulled in. It reintroduced the exact bug class this PR set out to fix.
-
-It survived the writers' tests because every mocked timestamp used `+07:00`, a format the database never returns. Both writer-authored tests passed against the broken comparison. The mocks now use `+00:00`, and the query builder records and applies range filters instead of handing back rows regardless — without that, no test could cover the fetch widening either.
-
-Each fix was verified by reverting it and confirming a specific test fails:
-- revert the epoch comparison → *"counts a shift in the first VN hours of the period"* fails
-- revert the 24h widening → *"counts a shift that starts inside the period and ends after it"* fails
-
-## Rule gap for you (not changed here)
-
-`CLAUDE.md` documents hand-applying migration SQL through the Supabase SQL Editor *and* the `apply-migrations` workflow pushes the same files. Both are live and neither knows about the other — that is what desynced the migration history and cost ten days. It will desync again on the next migration. `CLAUDE.md` is read-only to me, so this is a flag, not an edit: pick one path and I will move the docs and workflow together.
+`CLAUDE.md` is marked read-only to me and I flagged this rather than changing it across three separate PRs. Editing it here is on your explicit instruction to make the app autonomous. The scope block stays untouched — it is still accurate and still `/refresh`-generated.
 
 ## Self-check
 - [x] base = main; exactly one PR
-- [~] no migration file in this PR; `src/types` already matches (no schema change)
-- [x] tests/lint/typecheck green — 42/42 tests, 0 biome errors and 0 warnings, 0 tsc across 152 files; happy and unhappy paths both exercised
+- [~] no migration file in this PR; no schema change; `src/types` untouched
+- [x] tests/lint/typecheck green — 42/42 tests, lint exit 0 (8 pre-existing warnings from #38), 0 tsc across 154 files
 - [x] scripts named exactly `lint`, `typecheck`, `test`
 - [~] e2e not yet added
-- [x] key still read from `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY`; nothing hardcoded; no secret in code
-- [~] no migration, so no SQL block to paste
-- [~] no irreversible action introduced — read-path changes only
-- [x] no avoidable debt; ~150 lines of duplicated test mock boilerplate collapsed into one helper
-- [~] no migrations to explain
-- [x] reviewers ran — `.claude/review/{ts-react,demo-readiness,sql-rls-rpc}.md` refreshed this PR
-- [x] every subagent dispatched on Haiku, below the orchestrator's tier
+- [~] no env/key change
+- [~] no new migration to guard
+- [~] no irreversible action — the workflow's behaviour is unchanged apart from retrying a transient failure
+- [x] no avoidable debt; deleted the hardcoded repair lists rather than leaving them to run forever
+- [x] migration flow explained in plain English below
+- [x] reviewers ran — `.claude/review/*` refreshed this PR
+- [~] no subagent dispatched — docs + one workflow, verified directly
 
 ## For you
-**What changed:** Deactivated employees are paid for hours they actually worked. Shifts that run past midnight across a month boundary are no longer lost from both months. The payroll CSV now covers exactly the same events its totals do. Two pages that showed `[object Object]` on error now show the real message. Shift and membership filtering moved back into the database now that the migration has landed.
+**What changed:** Migrations now apply themselves on merge, and the rulebook says so. You no longer paste SQL into Supabase for a normal change. The workflow retries the one transient Supabase failure that used to need a manual re-run, and the one-off repair commands from the ten-day incident are gone now that history and the repo match exactly.
 
-**What you do next:** Review the Cloudflare Pages preview, then merge. Worth spot-checking on the preview: open Payroll, switch months, and download the CSV — the prize/fine line items should now only be ones inside the selected month, and their amounts should add up to the totals in the summary rows. No env or Supabase action needed.
+**What you do next:** Review and merge. Nothing to do in Supabase or Cloudflare. This PR touches no migrations, so `apply-migrations` will not fire — the next PR that adds one is the real test, and it should apply with no action from you.
 
-**How to roll it back:** Cloudflare Pages → Deployments → Rollback to the prior deployment. No schema changed, so there is no SQL to reverse.
+**How to roll it back:** Revert the commit. That restores the manual-apply wording and the old workflow; nothing in the database changes either way.

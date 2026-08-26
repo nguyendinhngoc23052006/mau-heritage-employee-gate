@@ -24,8 +24,16 @@
 - Rule application snapshots the rule state into `rule_events` so past applications explain themselves even after the rule is edited
 - CSV export includes UTF-8 BOM so Excel-VN opens Vietnamese characters correctly
 
+## Migration flow (settled 2026-08-26)
+- `apply-migrations` workflow is the ONLY applier — `supabase db push` on merge to main. Hand-applying via SQL Editor is banned: it never writes to `supabase_migrations.schema_migrations`, so schema runs ahead of recorded history and the next push dies replaying live work (cost 10 days, PRs #28-#33).
+- Workflow retries `supabase link` 3x — it intermittently fails with "Failed to get API keys for project" and succeeds on retry with the same token.
+- `supabase/config.toml` carries keys no pinned CLI parses; workflow swaps in a `project_id`-only stub at runtime. Don't chase CLI versions.
+- A migration must be re-runnable (`if not exists` guards) — an unguarded `add constraint` is what turned a desync into a hard stop.
+- Verify schema against the DB, not against a green workflow: `prize_fine_events.status` is an ENUM, and a migration written against an imagined text+CHECK column blocked everything for 10 days.
+
 ## Deferred (call out when picking back up)
 - Reviewer agents + Stop hook (guide Step 9) — never installed for this demo
+- Six Biome 2 rules demoted to `warn` in biome.json (see PR #38) — `useIterableCallbackReturn` in SchedulePage is a real bug shape, fix first
 - CI (tests/lint/typecheck workflow) + Dependabot auto-merge + uptime + e2e — never installed
 - Branch protection ruleset — never installed
 - Auto rule-detection tick (pg_cron or GitHub Actions cron) — schema is ready; the periodic job is not written

@@ -1,8 +1,8 @@
 name: apply-migrations
 
-# Auto-applies any new supabase/migrations/*.sql files to the production DB
-# when they land on main. Free-tier substitute for Supabase Branching's
-# built-in migration hook — replaces the "paste into SQL Editor" manual step.
+# Applies any new supabase/migrations/*.sql to the production DB when they
+# land on main. This is the ONLY way schema reaches production — nothing is
+# applied by hand. See the Migrations section of CLAUDE.md.
 
 on:
   push:
@@ -20,62 +20,36 @@ jobs:
 
       - uses: supabase/setup-cli@v3
         with:
-          # Pin the CLI. `latest` hits GitHub's anon rate limit on shared
-          # runner IPs. Config.toml on this repo carries bleeding-edge keys
-          # (auth.oauth_server, local_smtp, apple.email_optional,
-          # db.health_timeout, db.network_restrictions, experimental.pgdelta,
-          # storage.{analytics,s3_protocol,vector}) — someone touched it with
-          # a very recent CLI, so we need to match. 2.20.5 and 2.30.4 both
-          # failed on config parse; going high.
+          # Pinned: `latest` resolves via an unauthenticated GitHub API call
+          # that hits the anon rate limit on shared runner IPs.
           version: 2.48.3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Stub config.toml + link + repair ghost history + push
+      - name: Apply pending migrations
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
           SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
         run: |
-          # Config.toml in this repo carries bleeding-edge keys that no pinned
-          # CLI parses (auth.oauth_server, local_smtp, apple.email_optional,
-          # storage.{analytics,s3_protocol,vector}, db.{health_timeout,
-          # network_restrictions}, experimental.pgdelta). Chasing the CLI
-          # version is a losing game — the config was likely written by a
-          # nightly build.
-          #
-          # For migration push we only need `project_id`. Replace config.toml
-          # with a minimal stub at workflow-runtime — the checkout is
-          # ephemeral, the repo copy is untouched.
+          # supabase/config.toml carries keys no pinned CLI parses, and the
+          # CLI's parser is strict enough to abort before running anything.
+          # `db push` only needs project_id, so swap in a minimal stub — the
+          # checkout is ephemeral and the committed file is untouched.
           mv supabase/config.toml supabase/config.toml.original
           printf 'project_id = "%s"\n' "$SUPABASE_PROJECT_REF" > supabase/config.toml
 
-          supabase link --project-ref "$SUPABASE_PROJECT_REF"
-
-          # Ghost timestamps: recorded in schema_migrations with no local file.
-          # Mark reverted so they stop blocking reconciliation.
-          supabase migration repair --linked \
-            --status reverted \
-            20260817072203 20260817072235 20260817072322 \
-            20260817113820 20260817121342 \
-            20260818131500 20260818131542 \
-            20260821204255 \
-            || true
-
-          # The inverse problem: these migrations WERE applied to prod by hand
-          # via the Supabase SQL Editor (the documented demo flow in CLAUDE.md),
-          # which does not write to schema_migrations. The schema is ahead of the
-          # recorded history, so `db push` tries to replay them and dies on the
-          # first unguarded DDL ("constraint ... already exists", 42710).
-          # Verified against prod on 2026-08-25: every object through
-          # 20260822130000 is present; nothing from 20260823120000 is.
-          # Record them as applied so push only runs what is genuinely pending.
-          supabase migration repair --linked \
-            --status applied \
-            20260815120000 20260816120000 \
-            20260817120000 20260817130000 \
-            20260818120000 20260818130000 \
-            20260819120000 20260822130000 \
-            || true
+          # `link` intermittently fails against Supabase's management API with
+          # "Failed to get API keys for project" and succeeds on a retry with
+          # the same token. Retry here rather than leave a migration unapplied
+          # until a human notices the red run.
+          for attempt in 1 2 3; do
+            supabase link --project-ref "$SUPABASE_PROJECT_REF" && break
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::supabase link failed after 3 attempts"
+              exit 1
+            fi
+            sleep $((attempt * 15))
+          done
 
           supabase db push --linked
