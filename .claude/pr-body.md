@@ -1,8 +1,25 @@
-**Intent:** `npm run lint` has been failing on `main` for every PR, and failing *silently* for anyone whose `node_modules` predates the Biome bump. This makes the lint gate real again.
+**Intent:** CI has been failing on `main` for every PR, in **two independent ways**. Neither is caused by any open PR, and no PR in this repo can go green until both are fixed.
 
-**Impact:** Toolchain only. No behaviour change, no schema, no env. Stands alone per the "refactors never inside a feature PR" rule — it is deliberately not bundled into the payroll PR (#37) it currently blocks.
+**Impact:** Toolchain only. No behaviour change, no schema, no env. Deliberately kept out of the payroll PR (#37) it blocks, per the "refactors never inside a feature PR" rule — but both CI breaks live here together, because fixing only one still leaves every PR red.
 
-## What was broken
+## Break 2: CI runs an EOL Node, and the test suite cannot start on it
+
+`ci.yml` pinned `node-version: 20`. Node 20 went **end-of-life in March 2026**; the current Active LTS is 24 (22 is Maintenance). On Node 20 every one of the 10 test files fails to even load:
+
+```
+Failed to start forks worker for test files .../announcements.test.ts
+Caused by: TypeError: webidl.util.markAsUncloneable is not a function
+  ❯ new CacheStorage node_modules/undici/lib/web/cache/cachestorage.js:20:17
+  ❯ Object.<anonymous> node_modules/jsdom/lib/api.js:12:33
+```
+
+`jsdom` pulls in an `undici` that needs `markAsUncloneable`, added in Node 20.18 / 22.10. Result: `Test Files no tests · Errors 10 errors`.
+
+This was invisible until now because Break 1 killed the lint step before CI ever reached `npm test`. Bumped to `node-version: 24`, matching the constitution's "track the current Node LTS".
+
+**Verification honesty:** this sandbox runs Node **22.22.2**, where all 36 tests pass against this exact lockfile — that is what proves the Node 20 line is the problem. I could not execute Node 24 here; it is chosen because it is the current Active LTS and is strictly newer than the version I verified. If 24 misbehaves, 22 is the proven fallback.
+
+## Break 1: the linter config is a version behind the linter
 
 `package.json` pins `@biomejs/biome: ^2.5.10` but `biome.json` was still a Biome **1.x** config, right down to `"$schema": ".../1.9.4/schema.json"`. Biome 2 renamed `files.ignore` → `files.includes` (with `!` negations) and `overrides[].include` → `includes`, so CI died before linting a single file:
 
@@ -45,7 +62,7 @@ The two `useIterableCallbackReturn` hits in `SchedulePage` are worth looking at 
 ## Self-check
 - [x] base = main; exactly one PR
 - [~] no migration; no schema change; `src/types` untouched
-- [x] tests/lint/typecheck green — 36/36 tests, `biome check` exits 0 with 8 warnings and 0 errors, 0 tsc across 154 files
+- [x] tests/lint/typecheck green locally — 36/36 tests, `biome check` exits 0 with 8 warnings and 0 errors, 0 tsc across 154 files (on Node 22; see the verification-honesty note above)
 - [x] scripts named exactly `lint`, `typecheck`, `test`
 - [~] e2e not yet added
 - [~] no env/key change
@@ -57,8 +74,8 @@ The two `useIterableCallbackReturn` hits in `SchedulePage` are worth looking at 
 - [~] no subagent dispatched — verified the diff directly
 
 ## For you
-**What changed:** The linter config was written for an old version of the linter, so the check was crashing before it looked at any code. Config migrated with the linter's own migration tool, its automatic fixes applied, and six newly-added rules turned into warnings so their existing findings stay visible without blocking anyone.
+**What changed:** Two things were stopping CI. The linter config was written for an old version of the linter, so the check crashed before looking at any code. And CI was running an end-of-life Node that the test framework can no longer start on — that one was hidden behind the first. Config migrated with the linter's own migration tool, its automatic fixes applied, six newly-added rules turned into warnings so their existing findings stay visible without blocking anyone, and CI moved to the current supported Node.
 
 **What you do next:** Review the Cloudflare Pages preview and merge. **Merge this before #37** — #37 is red purely because of this, and will go green once it picks up this change. Nothing to do in Supabase or Cloudflare.
 
-**How to roll it back:** Cloudflare Pages → Deployments → Rollback to the prior deployment. Reverting the commit restores the old config, which puts CI back to failing on every PR.
+**How to roll it back:** Cloudflare Pages → Deployments → Rollback to the prior deployment. Reverting the commit restores the old config and the old Node pin, which puts CI back to failing on every PR.
