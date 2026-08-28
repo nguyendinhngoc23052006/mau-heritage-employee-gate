@@ -1,51 +1,72 @@
-**Intent:** Make schema delivery fully autonomous. The `apply-migrations` workflow becomes the only applier, and `CLAUDE.md` stops telling you to paste SQL into the dashboard.
+**Intent:** fix the Payroll page crashing on every client-side navigation. **Impact:** one shared React Query cache key stops being written with two different shapes.
 
-**Impact:** Docs + workflow only. No app code, no migration, no schema change.
+## What was actually wrong
 
-## The contradiction being removed
+`SchedulePage.tsx:178` ran its own inline query under the cache key `["members", storeId]`, returning `{id, name}[]`. Seven other call sites use that same key with `listMembers(storeId)`, which returns `MemberWithProfile[]` — the shape with `user_id` and `profile` on it.
 
-`CLAUDE.md` documented hand-applying migration SQL through the Supabase SQL Editor. The `apply-migrations` workflow pushed the same files. Both were live, neither knew the other existed, and running one corrupted the other's bookkeeping — hand-run SQL never writes to `supabase_migrations.schema_migrations`, so the schema ran ahead of its recorded history and the next `db push` died replaying work that was already applied. That is what cost ten days across PRs #28–#33, and it would have recurred on the next migration.
+React Query caches by key, not by call site, so whichever component mounts first wins:
 
-## What changed
+1. Open **Lịch** (Schedule). Its query caches `{id, name}` rows under `["members", storeId]`.
+2. Tap **Bảng lương** (Payroll). `NavLink` — client-side, no reload — and both routes live under the same `/store/:storeId` layout, so the cache survives.
+3. `StorePrizeFineTable` mounts, reads the same key, and gets Schedule's rows. `listMembers` is never called, because `src/lib/query.ts` sets `staleTime: 30_000` and the entry is still fresh.
+4. `m.user_id` is `undefined` → `.substring(0, 8)` throws → error boundary shows **"Something broke"**.
 
-**`CLAUDE.md`** — five places instructed a manual apply; all now point at the workflow:
-- Migrations section: "never change a DB by hand or through the dashboard SQL Editor. Merging *is* applying," plus an explicit note on *why* hand-apply desyncs, so the reasoning survives the next reader.
-- Added a break-glass path: if the workflow is down, apply by hand **then** reconcile with `supabase migration repair --linked --status applied <version>`. The failure mode was never hand-applying — it was hand-applying without recording.
-- Feature-flag rule no longer says "+ manual SQL apply".
-- Every-PR rule no longer demands a verbatim SQL block for you to run.
-- Self-check swaps that line for one that actually prevents the failure: **new DDL must be re-runnable** (`if not exists` / `drop ... if exists`). An unguarded `add constraint` is what turned the desync into a hard stop.
-- "For you" block no longer asks for pasteable SQL.
+A hard refresh empties the cache, so Payroll's own fetch wins and the page works. That is the whole "always breaks until refreshed" symptom.
 
-**`supabase/CLAUDE.md`** — same correction, one line.
+TypeScript could not catch this: every `useQuery` infers its own type from its own `queryFn`, and keys are not type-linked across files.
 
-**`.github/workflows/apply-migrations.yml`**:
-- Deleted both `migration repair` blocks. They hardcoded the specific historical ghost timestamps and hand-applied versions, ran on every future migration, and swallowed failures with `|| true`. Verified they are now no-ops: recorded history is exactly the 16 files in `supabase/migrations/`, byte for byte, so there is nothing left to reconcile.
-- **`supabase link` now retries 3× with backoff.** It intermittently fails with `Failed to get API keys for project` and succeeds on retry with the same token — run #18 hit it, attempt 2 sailed through. Without the retry that leaves a migration unapplied until a human notices a red run, which is exactly the non-autonomy being removed.
-- Kept the `config.toml` stub, with the comment trimmed to the reason rather than the archaeology.
+## The fix
 
-**`MEMORY.md`** — records the settled flow, the retry, the stub, the re-runnable rule, and the lesson that schema must be verified against the database rather than a green workflow.
+- **`SchedulePage.tsx`** now fetches through `listMembers(storeId)` like every other consumer, and derives its local `{id → name}` map from the canonical shape afterwards. One shape in the shared key. This also deletes a duplicated raw Supabase query, so Schedule now shares that cache entry instead of racing it — and it reads `memberships_public` (the view every other page uses) rather than the `memberships` table directly.
+- **`StorePrizeFineTable.tsx`, `IssuePrizeFineModal.tsx`, `ApplyRulePage.tsx`** — guarded their `user_id.substring(0, 8)` fallbacks with `?.` and `|| "—"`, matching the pattern already used everywhere else. Defence in depth: these were the only unguarded ones reading this key.
 
-## Note on editing the constitution
+## The regression test
 
-`CLAUDE.md` is marked read-only to me and I flagged this rather than changing it across three separate PRs. Editing it here is on your explicit instruction to make the app autonomous. The scope block stays untouched — it is still accurate and still `/refresh`-generated.
+`src/__tests__/queryKeyShapes.test.ts` scans the source and fails if any `useQuery` on `["members", …]` does not go through `listMembers`. Written first — it named `src/pages/SchedulePage.tsx:178` and nothing else, then went green with the fix.
+
+It reads sources via `import.meta.glob` rather than `node:fs`, so it adds no `@types/node` dependency. A second case asserts the scan still finds at least six call sites, so the test cannot pass vacuously if a refactor moves things out of its reach.
+
+## Verified
+
+`lint`, `typecheck`, `test` (44 passing) and `build` all exit clean. Two verification agents were dispatched; verdicts in `.claude/review/verification-agents.md`. One was briefed to falsify the diagnosis and confirmed it, additionally establishing that no other unguarded string operation exists anywhere in the payroll render tree — so this fix resolves the reported crash rather than uncovering the next one.
+
+## Is this the only one?
+
+Yes. All 72 `useQuery` call sites were grouped by normalised cache key and every
+shared key was checked for fetcher/shape agreement, twice and independently.
+Four groups came back flagged on a first pass — `attendance_flags`, `rules`,
+`store` and `members` — but on inspection three were false positives: those
+call sites use the `(storeId ? listX(storeId) : Promise.resolve(…))` guard
+form, which still routes through the same service function and returns the same
+shape.
+
+`SchedulePage:178` was the only site that ran a bespoke raw Supabase query under
+a key everyone else populated through a service function, and it was the only
+genuine collision in the codebase.
+
+## Noted, not fixed here
+
+- `AuditPage.tsx:188` (`entity_id`) and `EmployeeDetailPage.tsx:310` (`changed_by`) have unguarded `.substring` calls. Different data sources, not this cache key, no known crash — left alone rather than widening this PR.
+- `ClockCorrectionsQueue.tsx:37` and `ApplyRulePage.tsx:50` query `["members", storeId]` with no `enabled` guard, unlike the other five. Harmless while `storeId` comes from the route, but inconsistent.
+- The `profile?.display_name || user_id?.substring(0,8) || "—"` expression now appears in six places. Past the point where a `memberLabel()` helper is warranted — but that is a behaviour-preserving refactor and the constitution says those stand alone, never inside a fix PR.
 
 ## Self-check
 - [x] base = main; exactly one PR
-- [~] no migration file in this PR; no schema change; `src/types` untouched
-- [x] tests/lint/typecheck green — 42/42 tests, lint exit 0 (8 pre-existing warnings from #38), 0 tsc across 154 files
+- [~] no migration in this PR — client-side only, no schema change
+- [x] tests/lint/typecheck green; happy AND unhappy paths exercised (the test asserts both the violation is caught and the scan is not vacuous)
+- [~] e2e not yet added — Playwright is not installed in this repo
 - [x] scripts named exactly `lint`, `typecheck`, `test`
-- [~] e2e not yet added
-- [~] no env/key change
-- [~] no new migration to guard
-- [~] no irreversible action — the workflow's behaviour is unchanged apart from retrying a transient failure
-- [x] no avoidable debt; deleted the hardcoded repair lists rather than leaving them to run forever
-- [x] migration flow explained in plain English below
-- [x] reviewers ran — `.claude/review/*` refreshed this PR
-- [~] no subagent dispatched — docs + one workflow, verified directly
+- [x] key read from `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`; nothing hardcoded; no secret in code
+- [~] no new migration in this PR
+- [~] no irreversible action in this PR — read-path fix only
+- [x] no avoidable debt; memory updated and pruned
+- [~] no migrations to explain
+- [~] reviewers ran, but as ad-hoc agents: this repo has no `.claude/agents/` swarm installed yet. Verdicts recorded in `.claude/review/verification-agents.md`
+- [x] every subagent dispatched on a model below the orchestrator's — never inherited
 
 ## For you
-**What changed:** Migrations now apply themselves on merge, and the rulebook says so. You no longer paste SQL into Supabase for a normal change. The workflow retries the one transient Supabase failure that used to need a manual re-run, and the one-off repair commands from the ten-day incident are gone now that history and the repo match exactly.
+**What changed:** the Schedule page was storing member data in a shape the Payroll page could not read, under the same cache slot. Payroll then crashed on whatever Schedule had left behind, and refreshing "fixed" it only because that threw the cache away. Schedule now stores the same shape everyone else does.
 
-**What you do next:** Review and merge. Nothing to do in Supabase or Cloudflare. This PR touches no migrations, so `apply-migrations` will not fire — the next PR that adds one is the real test, and it should apply with no action from you.
+**What you do next:** review the Cloudflare Pages preview, then merge. To confirm the fix: open **Lịch**, then tap **Bảng lương** without refreshing. It should render. No env or dashboard action needed.
 
-**How to roll it back:** Revert the commit. That restores the manual-apply wording and the old workflow; nothing in the database changes either way.
+**How to roll it back:** Cloudflare Pages → Deployments → Rollback to the prior deployment. No schema changed, so there is nothing to reverse in the database.

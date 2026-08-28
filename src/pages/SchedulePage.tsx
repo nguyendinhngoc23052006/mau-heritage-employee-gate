@@ -18,6 +18,7 @@ import { useSession } from "../hooks/useSession";
 import { errorMessage } from "../lib/errorMessage";
 import { useT } from "../lib/i18n";
 import { getSupabase } from "../lib/supabaseClient";
+import { listMembers } from "../services/members";
 import { listPayMultipliers } from "../services/payMultipliers";
 import {
   claimSlot,
@@ -174,40 +175,21 @@ export function SchedulePage() {
     queryFn: () => listPendingSwaps(storeId as string),
   });
 
+  // Must go through listMembers: this key is shared with Payroll, People,
+  // Clock and others, which all read MemberWithProfile. Returning a narrower
+  // shape here writes it into the shared cache and crashes whichever of them
+  // renders next without a reload. Derive the local shape below, not here.
   const { data: members } = useQuery({
     queryKey: ["members", storeId],
     enabled: ready,
-    queryFn: async () => {
-      const supabase = getSupabase();
-      const { data, error: err } = await supabase
-        .from("memberships")
-        .select("user_id, store_id")
-        .eq("store_id", storeId)
-        .eq("active", true);
-      if (err) throw err;
-      const rows = (data ?? []) as { user_id: string }[];
-      const ids = rows.map((r) => r.user_id);
-      if (ids.length === 0) return [] as { id: string; name: string }[];
-      const { data: profs, error: perr } = await supabase
-        .from("profiles")
-        .select("id, display_name")
-        .in("id", ids);
-      if (perr) throw perr;
-      const nameById = new Map<string, string>();
-      (profs ?? []).forEach((p: { id: string; display_name: string | null }) =>
-        nameById.set(p.id, p.display_name ?? p.id.substring(0, 8)),
-      );
-      return ids.map((id) => ({
-        id,
-        name: nameById.get(id) ?? id.substring(0, 8),
-      }));
-    },
+    queryFn: () => (storeId ? listMembers(storeId) : Promise.resolve([])),
   });
 
   const memberNames = useMemo(() => {
     const m: Record<string, string> = {};
     (members ?? []).forEach((mem) => {
-      m[mem.id] = mem.name;
+      m[mem.user_id] =
+        mem.profile?.display_name || mem.user_id?.substring(0, 8) || "—";
     });
     return m;
   }, [members]);

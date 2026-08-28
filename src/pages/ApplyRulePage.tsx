@@ -179,7 +179,8 @@ export function ApplyRulePage({ storeId }: ApplyRulePageProps) {
                   value: member.user_id,
                   label:
                     member.profile?.display_name ||
-                    member.user_id.substring(0, 8),
+                    member.user_id?.substring(0, 8) ||
+                    "—",
                 })) || []
               }
               placeholder={t("rules.apply.select_employee_placeholder")}

@@ -80,7 +80,7 @@ export function StorePrizeFineTable({ storeId }: StorePrizeFineTableProps) {
   const memberNameMap = new Map(
     (membersQuery.data || []).map((m) => [
       m.user_id,
-      m.profile?.display_name || m.user_id.substring(0, 8),
+      m.profile?.display_name || m.user_id?.substring(0, 8) || "—",
     ]),
   );
 
