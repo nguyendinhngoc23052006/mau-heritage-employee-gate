@@ -84,7 +84,7 @@ export function IssuePrizeFineModal({
 
   const memberOptions = (membersQuery.data || []).map((m) => ({
     value: m.user_id,
-    label: m.profile?.display_name || m.user_id.substring(0, 8),
+    label: m.profile?.display_name || m.user_id?.substring(0, 8) || "—",
   }));
 
   const amountCents = parseVndToCents(amountVnd);
