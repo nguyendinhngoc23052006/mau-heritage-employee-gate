@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from "react";
+import { logClientError } from "../lib/errorLog";
 
 interface Props {
   children: ReactNode;
@@ -17,9 +18,13 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: unknown) {
-    // errorLog already listens on window.error; log here too in case a boundary
-    // caught something before it bubbled to window.
+    // A boundary CATCHES the error, so it never reaches window.onerror — the
+    // global listener in errorLog.ts cannot see anything that lands here. The
+    // previous comment claimed the opposite, which is why client_errors logged
+    // nothing for a month of boundary crashes and the only diagnosis available
+    // was reading source. Log explicitly.
     console.error("[ErrorBoundary]", error, info);
+    void logClientError(error);
   }
 
   reset = () => this.setState({ error: null });
@@ -36,6 +41,9 @@ export class ErrorBoundary extends Component<Props, State> {
           </h1>
           <p className="mb-4 text-sm text-slate-600">
             {this.state.error.message || "Unknown error"}
+          </p>
+          <p className="mb-4 font-mono text-xs text-slate-400">
+            build {__BUILD_SHA__}
           </p>
           <button
             type="button"
