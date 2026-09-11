@@ -18,7 +18,14 @@ export async function listMembers(
     .eq("store_id", storeId)
     .eq("active", true);
   if (mErr) throw mErr;
-  const rows = (members ?? []) as MembershipPublic[];
+  // Drop rows with no usable user_id before anything downstream sees them.
+  // Such a row cannot be keyed to a profile, cannot be a Select value, and
+  // cannot be labelled — every consumer either crashes on `user_id.substring`
+  // or renders a dead option. Fixing it once here covers all eight call sites;
+  // guarding each of them individually never can.
+  const rows = ((members ?? []) as MembershipPublic[]).filter(
+    (r) => typeof r?.user_id === "string" && r.user_id.length > 0,
+  );
   if (rows.length === 0) return [];
 
   const userIds = rows.map((r) => r.user_id);

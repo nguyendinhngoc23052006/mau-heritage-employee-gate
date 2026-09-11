@@ -57,7 +57,7 @@ export function Select<T extends string = string>(
 
   const filteredOptions = searchable
     ? options.filter((opt) =>
-        opt.label.toLowerCase().includes(searchTerm.toLowerCase()),
+        (opt.label ?? "").toLowerCase().includes(searchTerm.toLowerCase()),
       )
     : options;
 
