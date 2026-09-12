@@ -16,19 +16,30 @@ which immediately found a second live instance.
 
 ### Stale-bundle banner
 `vite.config.ts` emits `version.json` holding the same 7-char sha that `define`
-bakes into `__BUILD_SHA__`. `src/hooks/useStaleBundle.ts` reads it on mount and
-whenever the tab becomes visible (throttled to once a minute, module-scope so a
-remount cannot bypass it) and compares. When they differ, `Layout.tsx` shows a
+bakes into `__BUILD_SHA__`. `src/hooks/useStaleBundle.ts` reads it on mount, whenever
+the tab becomes visible, and on a 5-minute poll — the visibility trigger catches
+a phone tab reopened hours later, the poll catches a desktop tab left open and
+focused all day, which review showed would otherwise be checked exactly once.
+All three go through one 60s throttle held at module scope, so a remount cannot
+bypass it. When they differ, `Layout.tsx` shows a
 full-width reload bar. `public/_headers` serves `/version.json` no-cache —
 a cached copy would report the build the tab is already running.
 
 ### Cache-key collision, closed as a class
 `src/__tests__/queryKeyShapes.test.ts` was a grep for `["members", …]`. It now
-parses all 72 `useQuery` blocks, normalises each `queryFn` into a fetch
-signature (null-guard scaffolding and `as` assertions are not differences;
+parses all 73 `useQuery` blocks — including the `useQuery<T>({` spelling, whose
+type argument can span lines and contain braces — normalises each `queryFn` into
+a fetch signature (null-guard scaffolding and `as` casts are not differences;
 arguments are), groups by the literal key, and fails on any key with more than
-one signature. Its second case asserts the scanner still finds ≥60 sites and
-≥40 distinct keys, so it cannot pass vacuously.
+one signature.
+
+A gate is only worth its blind spots, so two of its own cases guard it: one
+asserts the number of parsed blocks equals the number of `useQuery` calls in the
+source, so a spelling it cannot read fails the test instead of vanishing from
+it; the other asserts the normaliser keeps genuinely different fetches apart.
+Reviewers found both holes those cases now close — the scanner missed
+`useQuery<T>({` entirely, and the cast stripper matched the letters "as" inside
+identifiers, collapsing `m.lastActive` and `m.lastFired` to the same signature.
 
 It found one: `["notifications", "inbox"]` was written by
 `listMyNotifications({unreadOnly: true})` on the employee dashboard and
@@ -51,6 +62,11 @@ are typed `string`, and the one nullable field, `changed_by`, is already inside
 a `{rh.changed_by && …}` guard at `src/pages/EmployeeDetailPage.tsx:307`.
 Guarding them would be noise.
 
+**Reviewers:** three ran (security/posture, TypeScript+React correctness,
+falsification of the root cause). Verdicts in `.claude/review/`. Two confirmed
+findings, both fixed here; the falsification attempt found no way for current
+code to throw the reported error on either route.
+
 **Debt I'm leaving:** `IssuePrizeFineModal` computes `memberOptions` even while
 closed — harmless now that the shapes agree, but it is why one bug broke two
 pages, and it is work done for nothing on every People render.
@@ -58,7 +74,7 @@ pages, and it is work done for nothing on every People render.
 ## Self-check
 - [x] base = main; exactly one PR
 - [~] no migration in this PR
-- [x] tests/lint/typecheck green — 55 tests, 14 files; `biome check` clean; `tsc --noEmit` clean; `vite build` emits `version.json` with the injected sha
+- [x] tests/lint/typecheck green — 56 tests, 14 files; `biome check` clean; `tsc --noEmit` clean; `vite build` emits `version.json` with the injected sha
 - [x] scripts named exactly `lint`, `typecheck`, `test`
 - [~] e2e not yet added
 - [x] key read from `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`; `envPrefix: ['VITE_']`; nothing hardcoded; no secret in code

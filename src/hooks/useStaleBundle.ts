@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 const MIN_GAP_MS = 60_000;
+const POLL_MS = 5 * 60_000;
 
 // Module scope, not component state: the throttle has to survive Layout
 // remounting, or every remount would refetch.
@@ -11,9 +12,12 @@ let lastCheckedAt = 0;
 //
 // A tab keeps running the bundle it loaded, forever. That is how a shipped fix
 // can look un-shipped — the page still throws a bug that `main` no longer
-// contains, and only a hard reload picks up the fix. Checking when the tab
-// becomes visible again is what catches the real case: a phone tab left open
-// for hours across a deploy.
+// contains, and only a hard reload picks up the fix.
+//
+// Two triggers, because they cover different people: `visibilitychange` catches
+// a phone tab reopened hours later, and the poll catches a desktop tab that a
+// manager leaves open and focused all day, which would otherwise be checked
+// exactly once, at mount, and never again.
 export function useStaleBundle(): boolean {
   const [stale, setStale] = useState(false);
 
@@ -41,8 +45,10 @@ export function useStaleBundle(): boolean {
 
     check();
     document.addEventListener("visibilitychange", check);
+    const poll = setInterval(check, POLL_MS);
     return () => {
       cancelled = true;
+      clearInterval(poll);
       document.removeEventListener("visibilitychange", check);
     };
   }, [stale]);

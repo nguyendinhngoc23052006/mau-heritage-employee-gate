@@ -1,58 +1,37 @@
-# Verification — "Something broke: reading 'substring'" on People + Payroll
+# Falsification review — "the People/Payroll crash cannot come from current code"
+Reviewed: `claude/heritage-gate-part-2-ia4u9p`
+Verdict: **conclusion survives; 1 CONFIRMED finding in the new gate, fixed in this PR**
 
-Date: 2026-09-11. Three agents, each one tier below the orchestrator.
-This repo still has no `.claude/agents/` swarm, so these were ad-hoc dispatches.
+## Falsification attempt
+No counterexample could be constructed. Walked `src/lib/router.tsx` →
+`src/routes/people.tsx`, `src/routes/payroll.tsx` → both pages and every component
+and hook they render, including shared `Layout`, `Nav`, `AuthGate`,
+`StoreMemberGate`, `StoreSwitcher`, `useMemberships`, `useSession`, `lib/i18n`,
+`ui/Select`, `services/members`; then grepped every string-mutator call in `src/`
+and checked each against the declared nullability in `src/types/database.ts`.
+Every `.substring` reachable from either route is `?.`-guarded;
+`ui/Select.tsx:60` was hardened to `(opt.label ?? "")`; `services/members.ts:26-28`
+filters non-string `user_id` before any consumer sees a row.
 
-## Agent 1 — briefed to FALSIFY the stale-bundle conclusion
+## Confirmed mechanism
+`git show 9fec580` confirms both crash sites were bare pre-fix, and
+`src/pages/PeoplePage.tsx:1078` renders `IssuePrizeFineModal` unconditionally while
+the modal has no `if (!open) return null` — so its `memberOptions` map runs on every
+People render. One cache bug, two broken pages.
 
-Verdict: **CONFIRMED.** Independently built both pages' transitive closures and
-found every `.substring` guarded on current `main`, and the unguarded
-`StorePrizeFineTable.tsx:82` present at the pre-fix base `141b226`. So the code
-shipped on `main` cannot produce the reported error, and the screenshots (30/08
-17:31 UTC, 31h after the merge) must come from an older bundle.
+## CONFIRMED finding — fixed in this PR
+The new generic scanner matched the literal token `useQuery({` and so was blind to
+`useQuery<T>({`, a spelling this repo uses at `src/hooks/useMemberships.ts:17` and
+`src/pages/OnboardingPage.tsx:58,67` (the latter two carry a multi-line type argument
+containing braces). Fixed: the scanner now walks past a balanced type argument
+(`optionsBraceAfter`), and a new assertion requires the number of parsed blocks to
+equal the number of `useQuery` calls in the source — so any spelling it cannot parse
+fails the test instead of disappearing from it
+(`src/__tests__/queryKeyShapes.test.ts:54-113, :186`).
 
-**Where it was wrong, and how that was caught:** it reported "no lazy loading
-exists… no dynamic imports", having grepped only `src/lib/router.tsx`. There IS
-one — `src/main.tsx:14` does `await import("./App")` — and the production build
-emits two chunks (`index-*.js`, `App-*.js`), which I confirmed by building. That
-correction matters: it is the mechanism by which a cached HTML shell keeps
-loading a superseded app chunk. Taken at face value, this review would have
-buried the actual cause.
-
-## Agent 2 — security review of the new logging
-
-**PASS** on the three that mattered: RLS forces `user_id` to `auth.uid()` or
-null so a client cannot attribute an error to someone else; `logClientError`
-cannot recurse (it swallows its own failures); and the origin+pathname
-sanitisation does correctly strip the fragment carrying Supabase recovery
-tokens.
-
-**Two findings, both fixed here** — and both were created by this PR, since
-nothing wrote to this table before:
-- No bound on row size. Stacks run to tens of KB and the project is on a 500 MB
-  Free tier. Message capped at 500 chars, stack at 4000.
-- No bound on write rate. A render loop would have written a row per frame.
-  `RouteErrorFallback` now logs once per mount behind a ref guard.
-
-**Deferred:** a retention policy for `client_errors`. The right fix is a
-migration, but it would auto-apply on merge via `apply-migrations`, it cannot be
-tested in this sandbox, and pg_cron availability on Free is unverified. Shipping
-an untested schema change inside a PR I was asked to merge unattended is the
-wrong trade. Exact follow-up: a scheduled
-`delete from client_errors where at < now() - interval '90 days'`.
-
-## Agent 3 — code review of the diff
-
-Confirmed the build stamp is wired correctly end to end (define → type
-declaration → vitest mirror), degrades to `"dev"` when unset, and that a bare
-global substitutes correctly inside JSX. I also verified this empirically: a
-build with `CF_PAGES_COMMIT_SHA=deadbee1234567` puts `deadbee` in the bundle
-with zero unsubstituted placeholders.
-
-Confirmed the `listMembers` row filter is safe — **no caller counts members**,
-and `computePayroll` reads `memberships_public` directly rather than through
-`listMembers`, so no payroll figure can move. That was the one outcome that
-would have made this fix worse than the bug.
-
-One finding, fixed: `errorLog.test.ts` mutated `window.history` without
-restoring it, leaking `/reset-password` into any later test in the file.
+## Out of scope, real, not fixed
+- `src/pages/AuditPage.tsx:188` `item.entity_id.substring(0, 12)` is unguarded, but
+  `entity_id` is typed `string` and the route is `/audit`.
+- `src/pages/EmployeeDetailPage.tsx:310` is inside `{rh.changed_by && …}`, safe.
+- `SchedulePage.tsx:955-980` uses its own key `["members_options", storeId]` on
+  query-constructed non-null strings, confined to `/schedule`.
