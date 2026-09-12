@@ -34,7 +34,10 @@ export function EmployeeDashboard({ storeId }: EmployeeDashboardProps) {
 
   // Notifications
   const { data: notifications, isLoading: notificationsLoading } = useQuery({
-    queryKey: ["notifications", "inbox"],
+    // The third element is not decoration: NotificationsInbox reads the same
+    // first two with unreadOnly:false. One key for two result sets means the
+    // page that mounts first decides what the other one shows.
+    queryKey: ["notifications", "inbox", "unread"],
     enabled: ready,
     queryFn: () => listMyNotifications({ unreadOnly: true }),
   });

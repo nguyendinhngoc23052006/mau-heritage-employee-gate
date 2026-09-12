@@ -1,79 +1,85 @@
-**Intent:** make this crash impossible *and* diagnosable — the app had two error catchers and neither logged, so there was no evidence to work from. **Impact:** every route crash now records a real stack trace and the build that produced it.
+Two pages kept crashing and two correct fixes looked like failures, because
+nothing in the app could tell a stale tab from a live bug. This closes the bug
+class generically and makes a stale bundle announce itself.
 
-## What I got wrong last time
+**Intent.** The `/people` and `/payroll` crash (`Cannot read properties of
+undefined (reading 'substring')`) was one cache key written by two different
+fetches, fixed in 9fec580. Production runs that fix — `/` returns
+`Cache-Control: no-cache, must-revalidate`, a rule that exists only as of
+bcf704d — and `client_errors` has recorded nothing since 2026-08-14, though
+every `/store/:storeId` route has logged through `RouteErrorFallback` since
+bcf704d. The reports came from a tab still running a pre-deploy bundle.
 
-PR #40 diagnosed this as a React Query cache-key collision and fixed it. That fix is on `main` and it was correct — but it did not end the problem, and I should not have called it resolved without evidence. These screenshots are from **production**, dated 30/08 17:31 UTC, **31 hours after that merge**.
+**Impact.** A tab that is behind now says so. The same collision class is now a
+CI gate over every cache key rather than a grep for the one key that bit us —
+which immediately found a second live instance.
 
-## What is actually true
+### Stale-bundle banner
+`vite.config.ts` emits `version.json` holding the same 7-char sha that `define`
+bakes into `__BUILD_SHA__`. `src/hooks/useStaleBundle.ts` reads it on mount and
+whenever the tab becomes visible (throttled to once a minute, module-scope so a
+remount cannot bypass it) and compares. When they differ, `Layout.tsx` shows a
+full-width reload bar. `public/_headers` serves `/version.json` no-cache —
+a cached copy would report the build the tab is already running.
 
-**The code on `main` cannot throw this error on either page.** I built the full transitive import closure of `PeoplePage` and `PayrollPage` and there is no unguarded `.substring` anywhere in it. The only two unguarded ones left in the repo are `AuditPage.tsx:188` and `EmployeeDetailPage.tsx:310`, and neither page is in either closure.
+### Cache-key collision, closed as a class
+`src/__tests__/queryKeyShapes.test.ts` was a grep for `["members", …]`. It now
+parses all 72 `useQuery` blocks, normalises each `queryFn` into a fetch
+signature (null-guard scaffolding and `as` assertions are not differences;
+arguments are), groups by the literal key, and fails on any key with more than
+one signature. Its second case asserts the scanner still finds ≥60 sites and
+≥40 distinct keys, so it cannot pass vacuously.
 
-**So the browser was running a pre-fix bundle.** The mechanism, traced end to end:
+It found one: `["notifications", "inbox"]` was written by
+`listMyNotifications({unreadOnly: true})` on the employee dashboard and
+`{unreadOnly: false}` in the inbox. Whichever mounted first decided what the
+other showed — open the dashboard, then the inbox within 30s, and the inbox
+silently hides every already-read notification. Split into
+`["notifications","inbox","unread"]` and `["notifications","inbox","all"]`; the
+existing `invalidateQueries(["notifications","inbox"])` calls still match both
+by prefix.
 
-- `src/main.tsx:14` dynamically imports `App`, so the build emits two chunks — a small `index-*.js` shell and a 637 KB `App-*.js`. `index.html` is what names the hashed `App-*.js`.
-- `public/_headers` set **no `Cache-Control` at all**, so the HTML shell could be cached.
-- A stale `index.html` names the *old* `App-*.js` — and Cloudflare Pages still serves a previous deployment's assets, so that old chunk loads fine. The result is a complete, coherent, **old** app. Not a load failure; the old bug, faithfully reproduced.
-- A hard refresh revalidates the shell, pulls the new chunk, and the page works. Exactly the reported symptom.
+### Header contract
+`src/__tests__/cacheHeaders.test.ts` asserts `/`, `/index.html` and
+`/version.json` are no-cache and `/assets/*` immutable. That file is a
+deploy-time contract with Cloudflare that nothing else in the build validated,
+and the stale-bundle check is inert if it rots.
 
-This also rules out the obvious alternative: a *failed* chunk load surfaces as `main.tsx`'s "Failed to start: …" text, not the "Something broke" card in the screenshots.
+**Not changed, deliberately:** the `.substring`/`.slice` fallbacks flagged as
+deferred in #43 are not defects. `entity_id` and the attendance-flag `user_id`
+are typed `string`, and the one nullable field, `changed_by`, is already inside
+a `{rh.changed_by && …}` guard at `src/pages/EmployeeDetailPage.tsx:307`.
+Guarding them would be noise.
 
-**And I could not prove any of this, because nothing was logged.** `client_errors` holds 6 rows, none since 14 August — through a month of crashes.
-
-## The real root cause: two catchers, neither logging
-
-- `src/components/RouteErrorFallback.tsx` is react-router's `errorElement` and is what actually caught these crashes — the **"Reload"** button in the screenshots is this component, not `ErrorBoundary` (whose button says "Try again"). It logged **nothing**: no `console.error`, no `logClientError`.
-- `src/components/ErrorBoundary.tsx` carried a comment claiming *"errorLog already listens on window.error"*. That is false. A boundary **catches** the error, so it never reaches `window.onerror` and the global listener in `errorLog.ts` can never see it.
-
-Both now call `logClientError`.
-
-## What this PR changes
-
-1. **Both catchers log.** Next occurrence writes a real stack to `client_errors` instead of vanishing.
-2. **The build SHA is baked in** (`CF_PAGES_COMMIT_SHA` via a Vite `define`) and shown on the error card, and prefixed to every logged stack. "Is my fix actually deployed?" becomes a one-glance question — it took a full source audit this time, and the audit still could not reach the deployed bundle.
-3. **`listMembers` drops rows with no `user_id`** before anything downstream sees them. Checked that this cannot move a number: no caller counts members, and `computePayroll` reads `memberships_public` directly rather than through `listMembers`, so no payroll figure is affected. Such a row cannot be keyed to a profile, cannot be a `Select` value and cannot be labelled — it either crashes on `user_id.substring` or renders a dead option. Fixing it once at the source covers all eight call sites; guarding them one by one never can, which is the lesson from the last attempt.
-4. **The logged URL is sanitised to origin + pathname.** Supabase's password-recovery link lands with `access_token` and `refresh_token` in the URL fragment, and the logger recorded `window.location.href`. That was dormant while nothing logged; turning logging on would have started persisting live credentials into `client_errors`.
-5. **`Select.tsx:60`** — guarded the one unguarded `.toLowerCase()` in the shared closure of both broken pages.
-6. **`public/_headers` now sets caching explicitly** — `no-cache, must-revalidate` on the HTML shell, `immutable` on the content-hashed `/assets/*`. This is the fix for the mechanism above: the shell can no longer pin a browser to a superseded bundle.
-
-## From the security review — bounds this PR needed because it turns logging on
-
-Nothing wrote to `client_errors` before, so it had never needed limits:
-
-- **Row size capped** — message 500 chars, stack 4000. Stacks run to tens of KB and this project is on a 500 MB Free tier.
-- **Write rate bounded** — `RouteErrorFallback` logs once per mount behind a ref guard, so a render loop cannot write a row per frame.
-
-RLS was verified correct (a client cannot attribute an error to another user), and `logClientError` cannot recurse.
-
-**Deferred deliberately:** a retention policy for `client_errors`. The right fix is a migration, but it would auto-apply on merge, cannot be tested in this sandbox, and pg_cron availability on Free is unverified — shipping an untested schema change inside a PR I was asked to merge unattended is the wrong trade. Follow-up SQL: `delete from client_errors where at < now() - interval '90 days'`.
-
-## Verified
-
-`lint`, `typecheck`, `test` (50 passing) and `build` all clean. Lint findings unchanged from `main` (7 pre-existing, none added).
-
-Three reviewers dispatched one tier below me; verdicts in `.claude/review/`. The first was briefed to falsify the stale-bundle conclusion rather than confirm it, including the strongest alternative (stale lazy-loaded chunks — ruled out, there is no code splitting).
-
-## Noted, not fixed here
-
-- `AuditPage.tsx:188` and `EmployeeDetailPage.tsx:310` still have unguarded `.substring`, and `AttendanceFlagsCard.tsx:92` an unguarded `.slice`. Different data sources, no reported crash.
-- A stale-bundle detector (poll a version file, prompt to reload when the deployed SHA moves) would remove the open-tab problem entirely. Deliberately not built — speculative until the build stamp shows it is actually happening.
+**Debt I'm leaving:** `IssuePrizeFineModal` computes `memberOptions` even while
+closed — harmless now that the shapes agree, but it is why one bug broke two
+pages, and it is work done for nothing on every People render.
 
 ## Self-check
 - [x] base = main; exactly one PR
-- [~] no migration in this PR — client-side only
-- [x] tests/lint/typecheck green; happy AND unhappy paths exercised (row dropped, logger never throws, URL sanitised)
-- [~] e2e not yet added — Playwright is not installed in this repo
+- [~] no migration in this PR
+- [x] tests/lint/typecheck green — 55 tests, 14 files; `biome check` clean; `tsc --noEmit` clean; `vite build` emits `version.json` with the injected sha
 - [x] scripts named exactly `lint`, `typecheck`, `test`
+- [~] e2e not yet added
 - [x] key read from `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`; `envPrefix: ['VITE_']`; nothing hardcoded; no secret in code
-- [~] no new migration in this PR
-- [x] irreversible actions guarded — none added; the new DB writes are insert-only error rows, and the URL sanitisation removes a credential-leak path
+- [~] no new migration
+- [x] irreversible actions guarded + idempotent + flagged — this PR performs no database write
 - [x] no avoidable debt; memory updated and pruned
 - [~] no migrations to explain
-- [~] reviewers ran, as ad-hoc agents: this repo still has no `.claude/agents/` swarm installed. Verdicts in `.claude/review/`
+- [x] reviewers ran — `.claude/review/*` verdicts refreshed this PR
 - [x] every subagent dispatched on a model below the orchestrator's — never inherited
 
 ## For you
-**What changed:** the app could crash on two pages and tell nobody why — both of its error screens threw the details away. They now record the error and stamp which build produced it, the member list drops rows too broken to render, and the error log no longer stores password-reset tokens.
+**What changed:** A tab running an out-of-date bundle now shows a reload bar
+instead of silently throwing bugs that `main` already fixed. The notifications
+inbox no longer hides read notifications when you open the dashboard first. The
+cache-key test now covers every key in the app, not just the one that broke
+Payroll.
 
-**What you do next:** merge (you asked me to merge this one, so I have). Then **hard-refresh the tab** — the crash you photographed was an old bundle still running in an open tab, and only a reload replaces it. If it ever recurs, the error card now shows a `build <sha>`: compare it to the latest commit on `main`, and if they differ it is a stale tab, not a bug.
+**What you do next:** Review the Cloudflare Pages preview, then merge. No env or
+secret action is needed. There is no migration in this PR. To see the banner
+work, open the preview, leave the tab, merge, come back to the tab — it should
+offer to reload.
 
-**How to roll it back:** Cloudflare Pages → Deployments → Rollback to the prior deployment. No schema changed.
+**How to roll it back:** Cloudflare Pages → Deployments → Rollback to the prior
+deployment. No schema changed, so there is nothing to reverse in the database.

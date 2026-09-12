@@ -170,6 +170,7 @@
   "common.loading": "Đang tải…",
   "common.empty": "Chưa có gì.",
   "common.error": "Có lỗi: {message}",
+  "common.new_version": "Đã có bản mới. Nhấn để tải lại.",
   "common.retry": "Thử lại",
   "common.cancel": "Hủy",
   "common.save": "Lưu",

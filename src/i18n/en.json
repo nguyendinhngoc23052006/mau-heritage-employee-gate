@@ -170,6 +170,7 @@
   "common.loading": "Loading…",
   "common.empty": "Nothing here yet.",
   "common.error": "Something went wrong: {message}",
+  "common.new_version": "A new version is available. Tap to reload.",
   "common.retry": "Retry",
   "common.cancel": "Cancel",
   "common.save": "Save",
