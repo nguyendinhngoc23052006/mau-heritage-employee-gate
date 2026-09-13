@@ -31,11 +31,18 @@
 - A migration must be re-runnable (`if not exists` guards) — an unguarded `add constraint` is what turned a desync into a hard stop.
 - Verify schema against the DB, not against a green workflow: `prize_fine_events.status` is an ENUM, and a migration written against an imagined text+CHECK column blocked everything for 10 days.
 
+## Proving what is actually deployed (settled 2026-09-12)
+- The build stamps itself: `dist/version.json` and `__BUILD_SHA__` both carry the 7-char sha. A `_headers` rule is also a fingerprint — `/` answering `no-cache, must-revalidate` proves bcf704d or later is live.
+- `client_errors` is the witness. Every `/store/:storeId` route has `RouteErrorFallback` as `errorElement` and it logs with `build <sha>` prefixed to `stack`. No row **and** no build line on the error card = the reporter is running a pre-fix bundle, not a live bug. Check this before re-diagnosing anything.
+- This sandbox cannot reach `*.pages.dev` (egress proxy 403 on curl and WebFetch). Use an external fetch tool to read production.
+- One cache key written by two different fetches is this repo's recurring defect — `["members", …]` crashed People and Payroll, `["notifications","inbox"]` silently hid read notifications. `src/__tests__/queryKeyShapes.test.ts` now gates every key, not one.
+
 ## Deferred (call out when picking back up)
-- Reviewer agents + Stop hook (guide Step 9) — never installed for this demo
+- Reviewer agents + Stop hook (guide Step 9) — never installed; `.claude/agents/` does not exist, so reviewers are dispatched ad hoc and their verdicts written to `.claude/review/`
 - Six Biome 2 rules demoted to `warn` in biome.json (see PR #38) — `useIterableCallbackReturn` in SchedulePage is a real bug shape, fix first
 - CI (tests/lint/typecheck workflow) + Dependabot auto-merge + uptime + e2e — never installed
 - Branch protection ruleset — never installed
 - Auto rule-detection tick (pg_cron or GitHub Actions cron) — schema is ready; the periodic job is not written
 - Supabase auto-pause prevention (weekly ping) — not installed
 - If the demo grows to real production: turn on Pro + Branching, add per-PR preview DBs, add Cloudflare Access on preview URLs
+- `IssuePrizeFineModal` maps `memberOptions` even while closed (no `if (!open) return null`) — harmless now, but it is why one cache bug broke both People and Payroll

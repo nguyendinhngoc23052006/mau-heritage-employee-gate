@@ -21,7 +21,7 @@ export function NotificationsInbox() {
   const queryClient = useQueryClient();
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["notifications", "inbox"],
+    queryKey: ["notifications", "inbox", "all"],
     queryFn: () => listMyNotifications({ unreadOnly: false }),
     refetchInterval: 30000,
   });

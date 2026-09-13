@@ -13,6 +13,12 @@
 /index.html
   Cache-Control: no-cache, must-revalidate
 
+# Read by a tab that is already open to find out whether it is behind. A cached
+# copy would report the build that tab is already running, which is the one
+# answer that is never useful.
+/version.json
+  Cache-Control: no-cache, must-revalidate
+
 /*
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff

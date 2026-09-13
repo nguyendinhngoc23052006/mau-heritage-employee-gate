@@ -21,5 +21,22 @@ export default defineConfig({
   define: {
     __BUILD_SHA__: JSON.stringify(buildSha),
   },
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    {
+      // A tab left open keeps running the bundle it loaded, forever. That is
+      // how a shipped fix can look un-shipped: the page still throws the bug
+      // that main no longer contains. version.json is the one file a running
+      // tab can cheaply re-read to notice it is behind.
+      name: "emit-build-version",
+      generateBundle() {
+        this.emitFile({
+          type: "asset",
+          fileName: "version.json",
+          source: JSON.stringify({ build: buildSha }),
+        });
+      },
+    },
+  ],
 });

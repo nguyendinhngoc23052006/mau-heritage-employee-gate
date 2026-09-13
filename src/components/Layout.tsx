@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Outlet, useNavigate, useParams } from "react-router-dom";
 import { useMemberships } from "../hooks/useMemberships";
+import { useStaleBundle } from "../hooks/useStaleBundle";
 import { useI18n, useT } from "../lib/i18n";
 import { clearAllQueries } from "../lib/query";
 import { getSupabase } from "../lib/supabaseClient";
@@ -40,6 +41,7 @@ export function Layout() {
   const { locale, setLocale } = useI18n();
   const navigate = useNavigate();
   const { storeId } = useParams<{ storeId: string }>();
+  const staleBundle = useStaleBundle();
 
   // Update last_active_at whenever storeId changes
   useEffect(() => {
@@ -59,6 +61,15 @@ export function Layout() {
     // horizontal-scroll strip, an over-long header row, etc.) from
     // pushing the whole viewport wider than the screen on mobile.
     <div className="min-h-screen w-full overflow-x-hidden bg-brand-cream-light">
+      {staleBundle && (
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="w-full bg-brand-navy px-4 py-2 text-center text-xs font-medium text-white"
+        >
+          {t("common.new_version")}
+        </button>
+      )}
       <header className="border-b border-brand-hairline bg-white">
         <div className="flex items-center justify-between gap-2 px-4 py-2">
           <Wordmark className="text-base" />
