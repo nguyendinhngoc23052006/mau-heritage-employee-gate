@@ -161,6 +161,7 @@ export function PeoplePage(): JSX.Element {
         : Promise.reject(new Error("Store ID required")),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["members", storeId] });
+      queryClient.invalidateQueries({ queryKey: ["org", "chart"] });
     },
   });
 
@@ -176,6 +177,7 @@ export function PeoplePage(): JSX.Element {
         : Promise.reject(new Error("Store ID required")),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["members", storeId] });
+      queryClient.invalidateQueries({ queryKey: ["org", "chart"] });
       setDeactivateDialogOpen(false);
     },
   });
@@ -219,6 +221,7 @@ export function PeoplePage(): JSX.Element {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["members", storeId] });
+      queryClient.invalidateQueries({ queryKey: ["org", "chart"] });
       setEditRateDialogOpen(false);
       setEditRateValue("");
     },
@@ -236,6 +239,7 @@ export function PeoplePage(): JSX.Element {
         queryKey: ["applications", "pending", storeId],
       });
       queryClient.invalidateQueries({ queryKey: ["members", storeId] });
+      queryClient.invalidateQueries({ queryKey: ["org", "chart"] });
     },
   });
 
@@ -1110,6 +1114,7 @@ export function PeoplePage(): JSX.Element {
         preselectedUserId={issuePrizeFineUserId}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ["members", storeId] });
+          queryClient.invalidateQueries({ queryKey: ["org", "chart"] });
         }}
       />
     </div>

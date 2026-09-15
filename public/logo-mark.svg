@@ -1,4 +1,6 @@
-<svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg" fill="#1F3A63">
-  <path d="M 15 55 Q 100 15 185 55 Q 100 40 15 55 Z" />
-  <path d="M 15 55 Q 100 95 185 55 Q 100 70 15 55 Z" />
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <path d="M50 50 C45 29 33 17 12 12 C17 33 29 45 50 50 Z" fill="#f9b431" />
+  <path d="M50 50 C45 29 33 17 12 12 C17 33 29 45 50 50 Z" fill="#79b84f" transform="rotate(90 50 50)" />
+  <path d="M50 50 C45 29 33 17 12 12 C17 33 29 45 50 50 Z" fill="#e4353c" transform="rotate(180 50 50)" />
+  <path d="M50 50 C45 29 33 17 12 12 C17 33 29 45 50 50 Z" fill="#336eb4" transform="rotate(270 50 50)" />
 </svg>

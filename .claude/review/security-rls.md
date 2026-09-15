@@ -1,26 +1,30 @@
-# Database-security review — org hierarchy migration (20260915090000)
-Reviewed: `claude/heritage-gate-part-2-ia4u9p`, migration + baseline/close_all_gaps + invite/application paths
-Verdict: **1 CONFIRMED finding, fixed in this PR; 2 flags accepted and documented; rest OK**
+# DB-security review — legacy purge + org_chart RPC (20260915133000)
+Verdict: **no blockers.** One SUSPECTED item removed by hardening.
 
-## CONFIRMED — fixed
-- **Hard delete bypassed `set_role`.** With hierarchy-aware `has_role_on`, `memberships_owner_delete`
-  (`baseline.sql:489`) let an overseer — and always let a legacy owner — `DELETE` a membership over
-  REST; nothing guarded DELETE. Fixed: `guard_role_write` now fires on DELETE and raises unless the
-  `set_role` flag is set or there is no JWT (admin/service call, or a cascade from `auth.users`).
-  `delete_store` sets the flag around its cascade. The overseer = owner-level semantics of
-  `has_role_on` are kept on purpose (a sector store has no owner; its settings must be editable by
-  someone) and now stated in the migration.
-
-## Flags — accepted
-- Manager-role invites / application approvals now raise `42501` (guard). The UI offers employee
-  only for both; people are promoted afterwards through `set_role`. Documented in the PR.
-- Bootstrap has no recovery path if the named account did not exist at merge — it does
-  (verified in the DB), and the dry run proved the row lands.
-
-## OK (traced)
-1 recursion: none, all helpers security-definer owned by postgres · 2 `guard_role_write` blocks every
-direct role write · 3 `guard_global_role_write` covers INSERT and UPDATE · 4a–h `set_role` branches,
-including transaction-local flag (now also cleared before each return) · 5 `profiles_self_select`
-scopes reads to branch · 6 no write policy on `sector_memberships`, grants consistent · 7 store
-insert requires an overseen sector, legacy self-insert dropped · 9 `delete_store` consistent with R1 ·
-10 no caller of the four dropped functions remains.
+- **Purge cascade — OK.** Every FK from a store-child to `stores`, and every
+  composite `(user_id, store_id) → memberships`, is `on delete cascade` (agent
+  enumerated all 15+ tables with baseline line refs). `client_errors` has no
+  store_id and is deleted by its own statement. `stores.sector_id → sectors` is
+  `on delete restrict` (reverse direction) — deleting stores never touches
+  sectors. Dry-run confirmed: 2 Kwook units, 0 legacy, 0 memberships, 0 audit,
+  0 shifts, 4 sectors intact.
+- **write_audit during cascade — OK.** The 20260915090000 version (applies
+  before this file, 090000 < 133000) carries the `not exists (select 1 from
+  stores where id = v_store)` guard, so cascaded audit rows don't hit the FK/NULL
+  bugs.
+- **Bypass flag — REMOVED.** The reviewer flagged a session-wide
+  `set_config('app.set_role','1',false)` that could leak if a delete threw before
+  the reset. It was redundant: the runner has no JWT, so `guard_role_write`'s
+  DELETE branch (`auth.uid() is null → return old`) already allows the cascade,
+  and `client_errors` has no guard. Removed entirely; re-dry-run passes.
+- **org_chart exposure — OK.** Both functions select only id, display_name, and
+  the global_role label at tier 1. No pay/PII/contact column. `org_chart()` is
+  granted to `authenticated`; `org_chart_unit` is revoked from public and never
+  granted (reachable only internally under the definer). anon cannot call.
+- **Idempotency — OK.** Deletes no-op on replay; `create or replace` ×2 and
+  revoke/grant idempotent.
+- **Perf — OK at scale.** `org_chart_unit` is called once per store (bounded by
+  store count, not employees), `stable`. Non-blocking follow-up: the
+  `active`-column is not index-covered on `memberships_store_role_idx` /
+  `sector_memberships_sector_idx` / `stores_sector_idx`; add a composite index if
+  the chart is hit hard. Noted as debt, not shipped.

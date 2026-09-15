@@ -74,6 +74,7 @@ export function SectorPage() {
     queryClient.invalidateQueries({ queryKey: ["members"] });
     queryClient.invalidateQueries({ queryKey: ["memberships", "mine"] });
     queryClient.invalidateQueries({ queryKey: ["me"] });
+    queryClient.invalidateQueries({ queryKey: ["org", "chart"] });
   };
 
   const createStoreMutation = useMutation({

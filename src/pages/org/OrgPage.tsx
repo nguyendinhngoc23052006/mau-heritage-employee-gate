@@ -55,6 +55,7 @@ export function OrgPage() {
     queryClient.invalidateQueries({ queryKey: ["sectors"] });
     queryClient.invalidateQueries({ queryKey: ["people", "directory"] });
     queryClient.invalidateQueries({ queryKey: ["me"] });
+    queryClient.invalidateQueries({ queryKey: ["org", "chart"] });
   };
 
   const createSectorMutation = useMutation({

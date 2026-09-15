@@ -1,5 +1,9 @@
 import { getSupabase } from "../lib/supabaseClient";
 import type {
+  OrgChart,
+  OrgChartPerson,
+  OrgChartSector,
+  OrgChartUnit,
   Profile,
   RoleScope,
   Sector,
@@ -155,4 +159,41 @@ export async function listPeople(): Promise<Profile[]> {
     .order("display_name", { nullsFirst: false });
   if (error) throw error;
   return (data ?? []) as Profile[];
+}
+
+// One RPC returns the entire company shape; the client only draws it. The
+// arrays are normalised here because the JSON crosses a system boundary —
+// a null where the UI expects [] must not crash the chart.
+export function normalizeChart(raw: unknown): OrgChart {
+  const r = (raw ?? {}) as Partial<OrgChart>;
+  const people = (xs: unknown): OrgChartPerson[] =>
+    Array.isArray(xs) ? (xs as OrgChartPerson[]) : [];
+  const unit = (u: Partial<OrgChartUnit>): OrgChartUnit => ({
+    id: u.id ?? "",
+    name: u.name ?? "",
+    managers: people(u.managers),
+    employees: people(u.employees),
+  });
+  const units = (xs: unknown): OrgChartUnit[] =>
+    Array.isArray(xs) ? (xs as Partial<OrgChartUnit>[]).map(unit) : [];
+  const sectors = Array.isArray(r.sectors)
+    ? (r.sectors as Partial<OrgChartSector>[]).map((s) => ({
+        id: s.id ?? "",
+        name: s.name ?? "",
+        directors: people(s.directors),
+        units: units(s.units),
+      }))
+    : [];
+  return {
+    tier1: people(r.tier1),
+    sectors,
+    unassigned: people(r.unassigned),
+  };
+}
+
+export async function getOrgChart(): Promise<OrgChart> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase.rpc("org_chart");
+  if (error) throw error;
+  return normalizeChart(data);
 }

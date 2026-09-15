@@ -39,6 +39,33 @@ export interface Profile {
   updated_at: string;
 }
 
+// Shape returned by the org_chart() RPC — one snapshot of the whole company.
+export interface OrgChartPerson {
+  id: string;
+  name: string;
+  role?: GlobalRole;
+}
+
+export interface OrgChartUnit {
+  id: string;
+  name: string;
+  managers: OrgChartPerson[];
+  employees: OrgChartPerson[];
+}
+
+export interface OrgChartSector {
+  id: string;
+  name: string;
+  directors: OrgChartPerson[];
+  units: OrgChartUnit[];
+}
+
+export interface OrgChart {
+  tier1: OrgChartPerson[];
+  sectors: OrgChartSector[];
+  unassigned: OrgChartPerson[];
+}
+
 export interface Sector {
   id: string;
   name: string;

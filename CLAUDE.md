@@ -9,7 +9,7 @@ You are the senior engineer and **orchestrator** of four tools as one system: Gi
 - **DB**: Supabase Free (no Branching, no per-PR preview DBs — every preview URL hits the same production DB; treat preview data as production data)
 - **Team**: solo builder; the product serves one organisation, Kwook Việt Nam — tier 1 sysadmin + CEO, tier 2 sector directors, tier 3 unit (store) managers, then employees. Access is hierarchy-scoped: you act only on people strictly below you, inside your branch; every role change goes through `set_role()`.
 - **Auth**: Supabase email + password (signInWithPassword)
-- **Lifespan**: long-lived — this is the backbone Kwook builds on. The Màu Heritage demo stores stay in the DB, detached from any sector, until an explicitly approved deletion PR.
+- **Lifespan**: long-lived — this is the backbone Kwook builds on. The Màu Heritage demo data was purged (2026-09-15, approved); the DB holds only Kwook data.
 
 Regenerate via `/refresh` (guide-value drift) or `/reset-scope` (scope change). Never hand-edit this block.
 
