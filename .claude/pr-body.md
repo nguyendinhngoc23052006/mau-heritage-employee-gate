@@ -33,6 +33,12 @@ caches identically. A render server would add cost and a moving part, not speed.
 The chart deliberately exposes only names and positions — never pay, contact, or
 account data — which is why it may read across branches.
 
+### Supporting indexes
+Part C of the migration adds three `if not exists` indexes the `org_chart` query
+filters on — `memberships(store_id, active, role)`,
+`sector_memberships(sector_id, active)`, and a partial
+`profiles(global_role) where not null`. Cheap, idempotent, verified to create.
+
 ### Kwook rebrand
 Palette sampled from the four-petal pinwheel logo (gold #f9b431, green #79b84f,
 red #e4353c, blue #336eb4) and its charcoal wordmark #373536. The Tailwind token
@@ -58,7 +64,7 @@ pre-existing missing i18n keys from before are still not filled.
 
 ## Self-check
 - [x] base = main; exactly one PR
-- [x] ≤ 1 migration file, UTC-timestamped latest (`20260915133000`); functions only, no new table; src/types matches the RPC shape
+- [x] ≤ 1 migration file, UTC-timestamped latest (`20260915133000`); functions + 3 supporting indexes, no new table; src/types matches the RPC shape
 - [x] tests/lint/typecheck green — 80 tests; `biome check` clean; `tsc --noEmit` clean; `vite build` clean; full migration dry-run green against production and rolled back
 - [x] scripts named exactly `lint`, `typecheck`, `test`
 - [~] e2e not yet added

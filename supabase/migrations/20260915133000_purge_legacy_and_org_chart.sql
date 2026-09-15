@@ -98,3 +98,14 @@ $$;
 revoke all on function public.org_chart() from public;
 revoke all on function public.org_chart_unit(uuid) from public;
 grant execute on function public.org_chart() to authenticated;
+
+-- Part C — indexes the org_chart() query filters on. Each subquery narrows
+-- memberships/sector_memberships by `active`, which the existing store_id/
+-- sector_id indexes don't cover; and tier1/unassigned scan profiles by
+-- global_role. Cheap and idempotent.
+create index if not exists memberships_store_active_role_idx
+  on public.memberships(store_id, active, role);
+create index if not exists sector_memberships_sector_active_idx
+  on public.sector_memberships(sector_id, active);
+create index if not exists profiles_global_role_idx
+  on public.profiles(global_role) where global_role is not null;
