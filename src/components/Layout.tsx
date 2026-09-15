@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { Outlet, useNavigate, useParams } from "react-router-dom";
+import { NavLink, Outlet, useNavigate, useParams } from "react-router-dom";
+import { useMe } from "../hooks/useMe";
 import { useMemberships } from "../hooks/useMemberships";
 import { useStaleBundle } from "../hooks/useStaleBundle";
 import { useI18n, useT } from "../lib/i18n";
@@ -42,6 +43,8 @@ export function Layout() {
   const navigate = useNavigate();
   const { storeId } = useParams<{ storeId: string }>();
   const staleBundle = useStaleBundle();
+  const me = useMe();
+  const showOrg = me.tier !== undefined && me.tier <= 2;
 
   // Update last_active_at whenever storeId changes
   useEffect(() => {
@@ -89,8 +92,22 @@ export function Layout() {
             </Button>
           </div>
         </div>
-        {storeId && (
+        {(storeId || showOrg) && (
           <div className="flex flex-wrap items-center gap-2 px-4 pb-2">
+            {showOrg && (
+              <NavLink
+                to="/org"
+                className={({ isActive }) =>
+                  `shrink-0 rounded-md px-3 py-1.5 text-sm font-medium transition ${
+                    isActive
+                      ? "bg-brand-navy text-brand-cream"
+                      : "text-brand-ink hover:bg-brand-cream-light"
+                  }`
+                }
+              >
+                {t("nav.org")}
+              </NavLink>
+            )}
             <StoreSwitcher />
             <StoreIdentity />
           </div>

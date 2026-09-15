@@ -13,15 +13,14 @@ import {
 } from "../components/ui/EmptyState";
 import { Input, Label, Textarea } from "../components/ui/Input";
 import { Select } from "../components/ui/Select";
-import {
-  isManagerRole,
-  useMemberships,
-  useRoleOn,
-} from "../hooks/useMemberships";
+import { useMe } from "../hooks/useMe";
+import { useMemberships } from "../hooks/useMemberships";
 import { useSession } from "../hooks/useSession";
+import { useStoreAccess } from "../hooks/useStoreAccess";
 import { errorMessage } from "../lib/errorMessage";
 import { useT } from "../lib/i18n";
 import { parseVndToCents } from "../lib/money";
+import { canActOn, canAssign, tierOfRole } from "../lib/tier";
 import {
   approveApplication,
   declineApplication,
@@ -38,8 +37,8 @@ import {
   deactivateMember,
   listMembers,
   updateHourlyRate,
-  updateMemberRole,
 } from "../services/members";
+import { setRole } from "../services/org";
 import { applyManualRule, listRules } from "../services/rules";
 import type { EmploymentType, Role, Rule } from "../types/database";
 
@@ -49,8 +48,8 @@ export function PeoplePage(): JSX.Element {
   const { storeId } = useParams<{ storeId: string }>();
   const { user } = useSession();
   const queryClient = useQueryClient();
-  const role = useRoleOn(storeId);
-  const canManage = isManagerRole(role);
+  const { canManage } = useStoreAccess(storeId);
+  const { tier: myTier } = useMe();
   const { isLoading: membershipsLoading } = useMemberships();
 
   const [showInviteForm, setShowInviteForm] = useState(false);
@@ -149,9 +148,20 @@ export function PeoplePage(): JSX.Element {
   });
 
   const updateRoleMutation = useMutation({
-    mutationFn: ({ userId, newRole }: { userId: string; newRole: Role }) =>
+    mutationFn: ({
+      userId,
+      newRole,
+    }: {
+      userId: string;
+      newRole: "manager" | "employee";
+    }) =>
       storeId
-        ? updateMemberRole(userId, storeId, newRole)
+        ? setRole({
+            targetUserId: userId,
+            scope: "store",
+            scopeId: storeId,
+            role: newRole,
+          })
         : Promise.reject(new Error("Store ID required")),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["members", storeId] });
@@ -362,8 +372,6 @@ export function PeoplePage(): JSX.Element {
                 const state = getAppFormState(app.id);
                 const roleOptions: Array<{ value: Role; label: string }> = [
                   { value: "employee", label: t("people.role_employee") },
-                  { value: "manager", label: t("people.role_manager") },
-                  { value: "owner", label: t("people.role_owner") },
                 ];
                 const employmentOptions: Array<{
                   value: EmploymentType;
@@ -589,11 +597,26 @@ export function PeoplePage(): JSX.Element {
               const isLastOwner =
                 member.role === "owner" && activeOwnerCount === 1;
               const isSelf = member.user_id === user?.id;
-              const roleOptions: Array<{ value: Role; label: string }> = [
-                { value: "employee", label: t("people.role_employee") },
-                { value: "manager", label: t("people.role_manager") },
-                { value: "owner", label: t("people.role_owner") },
-              ];
+              // Only roles below my own tier are offered, and only for people
+              // below my own tier; the database refuses anything else anyway.
+              const canTouch =
+                !isSelf &&
+                myTier !== undefined &&
+                canActOn(myTier, tierOfRole(member.role));
+              const roleOptions: Array<{ value: Role; label: string }> = (
+                [
+                  { value: "employee", label: t("people.role_employee") },
+                  { value: "manager", label: t("people.role_manager") },
+                ] as Array<{ value: "employee" | "manager"; label: string }>
+              ).filter(
+                (o) => myTier !== undefined && canAssign(myTier, o.value),
+              );
+              if (member.role === "owner") {
+                roleOptions.unshift({
+                  value: "owner",
+                  label: t("people.role_owner"),
+                });
+              }
 
               return (
                 <div
@@ -628,14 +651,20 @@ export function PeoplePage(): JSX.Element {
                       >
                         <Select
                           value={member.role}
-                          onChange={(v) =>
-                            updateRoleMutation.mutate({
-                              userId: member.user_id,
-                              newRole: v as Role,
-                            })
-                          }
+                          onChange={(v) => {
+                            if (v === "manager" || v === "employee") {
+                              updateRoleMutation.mutate({
+                                userId: member.user_id,
+                                newRole: v,
+                              });
+                            }
+                          }}
                           options={roleOptions}
-                          disabled={updateRoleMutation.isPending || isLastOwner}
+                          disabled={
+                            updateRoleMutation.isPending ||
+                            isLastOwner ||
+                            !canTouch
+                          }
                           ariaLabel={t("people.applications.role")}
                           className="text-xs"
                         />
@@ -791,10 +820,6 @@ export function PeoplePage(): JSX.Element {
                       {
                         value: "employee",
                         label: t("people.role_employee"),
-                      },
-                      {
-                        value: "manager",
-                        label: t("people.role_manager"),
                       },
                     ]}
                     disabled={createInviteMutation.isPending}

@@ -8,7 +8,7 @@ import {
   ErrorState,
   LoadingState,
 } from "../components/ui/EmptyState";
-import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
+import { useStoreAccess } from "../hooks/useStoreAccess";
 import { errorMessage } from "../lib/errorMessage";
 import { useT } from "../lib/i18n";
 import { formatVnd } from "../lib/money";
@@ -22,8 +22,7 @@ import type { RateHistory, Shift } from "../types/database";
 export function EmployeeDetailPage(): JSX.Element {
   const t = useT();
   const { storeId, userId } = useParams<{ storeId: string; userId: string }>();
-  const role = useRoleOn(storeId);
-  const canView = isManagerRole(role);
+  const { canManage: canView } = useStoreAccess(storeId);
 
   const membersQuery = useQuery({
     queryKey: ["members", storeId],

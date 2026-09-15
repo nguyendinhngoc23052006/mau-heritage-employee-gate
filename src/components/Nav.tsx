@@ -1,5 +1,5 @@
 import { NavLink, useParams } from "react-router-dom";
-import { isManagerRole, useMemberships } from "../hooks/useMemberships";
+import { useStoreAccess } from "../hooks/useStoreAccess";
 import { useT } from "../lib/i18n";
 
 interface Item {
@@ -26,14 +26,13 @@ const ITEMS: Item[] = [
 
 export function Nav() {
   const { storeId } = useParams();
-  const { data } = useMemberships();
+  const { role, canManage, canEnter } = useStoreAccess(storeId);
   const t = useT();
-  const role = data?.find((m) => m.store_id === storeId)?.role;
-  if (!storeId || !role) return null;
+  if (!storeId || !canEnter) return null;
 
   const visible = ITEMS.filter((i) => {
-    if (i.ownerOnly) return role === "owner";
-    if (i.managerOnly) return isManagerRole(role);
+    if (i.ownerOnly) return role === "owner" || canManage;
+    if (i.managerOnly) return canManage;
     return true;
   });
 

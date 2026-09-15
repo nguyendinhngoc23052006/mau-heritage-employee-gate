@@ -7,9 +7,9 @@ You are the senior engineer and **orchestrator** of four tools as one system: Gi
 - **Environments**: main only (no staging)
 - **Deploy**: Cloudflare Pages Git integration (production = `main` push; previews = PR pushes). No wrangler, no GitHub Actions deploy workflows.
 - **DB**: Supabase Free (no Branching, no per-PR preview DBs — every preview URL hits the same production DB; treat preview data as production data)
-- **Team**: solo now, scaling to 1 boss + 3-5 managers + 30-50 employees per store; multi-tenant per store
+- **Team**: solo builder; the product serves one organisation, Kwook Việt Nam — tier 1 sysadmin + CEO, tier 2 sector directors, tier 3 unit (store) managers, then employees. Access is hierarchy-scoped: you act only on people strictly below you, inside your branch; every role change goes through `set_role()`.
 - **Auth**: Supabase email + password (signInWithPassword)
-- **Lifespan**: demo for ~several months until a rebuild budget arrives
+- **Lifespan**: long-lived — this is the backbone Kwook builds on. The Màu Heritage demo stores stay in the DB, detached from any sector, until an explicitly approved deletion PR.
 
 Regenerate via `/refresh` (guide-value drift) or `/reset-scope` (scope change). Never hand-edit this block.
 

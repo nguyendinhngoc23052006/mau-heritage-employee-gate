@@ -1,60 +1,64 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "part_0_complete": true,
   "framework": "vite",
+  "framework_values": null,
   "repo_owner": "nguyendinhngoc23052006",
   "repo_name": "mau-heritage-employee-gate",
-  "session_id": "part2-drive-2026-08-12",
-  "locked_at": "2026-08-12T00:00:00Z",
+  "session_id": "908a4937-c8b9-4847-8ee2-d7f34e530de3",
+  "locked_at": "2026-09-15T08:00:00Z",
   "team_size": "solo",
   "environments": "main-only",
-  "repo_state": "empty",
-  "postgres_version": "17",
+  "repo_state": "migrating",
   "constraints": [
-    "demo lifespan (a few months) — prefer simplicity over defense-in-depth",
-    "solo developer for the entire demo phase",
-    "multi-tenant per store (design consideration)",
+    "single organisation: Kwook Việt Nam — tier 1 sysadmin + CEO, tier 2 sector directors, tier 3 unit (store) managers, then employees; access is hierarchy-scoped, roles change only through set_role()",
+    "solo developer; the product serves the whole company",
     "supabase email + password auth (signInWithPassword)",
-    "supabase free tier (no Branching, no PITR add-on)",
-    "cloudflare pages git integration (no wrangler, no per-PR preview DBs)"
+    "supabase free tier (no Branching, no PITR add-on) — every preview URL hits the production DB",
+    "cloudflare pages git integration (no wrangler, no per-PR preview DBs)",
+    "the Màu Heritage demo stores remain in the DB, detached from any sector, until an explicitly approved deletion PR"
+  ],
+  "stack_exceptions": [
+    "cloudflare-pages-git-integration instead of Workers deployed by GitHub Actions",
+    "supabase-free instead of Pro + Branching"
   ],
   "answers": {
-    "q1_what_building": "internal tool: employee gate for Mau Heritage stores (demo)",
-    "q2_who_for": "internal team; near-term: solo builder; product target: 1 boss + 3-5 managers + 30-50 employees per store",
+    "q1_what_building": "internal gate for Kwook Việt Nam: organisation hierarchy, people, pay/fines/rewards, scheduling and attendance — the backbone the company builds on",
+    "q2_who_for": "Kwook Việt Nam staff: sysadmin (builder) + CEO at tier 1, sector directors at tier 2, unit managers at tier 3, employees",
     "q3_team_size": "solo",
     "q4_environments": "one (main only)",
-    "q5_repo_state": "empty (README + LICENSE only)",
-    "q6_constraints": "demo for several months until real budget; multi-tenant per store; email + password auth; Cloudflare Pages; Supabase Free"
+    "q5_repo_state": "migrating (existing app re-scoped from a per-store demo to one company hierarchy)",
+    "q6_stack_exceptions": "Cloudflare Pages Git integration; Supabase Free; email + password auth"
   },
   "deviations": [
     {
       "question": "q3",
       "value": "solo",
-      "callout_ref": "docs/00-scope.md (Solo developer — drop staging branch; main-only)"
+      "effect": "main-only; no staging branch"
     },
     {
       "question": "q4",
       "value": "main-only",
-      "callout_ref": "docs/00-scope.md (One environment — Cloudflare Pages Git integration over wrangler + secrets)"
+      "effect": "Cloudflare Pages Git integration deploys main and PR previews; no wrangler/Actions deploy"
     },
     {
       "question": "q6",
       "value": "cloudflare-pages",
-      "callout_ref": "docs/00-scope.md#deviations (matches Q4=one-env deviation)"
+      "effect": "Parts 2 and 8 deploy steps do not apply as written"
     },
     {
       "question": "q6",
       "value": "supabase-free-no-branching",
-      "callout_ref": "docs/vite/02-set-it-up.md#3-create-the-supabase-project (Pro skipped for demo; no per-PR preview DBs)"
+      "effect": "no per-PR preview DB; previews write to production; migrations apply on merge via apply-migrations"
     },
     {
       "question": "q6",
-      "value": "demo-lifespan",
-      "callout_ref": "docs/00-scope.md (demo class — favor Pages + Free tier; skip PITR/backup-check/blue-green/perf-budget gates)"
+      "value": "single-organisation-hierarchy",
+      "effect": "RLS keys off tier and branch (sectors → stores), not a per-tenant store_id alone"
     }
   ],
-  "completed_at": "2026-08-12T00:00:00Z",
-  "changed_at": "2026-08-12T00:00:00Z",
+  "completed_at": "2026-09-15T08:00:00Z",
+  "changed_at": "2026-09-15T08:00:00Z",
   "imported_from": null,
   "mode": "normal"
 }
