@@ -6,7 +6,7 @@ import {
   ErrorState,
   LoadingState,
 } from "../components/ui/EmptyState";
-import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
+import { useStoreAccess } from "../hooks/useStoreAccess";
 import { errorMessage } from "../lib/errorMessage";
 import { useT } from "../lib/i18n";
 import { formatVnd } from "../lib/money";
@@ -15,8 +15,8 @@ import { getSupabase } from "../lib/supabaseClient";
 export function AnalyticsPage() {
   const t = useT();
   const { storeId } = useParams<{ storeId: string }>();
-  const role = useRoleOn(storeId);
-  const isManager = isManagerRole(role);
+  const { canManage } = useStoreAccess(storeId);
+  const isManager = canManage;
 
   if (!storeId) {
     return (

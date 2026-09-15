@@ -10,7 +10,7 @@ import {
   ErrorState,
   LoadingState,
 } from "../components/ui/EmptyState";
-import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
+import { useStoreAccess } from "../hooks/useStoreAccess";
 import { downloadCsv, toCsv } from "../lib/csv";
 import { useT } from "../lib/i18n";
 import { formatVnd } from "../lib/money";
@@ -24,8 +24,8 @@ interface PayrollPageProps {
 export function PayrollPage({ storeId }: PayrollPageProps) {
   const t = useT();
   const queryClient = useQueryClient();
-  const role = useRoleOn(storeId);
-  const isManager = isManagerRole(role);
+  const { canManage } = useStoreAccess(storeId);
+  const isManager = canManage;
   const [date, setDate] = useState(() => new Date());
   const [issuePrizeFineOpen, setIssuePrizeFineOpen] = useState(false);
 

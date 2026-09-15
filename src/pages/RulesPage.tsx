@@ -10,7 +10,7 @@ import {
 } from "../components/ui/EmptyState";
 import { Input, Label } from "../components/ui/Input";
 import { Select } from "../components/ui/Select";
-import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
+import { useStoreAccess } from "../hooks/useStoreAccess";
 import { useT } from "../lib/i18n";
 import { formatVnd } from "../lib/money";
 import { createRule, listRules, updateRule } from "../services/rules";
@@ -32,8 +32,8 @@ const UNIMPLEMENTED_AUTO_TRIGGERS = new Set<RuleTrigger>([
 export function RulesPage({ storeId }: RulesPageProps) {
   const t = useT();
   const queryClient = useQueryClient();
-  const role = useRoleOn(storeId);
-  const isManager = isManagerRole(role);
+  const { canManage } = useStoreAccess(storeId);
+  const isManager = canManage;
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState<{
     name: string;

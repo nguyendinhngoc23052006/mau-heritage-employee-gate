@@ -118,8 +118,10 @@ export function SectorPage() {
 
   const directory = people.data ?? [];
   const directorIds = new Set((directors.data ?? []).map((d) => d.user_id));
+  // RLS already hides everyone at or above the caller; this only keeps the
+  // sector's own directors out of the manager list.
   const candidates = directory.filter(
-    (p) => !p.global_role && p.id !== me.profile?.id,
+    (p) => !p.global_role && p.id !== me.profile?.id && !directorIds.has(p.id),
   );
 
   return (
@@ -182,9 +184,10 @@ export function SectorPage() {
                 onChange={setDirectorPick}
                 options={[
                   { value: "", label: t("org.pick_person") },
-                  ...candidates
-                    .filter((p) => !directorIds.has(p.id))
-                    .map((p) => ({ value: p.id, label: personLabel(p, p.id) })),
+                  ...candidates.map((p) => ({
+                    value: p.id,
+                    label: personLabel(p, p.id),
+                  })),
                 ]}
                 searchable={candidates.length >= 6}
                 ariaLabel={t("org.appoint_director")}

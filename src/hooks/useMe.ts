@@ -13,8 +13,11 @@ interface Me {
 export interface UseMeResult {
   profile: Profile | null | undefined;
   directorOf: string[];
+  // undefined while loading OR after a failed fetch: "don't know" must never
+  // read as "employee", or a transient error would boot a director out of /org.
   tier: Tier | undefined;
   isLoading: boolean;
+  isError: boolean;
 }
 
 // Who am I in the hierarchy. Tier is derived exactly as public.tier_of() does
@@ -35,14 +38,16 @@ export function useMe(): UseMeResult {
   });
 
   const isLoading = me.isLoading || memberships.isLoading;
+  const isError = me.isError || memberships.isError;
   const directorOf = (me.data?.sectorMemberships ?? []).map((m) => m.sector_id);
-  const tier = isLoading
-    ? undefined
-    : computeTier({
-        globalRole: me.data?.profile?.global_role ?? null,
-        directorOfCount: directorOf.length,
-        storeRoles: (memberships.data ?? []).map((m) => m.role),
-      });
+  const tier =
+    isLoading || isError
+      ? undefined
+      : computeTier({
+          globalRole: me.data?.profile?.global_role ?? null,
+          directorOfCount: directorOf.length,
+          storeRoles: (memberships.data ?? []).map((m) => m.role),
+        });
 
-  return { profile: me.data?.profile, directorOf, tier, isLoading };
+  return { profile: me.data?.profile, directorOf, tier, isLoading, isError };
 }

@@ -10,7 +10,7 @@ import {
   LoadingState,
 } from "../components/ui/EmptyState";
 import { Input } from "../components/ui/Input";
-import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
+import { useStoreAccess } from "../hooks/useStoreAccess";
 import { useT } from "../lib/i18n";
 import { exportAuditCsv, listAuditLog } from "../services/audit";
 import type { AuditLog } from "../types/database";
@@ -18,8 +18,8 @@ import type { AuditLog } from "../types/database";
 export function AuditPage() {
   const t = useT();
   const { storeId } = useParams<{ storeId: string }>();
-  const role = useRoleOn(storeId);
-  const isManager = isManagerRole(role);
+  const { canManage } = useStoreAccess(storeId);
+  const isManager = canManage;
 
   const [filterEntityType, setFilterEntityType] = useState<string>("");
   const [before, setBefore] = useState<string>("");

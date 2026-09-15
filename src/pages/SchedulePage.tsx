@@ -13,8 +13,8 @@ import { Dialog } from "../components/ui/Dialog";
 import { ErrorState, LoadingState } from "../components/ui/EmptyState";
 import { Input, Label, Textarea } from "../components/ui/Input";
 import { Select } from "../components/ui/Select";
-import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
 import { useSession } from "../hooks/useSession";
+import { useStoreAccess } from "../hooks/useStoreAccess";
 import { errorMessage } from "../lib/errorMessage";
 import { useT } from "../lib/i18n";
 import { getSupabase } from "../lib/supabaseClient";
@@ -104,7 +104,7 @@ export function SchedulePage() {
   const t = useT();
   const { storeId } = useParams<{ storeId: string }>();
   const { user } = useSession();
-  const role = useRoleOn(storeId);
+  const { canManage } = useStoreAccess(storeId);
   const queryClient = useQueryClient();
 
   const [weekStart, setWeekStart] = useState<string>(() =>
@@ -141,7 +141,7 @@ export function SchedulePage() {
   const toDateISO = `${addDaysISO(weekEnd, 1)}T00:00:00+07:00`;
 
   const ready = Boolean(storeId);
-  const isManager = isManagerRole(role);
+  const isManager = canManage;
 
   const {
     data: shifts,

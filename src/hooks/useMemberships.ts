@@ -9,6 +9,7 @@ export interface MembershipWithStore extends Membership {
 interface UseMembershipsResult {
   data?: MembershipWithStore[];
   isLoading: boolean;
+  isError: boolean;
 }
 
 // 30s poll so a role demotion/promotion done by another manager reaches this
@@ -33,6 +34,7 @@ export function useMemberships(): UseMembershipsResult {
   return {
     data: query.data,
     isLoading: query.isLoading,
+    isError: query.isError,
   };
 }
 

@@ -2,7 +2,7 @@ import { Navigate } from "react-router-dom";
 import { LogoMark } from "../components/Brand/LogoMark";
 import { Button } from "../components/ui/Button";
 import { Card, CardTitle } from "../components/ui/Card";
-import { LoadingState } from "../components/ui/EmptyState";
+import { ErrorState, LoadingState } from "../components/ui/EmptyState";
 import { useMe } from "../hooks/useMe";
 import { useMemberships } from "../hooks/useMemberships";
 import { useSession } from "../hooks/useSession";
@@ -23,6 +23,7 @@ export function OnboardingPage() {
     return <LoadingState>{t("common.loading")}</LoadingState>;
   }
   if (!user) return <Navigate to="/login" replace />;
+  if (me.isError) return <ErrorState message={t("org.error")} />;
   if (me.tier !== undefined && me.tier <= 2)
     return <Navigate to="/org" replace />;
   const first = memberships?.[0];

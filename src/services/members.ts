@@ -1,5 +1,5 @@
 import { getSupabase } from "../lib/supabaseClient";
-import type { MembershipPublic, Profile, Role } from "../types/database";
+import type { MembershipPublic, Profile } from "../types/database";
 
 export interface MemberWithProfile extends MembershipPublic {
   profile: Profile | null;
@@ -48,36 +48,6 @@ export async function listMembers(
     return an.localeCompare(bn);
   });
   return merged;
-}
-
-export async function updateMemberRole(
-  userId: string,
-  storeId: string,
-  role: Role,
-) {
-  const supabase = getSupabase();
-  const { data, error } = await supabase
-    .from("memberships")
-    .update({ role })
-    .eq("user_id", userId)
-    .eq("store_id", storeId)
-    .select()
-    .single();
-  if (error) throw error;
-  return data;
-}
-
-export async function deactivateMember(userId: string, storeId: string) {
-  const supabase = getSupabase();
-  const { data, error } = await supabase
-    .from("memberships")
-    .update({ active: false })
-    .eq("user_id", userId)
-    .eq("store_id", storeId)
-    .select()
-    .single();
-  if (error) throw error;
-  return data;
 }
 
 export async function updateHourlyRate(params: {

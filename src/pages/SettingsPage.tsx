@@ -11,7 +11,7 @@ import { Card, CardTitle } from "../components/ui/Card";
 import { Dialog } from "../components/ui/Dialog";
 import { ErrorState, LoadingState } from "../components/ui/EmptyState";
 import { Input, Label } from "../components/ui/Input";
-import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
+import { useStoreAccess } from "../hooks/useStoreAccess";
 import { errorMessage } from "../lib/errorMessage";
 import { useT } from "../lib/i18n";
 import { getStore, regenerateJoinCode, updateStore } from "../services/stores";
@@ -20,8 +20,8 @@ export function SettingsPage() {
   const t = useT();
   const { storeId } = useParams<{ storeId: string }>();
   const queryClient = useQueryClient();
-  const role = useRoleOn(storeId);
-  const canEdit = isManagerRole(role);
+  const { canManage } = useStoreAccess(storeId);
+  const canEdit = canManage;
 
   const [name, setName] = useState("");
   const [timezone, setTimezone] = useState("");

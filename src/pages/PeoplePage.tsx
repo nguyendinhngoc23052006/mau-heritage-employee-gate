@@ -33,11 +33,7 @@ import {
   resendInvite,
   revokeInvite,
 } from "../services/invites";
-import {
-  deactivateMember,
-  listMembers,
-  updateHourlyRate,
-} from "../services/members";
+import { listMembers, updateHourlyRate } from "../services/members";
 import { setRole } from "../services/org";
 import { applyManualRule, listRules } from "../services/rules";
 import type { EmploymentType, Role, Rule } from "../types/database";
@@ -171,7 +167,12 @@ export function PeoplePage(): JSX.Element {
   const deactivateMutation = useMutation({
     mutationFn: (userId: string) =>
       storeId
-        ? deactivateMember(userId, storeId)
+        ? setRole({
+            targetUserId: userId,
+            scope: "store",
+            scopeId: storeId,
+            role: "none",
+          })
         : Promise.reject(new Error("Store ID required")),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["members", storeId] });
@@ -611,10 +612,13 @@ export function PeoplePage(): JSX.Element {
               ).filter(
                 (o) => myTier !== undefined && canAssign(myTier, o.value),
               );
-              if (member.role === "owner") {
+              // The row's current role must resolve even when I cannot assign
+              // it (a peer manager, a legacy owner) — the control is disabled
+              // then, but it still has to read as what the person is.
+              if (!roleOptions.some((o) => o.value === member.role)) {
                 roleOptions.unshift({
-                  value: "owner",
-                  label: t("people.role_owner"),
+                  value: member.role,
+                  label: t(`people.role_${member.role}`),
                 });
               }
 
@@ -723,7 +727,7 @@ export function PeoplePage(): JSX.Element {
                           disabled={
                             deactivateMutation.isPending ||
                             isLastOwner ||
-                            isSelf
+                            !canTouch
                           }
                           className="text-xs"
                         >

@@ -97,6 +97,9 @@ returns boolean language sql stable security definer set search_path = public as
 $$;
 
 -- 4. the two helpers every policy already calls ---------------------------------
+-- An overseer matches any owner-or-manager check, i.e. holds OWNER-level rights
+-- on every store in their branch. Deliberate: a store created under a sector
+-- has no owner at all, so its settings would otherwise be editable by nobody.
 create or replace function public.is_member_of(p_store_id uuid)
 returns boolean language sql stable security definer set search_path = public as $$
   select exists (select 1 from public.memberships m
@@ -207,20 +210,36 @@ create or replace function public.guard_role_write()
 returns trigger language plpgsql as $$
 begin
   if coalesce(current_setting('app.set_role', true), '') = '1' then
-    return new;
+    return coalesce(new, old);
+  end if;
+  -- A hard delete is a role change too, and memberships_owner_delete would let
+  -- an owner or overseer do it straight over REST, skipping every tier check.
+  -- No JWT means an admin/service call or a cascade from auth.users; those pass.
+  if tg_op = 'DELETE' then
+    if auth.uid() is null then
+      return old;
+    end if;
+    raise exception 'memberships are removed through set_role()' using errcode = '42501';
   end if;
   -- Invites and applications still bring people in at the bottom.
-  if tg_op = 'INSERT' and new.role = 'employee' then
-    return new;
+  if tg_op = 'INSERT' then
+    if new.role = 'employee' then
+      return new;
+    end if;
+    raise exception 'roles are assigned through set_role()' using errcode = '42501';
   end if;
-  if tg_op = 'UPDATE' and new.role = old.role then
-    return new;
+  if new.role <> old.role then
+    raise exception 'roles are assigned through set_role()' using errcode = '42501';
   end if;
-  raise exception 'roles are assigned through set_role()' using errcode = '42501';
+  -- Deactivating is removing. Reactivation (an invite accepted again) is not.
+  if old.active and not new.active then
+    raise exception 'memberships are removed through set_role()' using errcode = '42501';
+  end if;
+  return new;
 end $$;
 drop trigger if exists guard_role_write on public.memberships;
 create trigger guard_role_write
-  before insert or update of role on public.memberships
+  before insert or delete or update of role, active on public.memberships
   for each row execute function public.guard_role_write();
 
 create or replace function public.guard_global_role_write()
@@ -272,6 +291,8 @@ begin
   end if;
   v_my := public.my_tier();
   v_target_tier := public.tier_of(p_target);
+  -- The flag is transaction-local and cleared again before every return, so
+  -- nothing that runs after this call in the same transaction inherits it.
   perform set_config('app.set_role', '1', true);
 
   if p_scope = 'global' then
@@ -288,6 +309,7 @@ begin
     else
       raise exception 'global role must be ceo or none' using errcode = '22023';
     end if;
+    perform set_config('app.set_role', '', true);
     return;
   end if;
 
@@ -312,6 +334,7 @@ begin
     else
       raise exception 'sector role must be director or none' using errcode = '22023';
     end if;
+    perform set_config('app.set_role', '', true);
     return;
   end if;
 
@@ -333,6 +356,7 @@ begin
     else
       raise exception 'store role must be manager, employee or none' using errcode = '22023';
     end if;
+    perform set_config('app.set_role', '', true);
     return;
   end if;
 
@@ -342,6 +366,7 @@ revoke all on function public.set_role(uuid, text, uuid, text) from public;
 grant execute on function public.set_role(uuid, text, uuid, text) to authenticated;
 
 -- 11. whoever is above a store may delete it ----------------------------------------
+--     (the cascade onto memberships hits guard_role_write, hence the flag)
 create or replace function public.delete_store(p_store_id uuid)
 returns void language plpgsql security definer set search_path = public as $$
 begin
@@ -351,17 +376,48 @@ begin
   if not public.has_role_on(p_store_id, array['owner']::public.role[]) then
     raise exception 'not permitted' using errcode = '42501';
   end if;
+  perform set_config('app.set_role', '1', true);
   delete from public.stores where id = p_store_id;
+  perform set_config('app.set_role', '', true);
 end $$;
 
--- 12. self-service store creation and ownership transfer are retired: stores
+-- 12. write_audit(): a DELETE on a table with no `id` column (memberships is
+--     keyed user_id + store_id) wrote NULL into audit_log.entity_id and crashed
+--     on its NOT NULL — so every membership delete, delete_store's cascade and
+--     deleting an auth user all failed. And when the store itself is being
+--     deleted, the cascaded rows fire after the parent is gone, so the audit
+--     insert violated audit_log's FK. Both found by exercising delete_store. ----------
+create or replace function public.write_audit()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  v_actor uuid := auth.uid();
+  v_row jsonb := case when tg_op = 'DELETE' then to_jsonb(old) else to_jsonb(new) end;
+  v_store uuid := (v_row->>'store_id')::uuid;
+begin
+  if v_store is null then return coalesce(new, old); end if;
+  -- The store is mid-deletion: its audit rows cascade away with it anyway.
+  if not exists (select 1 from public.stores where id = v_store) then
+    return coalesce(new, old);
+  end if;
+  insert into public.audit_log(store_id, actor_id, entity_type, entity_id, action, before_json, after_json)
+  values (v_store, v_actor, tg_table_name,
+    coalesce(v_row->>'id',
+             nullif(concat_ws(':', v_row->>'user_id', v_row->>'store_id'), ''),
+             ''),
+    lower(tg_op),
+    case when tg_op in ('UPDATE', 'DELETE') then to_jsonb(old) else null end,
+    case when tg_op in ('INSERT', 'UPDATE') then to_jsonb(new) else null end);
+  return coalesce(new, old);
+end $$;
+
+-- 13. self-service store creation and ownership transfer are retired: stores
 --     are created under a sector by the people above it -----------------------------
 drop function if exists public.create_store_with_owner(text, text, text);
 drop function if exists public.reclaim_store(uuid);
 drop function if exists public.transfer_ownership(uuid, uuid);
 drop function if exists public.list_my_orphaned_stores();
 
--- 13. bootstrap: the sysadmin -----------------------------------------------------------
+-- 14. bootstrap: the sysadmin -----------------------------------------------------------
 -- Session-scoped on purpose: if the runner executes statements outside one
 -- transaction, a transaction-local flag would already be gone here.
 select set_config('app.set_role', '1', false);

@@ -10,7 +10,7 @@ import {
   LoadingState,
 } from "../components/ui/EmptyState";
 import { Select } from "../components/ui/Select";
-import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
+import { useStoreAccess } from "../hooks/useStoreAccess";
 import { useT } from "../lib/i18n";
 import { getSupabase } from "../lib/supabaseClient";
 import type {
@@ -21,8 +21,8 @@ import type {
 function ClockCorrectionsPage() {
   const t = useT();
   const { storeId } = useParams<{ storeId: string }>();
-  const role = useRoleOn(storeId);
-  const isManager = isManagerRole(role);
+  const { canManage } = useStoreAccess(storeId);
+  const isManager = canManage;
   const [statusFilter, setStatusFilter] = useState<
     ClockCorrectionStatus | "all"
   >("pending");

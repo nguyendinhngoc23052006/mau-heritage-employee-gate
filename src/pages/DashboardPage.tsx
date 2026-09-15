@@ -5,8 +5,9 @@ import { ManagerDashboard } from "../components/dashboard/ManagerDashboard";
 import { OwnerDashboard } from "../components/dashboard/OwnerDashboard";
 import { Alert } from "../components/ui/Alert";
 import { ErrorState, LoadingState } from "../components/ui/EmptyState";
-import { isManagerRole, isOwnerRole, useRoleOn } from "../hooks/useMemberships";
+import { isOwnerRole } from "../hooks/useMemberships";
 import { useSession } from "../hooks/useSession";
+import { useStoreAccess } from "../hooks/useStoreAccess";
 import { useT } from "../lib/i18n";
 import { getTodayMultiplier } from "../services/payMultipliers";
 
@@ -16,9 +17,9 @@ export function DashboardPage() {
   const { user } = useSession();
   const userId = user?.id;
   const ready = Boolean(storeId && userId);
-  const role = useRoleOn(storeId);
+  const { role, canManage } = useStoreAccess(storeId);
   const isOwner = isOwnerRole(role);
-  const isManager = isManagerRole(role);
+  const isManager = canManage;
 
   // Today's pay multiplier (shown for all roles)
   const { data: todayMultiplier } = useQuery({

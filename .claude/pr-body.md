@@ -30,8 +30,11 @@ gone from the UI and their RPCs dropped — people are placed from above.
   anyone managing the store, roles below their own tier only). Target must be
   strictly below the caller. Store-level changes are audited by the existing
   `audit_memberships` trigger.
-- Guard triggers on `memberships.role` and `profiles.global_role`; a plain
-  employee insert is still allowed so invites and applications keep working.
+- Guard triggers on `memberships` (role, active, DELETE) and
+  `profiles.global_role`; a plain employee insert and a reactivation are still
+  allowed so invites and applications keep working. A manager-role invite or
+  approval now raises — the UI offers employee only; promote afterwards.
+- `write_audit` fixed for tables without `id` and for stores mid-deletion.
 - `enforce_store_has_owner` now only guards detached (legacy) stores; a store in
   a sector answers to its director and needs no owner.
 - `stores` insert requires a sector the caller oversees. `delete_store` is
@@ -40,13 +43,40 @@ gone from the UI and their RPCs dropped — people are placed from above.
   `list_my_orphaned_stores`.
 - Bootstraps the sysadmin by email, idempotently.
 
-**Verified before opening this PR:** the whole migration was executed against
-the production schema inside one `begin; … rollback;` call (the tool honours
-transaction control — proved first with a temp-table probe) and its assertions
-passed: sysadmin at tier 1, 7 helpers present, 2 guard triggers, 5 new
-policies, 4 retired functions gone. A follow-up query confirmed nothing
-persisted. Nothing was applied; the `apply-migrations` workflow applies it on
-merge, as always.
+**Verified before opening this PR — against the production schema, rolled back.**
+The SQL tool honours `begin; … rollback;` in one call (proved first with a
+temp-table probe). The whole migration ran inside such a call, followed by a
+scenario with six synthetic users acting through `request.jwt.claims`:
+sysadmin appoints CEO and a director; director creates a unit and appoints a
+manager; manager adds and removes employees; then every forbidden move —
+director appointing a director, manager appointing a peer, CEO removing the
+sysadmin or appointing a CEO, anyone changing their own role, promoting /
+deactivating / hard-deleting over a direct table write, an outsider adding an
+employee — each refused with the intended message; reactivation, self
+`employment_type` edits, `delete_store` with its cascade, and an admin user
+deletion with no JWT all succeed. 24 write steps and 17 read probes (`tier_of`,
+`can_act_on`, `is_member_of`, owner-level `has_role_on` for a director) all
+matched expectation. A follow-up query confirmed nothing persisted: no synthetic
+users, no new column, no new function. Nothing was applied; the
+`apply-migrations` workflow applies it on merge, as always.
+
+**What the reviewers and the scenario changed.** Three findings, all fixed
+here: (1) a hard `DELETE` of a membership, and (2) a direct `active = false`
+update, both skipped every tier check — a manager could remove a peer — so
+`guard_role_write` now watches DELETE and `active` too, and PeoplePage
+deactivates through `set_role(…, 'none')`; (3) twelve store pages still gated on
+the old `isManagerRole(useRoleOn())`, so a director saw tabs that then said
+"Access denied" — every page now reads `useStoreAccess`. Smaller: `set_role`
+clears its bypass flag before every return; `EmployeeDetailPage` no longer
+flashes "Access denied" while loading; a failed `me` fetch is an error, not
+tier 4; the role Select always shows the row's current role.
+
+**Two pre-existing bugs fixed because the scenario hit them:** `write_audit`
+wrote `NULL` into `audit_log.entity_id` on any DELETE from a table without an
+`id` column (`memberships` is keyed `user_id + store_id`) and, when a store was
+being deleted, audited cascaded rows against a store already gone (FK
+violation). Every membership delete, `delete_store` and deleting an auth user
+failed on `main` because of this.
 
 **To reverse the schema:** drop the two guard triggers and their functions,
 `set_role`, `can_act_on`, `oversees_store`, `oversees_sector`, `role_tier`,
@@ -94,6 +124,10 @@ them is a separate, explicitly approved PR.
 - CEO touching the sysadmin → global scope requires the caller's own row to be
   `sysadmin`; setting CEO skips rows already `sysadmin`.
 
+**Accepted regression:** a plain legacy owner (tier 3) can no longer appoint
+managers — owner is a manager in this model. The only legacy owner in
+production is you, at tier 1, so nobody is affected.
+
 **Debt I'm leaving:** sector- and global-scope role changes are not audited
 (`audit_log.store_id` is NOT NULL) — needs a nullable column or a separate
 `org_events` table; directors cannot see unassigned accounts, so they onboard by
@@ -106,7 +140,7 @@ not touched here.
 ## Self-check
 - [x] base = main; exactly one PR
 - [x] ≤ 1 migration file, UTC-timestamped latest (`20260915090000`); new tables have RLS; src/types matches
-- [x] tests/lint/typecheck green — 77 tests, 16 files; `biome check` clean; `tsc --noEmit` clean; `vite build` clean; migration dry-run green against the production schema and rolled back
+- [x] tests/lint/typecheck green — 77 tests, 16 files; `biome check` clean; `tsc --noEmit` clean; `vite build` clean; migration + 41-step scenario green against the production schema and rolled back
 - [x] scripts named exactly `lint`, `typecheck`, `test`
 - [~] e2e not yet added
 - [x] key read from `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`; `envPrefix: ['VITE_']`; nothing hardcoded; no secret in code

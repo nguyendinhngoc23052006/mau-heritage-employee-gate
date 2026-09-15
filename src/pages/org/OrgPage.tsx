@@ -84,7 +84,9 @@ export function OrgPage() {
   });
 
   if (me.isLoading) return <LoadingState>{t("common.loading")}</LoadingState>;
-  if (me.tier === undefined || me.tier > 2) return <Navigate to="/" replace />;
+  if (me.isError || me.tier === undefined)
+    return <ErrorState message={t("org.error")} />;
+  if (me.tier > 2) return <Navigate to="/onboarding" replace />;
   if (sectors.error)
     return <ErrorState message={errorMessage(sectors.error, t("org.error"))} />;
 
