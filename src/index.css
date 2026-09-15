@@ -1,18 +1,93 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand-navy: #1f3a63;
-  --color-brand-navy-dark: #152a4a;
-  --color-brand-cream: #f8e9c3;
-  --color-brand-cream-light: #fcf3d9;
-  --color-brand-ink: #152a4a;
-  --color-brand-muted: #5c6b82;
-  --color-brand-hairline: #d9d0b4;
-  --color-brand-hairline-strong: #b8ac85;
+  /* Kwook Việt Nam — palette sampled from the four-petal pinwheel logo
+     (logo JPEG, modal pixel per petal) + its charcoal wordmark. Token NAMES
+     are inherited from the Màu Heritage era so ~200 class usages need no
+     rename: "navy" now holds Kwook petal blue, "cream" the paper neutrals. */
+  --color-brand-navy: #336eb4;
+  --color-brand-navy-dark: #27578f;
+  --color-brand-cream: #eef2ec;
+  --color-brand-cream-light: #f7f9f5;
+  --color-brand-ink: #373536;
+  --color-brand-muted: #68706a;
+  --color-brand-hairline: #dde3da;
+  --color-brand-hairline-strong: #b8c3b4;
   --color-brand-surface: #ffffff;
+  --color-brand-gold: #f9b431;
+  --color-brand-green: #79b84f;
+  --color-brand-red: #e4353c;
 
   --font-display:
     "Barlow Semi Condensed", "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+/* Org chart connectors: a classic nested-list tree. Each <ul> is a rank; the
+   lines are borders on pseudo-elements, so the browser lays the whole company
+   out in one pass with no per-node script. */
+.org-tree ul {
+  display: flex;
+  justify-content: center;
+  padding-top: 1.25rem;
+  position: relative;
+}
+.org-tree > ul {
+  padding-top: 0;
+}
+.org-tree li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  padding: 1.25rem 0.5rem 0;
+  list-style: none;
+}
+.org-tree > ul > li {
+  padding-top: 0;
+}
+.org-tree li::before,
+.org-tree li::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  height: 1.25rem;
+  width: 50%;
+  border-top: 2px solid var(--color-brand-hairline-strong);
+}
+.org-tree li::before {
+  right: 50%;
+}
+.org-tree li::after {
+  left: 50%;
+  border-left: 2px solid var(--color-brand-hairline-strong);
+}
+.org-tree li:first-child::before,
+.org-tree li:last-child::after {
+  border-top: 0 none;
+}
+.org-tree li:last-child::before {
+  border-right: 2px solid var(--color-brand-hairline-strong);
+}
+.org-tree li:only-child::before,
+.org-tree li:only-child::after {
+  border-top: 0 none;
+  border-right: 0 none;
+}
+.org-tree li:only-child::after {
+  border-left: 2px solid var(--color-brand-hairline-strong);
+}
+.org-tree > ul > li::before,
+.org-tree > ul > li::after {
+  display: none;
+}
+.org-tree ul ul::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 1.25rem;
+  width: 0;
+  border-left: 2px solid var(--color-brand-hairline-strong);
 }

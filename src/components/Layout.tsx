@@ -92,11 +92,12 @@ export function Layout() {
             </Button>
           </div>
         </div>
-        {(storeId || showOrg) && (
+        {
           <div className="flex flex-wrap items-center gap-2 px-4 pb-2">
             {showOrg && (
               <NavLink
                 to="/org"
+                end
                 className={({ isActive }) =>
                   `shrink-0 rounded-md px-3 py-1.5 text-sm font-medium transition ${
                     isActive
@@ -108,10 +109,22 @@ export function Layout() {
                 {t("nav.org")}
               </NavLink>
             )}
+            <NavLink
+              to="/org/chart"
+              className={({ isActive }) =>
+                `shrink-0 rounded-md px-3 py-1.5 text-sm font-medium transition ${
+                  isActive
+                    ? "bg-brand-navy text-brand-cream"
+                    : "text-brand-ink hover:bg-brand-cream-light"
+                }`
+              }
+            >
+              {t("nav.chart")}
+            </NavLink>
             <StoreSwitcher />
             <StoreIdentity />
           </div>
-        )}
+        }
       </header>
       <Nav />
       <main className="mx-auto w-full max-w-6xl px-4 py-6">
