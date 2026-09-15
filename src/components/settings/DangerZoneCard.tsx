@@ -1,24 +1,21 @@
 import type { JSX } from "react";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { isOwnerRole, useRoleOn } from "../../hooks/useMemberships";
+import { useStoreAccess } from "../../hooks/useStoreAccess";
 import { useT } from "../../lib/i18n";
 import { Button } from "../ui/Button";
 import { Card, CardTitle } from "../ui/Card";
 import { DeleteStoreDialog } from "./DeleteStoreDialog";
-import { TransferOwnershipDialog } from "./TransferOwnershipDialog";
 
+// Deleting a store is for whoever sits above it: tier 1, the sector's
+// director, or the legacy owner of a detached store.
 export function DangerZoneCard(): JSX.Element | null {
   const t = useT();
   const { storeId } = useParams<{ storeId: string }>();
-  const role = useRoleOn(storeId);
-  const isOwner = isOwnerRole(role);
-
-  const [showTransferDialog, setShowTransferDialog] = useState(false);
+  const { role, isOverseer } = useStoreAccess(storeId);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  // Only show for owners
-  if (!isOwner) {
+  if (!isOverseer && role !== "owner") {
     return null;
   }
 
@@ -29,28 +26,15 @@ export function DangerZoneCard(): JSX.Element | null {
         <p className="text-sm text-red-700 mb-4">
           {t("danger_zone.owner_only")}
         </p>
-        <div className="space-y-2">
-          <Button
-            variant="danger"
-            onClick={() => setShowTransferDialog(true)}
-            className="w-full"
-          >
-            {t("danger_zone.transfer_ownership")}
-          </Button>
-          <Button
-            variant="danger"
-            onClick={() => setShowDeleteDialog(true)}
-            className="w-full"
-          >
-            {t("danger_zone.delete_store")}
-          </Button>
-        </div>
+        <Button
+          variant="danger"
+          onClick={() => setShowDeleteDialog(true)}
+          className="w-full"
+        >
+          {t("danger_zone.delete_store")}
+        </Button>
       </Card>
 
-      <TransferOwnershipDialog
-        open={showTransferDialog}
-        onClose={() => setShowTransferDialog(false)}
-      />
       <DeleteStoreDialog
         open={showDeleteDialog}
         onClose={() => setShowDeleteDialog(false)}

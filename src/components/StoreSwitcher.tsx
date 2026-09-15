@@ -3,8 +3,6 @@ import { useMemberships } from "../hooks/useMemberships";
 import { useT } from "../lib/i18n";
 import { Select } from "./ui/Select";
 
-const ADD_SENTINEL = "__add__";
-
 export function StoreSwitcher() {
   const { data, isLoading } = useMemberships();
   const { storeId } = useParams();
@@ -18,26 +16,15 @@ export function StoreSwitcher() {
   if (!data) return null;
 
   const onChange = (value: string) => {
-    if (value === ADD_SENTINEL) {
-      navigate("/onboarding?add=1");
-    } else {
-      navigate(`/store/${value}`);
-    }
+    navigate(`/store/${value}`);
   };
 
   if (data.length === 0) return null;
 
-  const options = [
-    ...data.map((m) => ({
-      value: m.store_id,
-      label: m.store.name,
-    })),
-    {
-      value: ADD_SENTINEL,
-      label: t("store.switcher.add"),
-      title: t("store.switcher.add_full"),
-    },
-  ];
+  const options = data.map((m) => ({
+    value: m.store_id,
+    label: m.store.name,
+  }));
 
   const searchable = data.length >= 6;
 

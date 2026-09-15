@@ -10,7 +10,7 @@ import {
 } from "../components/ui/EmptyState";
 import { Input, Label } from "../components/ui/Input";
 import { Select } from "../components/ui/Select";
-import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
+import { useStoreAccess } from "../hooks/useStoreAccess";
 import { errorMessage } from "../lib/errorMessage";
 import { useT } from "../lib/i18n";
 import { listMembers } from "../services/members";
@@ -23,8 +23,8 @@ interface ApplyRulePageProps {
 export function ApplyRulePage({ storeId }: ApplyRulePageProps) {
   const t = useT();
   const queryClient = useQueryClient();
-  const role = useRoleOn(storeId);
-  const isManager = isManagerRole(role);
+  const { canManage } = useStoreAccess(storeId);
+  const isManager = canManage;
   const [selectedRuleId, setSelectedRuleId] = useState<string>("");
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [reason, setReason] = useState("");

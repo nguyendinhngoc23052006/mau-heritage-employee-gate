@@ -2,6 +2,10 @@
 // When the schema changes, update this file in the same PR.
 
 export type Role = "owner" | "manager" | "employee";
+export type GlobalRole = "sysadmin" | "ceo";
+// 1 sysadmin/ceo · 2 director · 3 manager (or legacy owner) · 4 employee/unassigned
+export type Tier = 1 | 2 | 3 | 4;
+export type RoleScope = "global" | "sector" | "store";
 export type EmploymentType = "full_time" | "part_time" | "hourly";
 export type ShiftStatus = "open" | "claimed" | "cancelled";
 export type SwapStatus = "requested" | "approved" | "declined" | "cancelled";
@@ -30,8 +34,24 @@ export interface Profile {
   phone: string | null;
   avatar_url: string | null;
   locale: string;
+  global_role: GlobalRole | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface Sector {
+  id: string;
+  name: string;
+  active: boolean;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface SectorMembership {
+  user_id: string;
+  sector_id: string;
+  active: boolean;
+  created_at: string;
 }
 
 export interface Store {
@@ -47,6 +67,7 @@ export interface Store {
   geofence_radius_m: number;
   require_geofence: boolean;
   variance_threshold_pct: number;
+  sector_id: string | null;
 }
 
 export interface StoreApplication {

@@ -11,12 +11,9 @@ import {
   ErrorState,
   LoadingState,
 } from "../components/ui/EmptyState";
-import {
-  isManagerRole,
-  useMemberships,
-  useRoleOn,
-} from "../hooks/useMemberships";
+import { useMemberships } from "../hooks/useMemberships";
 import { useSession } from "../hooks/useSession";
+import { useStoreAccess } from "../hooks/useStoreAccess";
 import { errorMessage } from "../lib/errorMessage";
 import { type GeolocationError, getCurrentCoords } from "../lib/geolocation";
 import { useT } from "../lib/i18n";
@@ -68,8 +65,8 @@ export function ClockPage() {
   const [selectedKind, setSelectedKind] = useState<
     "missing_in" | "missing_out" | "wrong_time" | undefined
   >(undefined);
-  const role = useRoleOn(storeId);
-  const isManager = isManagerRole(role);
+  const { canManage } = useStoreAccess(storeId);
+  const isManager = canManage;
   const { isLoading: membershipsLoading } = useMemberships();
 
   const { data: store, isLoading: storeLoading } = useQuery({

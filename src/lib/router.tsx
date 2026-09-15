@@ -20,6 +20,7 @@ import { inviteRoutes } from "../routes/invite";
 import { meRoutes } from "../routes/me";
 import { mePayRoutes } from "../routes/mePay";
 import { onboardingRoutes } from "../routes/onboarding";
+import { orgRoutes } from "../routes/org";
 import { payrollRoutes } from "../routes/payroll";
 import { peopleRoutes } from "../routes/people";
 import { rulesRoutes } from "../routes/rules";
@@ -51,6 +52,19 @@ export const router = createBrowserRouter([
   { path: "/deactivated", element: <DeactivatedPage /> },
   { path: "/reset-password", element: <ResetPasswordPage /> },
   { path: "/health", element: <div>OK</div> },
+  {
+    path: "/org",
+    element: (
+      <AuthGate>
+        <Layout />
+      </AuthGate>
+    ),
+    errorElement: <RouteErrorFallback />,
+    children: orgRoutes.map((r) => ({
+      ...r,
+      errorElement: r.errorElement ?? <RouteErrorFallback />,
+    })),
+  },
   {
     path: "/store/:storeId",
     element: (

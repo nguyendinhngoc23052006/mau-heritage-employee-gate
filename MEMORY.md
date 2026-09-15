@@ -1,6 +1,15 @@
 # MEMORY.md — repo-scope facts Claude has learned
 
-## Demo posture (from PR #1 scope + user overrides on Aug 12)
+## Organisation hierarchy (settled 2026-09-15, PR #45)
+- Re-scoped from "one store per owner" to Kwook Việt Nam, one organisation: tier 1 sysadmin (`nguyendinhngoc23052006@gmail.com`, bootstrapped by migration) + CEO via `profiles.global_role`; tier 2 directors via `sector_memberships`; tier 3 store managers (`memberships.role` manager/owner); tier 4 employees. `stores` kept its name and every FK — it is the tier-3 unit ("bộ phận"); `stores.sector_id` hangs it under a sector ("khối").
+- `is_member_of()` / `has_role_on()` are hierarchy-aware, so all 60 policies grant a director and tier 1 what the store's managers have without a rewrite. `set_role()` is the only role writer; `guard_role_write` / `guard_global_role_write` triggers make any other path raise. Rule everywhere: act only on tiers strictly below yours, inside your branch; the sysadmin removing a CEO is the one exception.
+- Directors do not see unassigned accounts (RLS). They bring people in by store invite (lands as employee), then promote. Tier 1 sees everyone and appoints directly.
+- Retired (functions dropped): `create_store_with_owner`, `reclaim_store`, `transfer_ownership`, `list_my_orphaned_stores`. Self-service store creation/joining is gone from the UI; the applications/invites tables remain (invites: employee only).
+- Verifying a migration before merge: `execute_sql` honours `begin; … ; rollback;` in one call (proved with a temp-table probe first — the rollback leaves no trace). Dry-run every migration this way; it is not a hand edit because nothing commits. The runner is still the only applier.
+- Kwook brand (from kwookvietnam.com.vn, 2026-09-15): logo = four-petal pinwheel (gold/orange, green, red, blue) + charcoal "Kw" wordmark; site CSS is Flatsome-default (#446084 / #d26e4b / #7a9c59 / #313131, Lato + Dancing Script) so the app palette is built from the logo, not the CSS. Voice: xanh, làn sóng nhỏ, bền vững, thiên nhiên. Rebrand is its own PR.
+- Debt: sector/global role changes are not audited (`audit_log.store_id` is NOT NULL); `IssuePrizeFineModal` still maps options while closed.
+
+## Demo posture (from PR #1 scope + user overrides on Aug 12; superseded by the section above where they differ)
 - main-only, Cloudflare Pages Git integration, Supabase Free (no Branching)
 - Every Pages preview URL hits prod DB — treat preview writes as prod writes
 - Simple email + password login (no captcha) — user chose spam-risk for simplicity

@@ -10,7 +10,7 @@ import {
   LoadingState,
 } from "../components/ui/EmptyState";
 import { Input, Label, Textarea } from "../components/ui/Input";
-import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
+import { useStoreAccess } from "../hooks/useStoreAccess";
 import { useT } from "../lib/i18n";
 import {
   createAnnouncement,
@@ -23,8 +23,8 @@ export function AnnouncementsPage() {
   const t = useT();
   const { storeId } = useParams<{ storeId: string }>();
   const queryClient = useQueryClient();
-  const role = useRoleOn(storeId);
-  const isManager = isManagerRole(role);
+  const { canManage } = useStoreAccess(storeId);
+  const isManager = canManage;
 
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");

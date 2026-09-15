@@ -11,8 +11,8 @@ import {
   LoadingState,
 } from "../components/ui/EmptyState";
 import { Input, Label, Textarea } from "../components/ui/Input";
-import { isManagerRole, useRoleOn } from "../hooks/useMemberships";
 import { useSession } from "../hooks/useSession";
+import { useStoreAccess } from "../hooks/useStoreAccess";
 import { errorMessage } from "../lib/errorMessage";
 import { useT } from "../lib/i18n";
 import { formatVnd, parseVndToCents } from "../lib/money";
@@ -29,8 +29,8 @@ export function SalesPage() {
   const t = useT();
   const { storeId } = useParams<{ storeId: string }>();
   const { user } = useSession();
-  const role = useRoleOn(storeId);
-  const isManager = isManagerRole(role);
+  const { canManage } = useStoreAccess(storeId);
+  const isManager = canManage;
 
   // No hooks below this line, so an early return here is hook-order-safe.
   if (!storeId || !user)
